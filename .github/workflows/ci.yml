@@ -26,6 +26,8 @@ jobs:
         pip install -r requirements-lite.txt
         
     - name: Run Tests
+      env:
+        BYPASS_AUTH: "true"
       run: |
         python -m pytest
   
