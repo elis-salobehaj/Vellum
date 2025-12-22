@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic-settings
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+msal
+httpx
+python-dotenv
+pytest>=8.0.0
+pytest-asyncio
+openai
+tiktoken

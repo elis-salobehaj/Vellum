@@ -19,3 +19,5 @@ httpx
 python-dotenv
 openai
 tiktoken
+pytest>=8.0.0
+pytest-asyncio
