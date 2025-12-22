@@ -118,7 +118,7 @@ The application is configured via `.env` file.
 If you prefer running without Docker:
 
 ### Prerequisites
--   Node.js 22+
+-   Node.js 23+
 -   Python 3.12+
 -   Ollama (Installed locally)
 
