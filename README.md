@@ -71,13 +71,23 @@ PROJECT_NAME=Vellum
 ## Tech Stack
 
 ### Frontend
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+
 -   **Framework**: React 19 + Vite
 -   **Styling**: Tailwind CSS v4, Framer Motion
 -   **Auth**: MSAL (`@azure/msal-react`)
 -   **Markdown**: `react-markdown`, `remark-gfm`
 
 ### Backend
--   **API**: FastAPI (Python 3.11)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-Local_AI-000000?style=for-the-badge)
+
+-   **API**: FastAPI (Python 3.12)
 -   **Orchestration**: LlamaIndex
 -   **Vector DB**: ChromaDB (Persistent)
 -   **LLM Serving**: Ollama (Dockerized)
@@ -108,8 +118,8 @@ The application is configured via `.env` file.
 If you prefer running without Docker:
 
 ### Prerequisites
--   Node.js 18+
--   Python 3.11+
+-   Node.js 22+
+-   Python 3.12+
 -   Ollama (Installed locally)
 
 ### Steps
