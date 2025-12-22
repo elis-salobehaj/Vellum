@@ -27,7 +27,7 @@ jobs:
         
     - name: Run Tests
       run: |
-        pytest
+        python -m pytest
   
   frontend-build:
     runs-on: ubuntu-latest
