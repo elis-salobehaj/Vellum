@@ -27,8 +27,10 @@ build/
 # Project Data
 backend/data/chroma/
 backend/data/db/
+backend/data/source_documents/
 ollama_data/
 
 # OS
 .DS_Store
 Thumbs.db
+data/cache

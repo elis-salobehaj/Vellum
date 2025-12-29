@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      target: production
     ports:
       - "8000:8000"
     volumes:
@@ -28,6 +30,7 @@ services:
   frontend:
     build:
       context: ./frontend
+      target: production
       args:
         VITE_API_URL: ${VITE_API_URL}
         VITE_AZURE_CLIENT_ID: ${VITE_AZURE_CLIENT_ID}

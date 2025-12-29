@@ -4,21 +4,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  citations?: Array<{
-    id: string;
-    source: string;
-    page: number;
-    text: string;
-  }>;
-}
+import type { Citation, Message } from '../../types';
 
 interface MessageBubbleProps {
   message: Message;
-  onCitationClick: (citation: any) => void;
+  onCitationClick: (citation: Citation) => void;
 }
 
 const MessageBubble = ({ message, onCitationClick }: MessageBubbleProps) => {

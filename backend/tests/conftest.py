@@ -10,17 +10,19 @@ HEAVY_LIBS = [
     "llama_index.embeddings.huggingface",
     "llama_index.llms.ollama",
     "llama_index.llms.gemini",
+    "llama_index.llms.openai",
     "llama_index.core.node_parser",
     "huggingface_hub",
     "sentence_transformers",
     "chromadb",
-    "pypdf"
+    "pypdf",
+    "torch"
 ]
 
 for lib in HEAVY_LIBS:
     try:
         __import__(lib)
     except ImportError:
-        # Only mock if the library is missing (e.g. in CI with requirements-lite.txt)
+        # Only mock if the library is missing (e.g. in CI with requirements-test.txt)
         sys.modules[lib] = MagicMock()
         print(f"⚠️ Mocking missing library: {lib}")

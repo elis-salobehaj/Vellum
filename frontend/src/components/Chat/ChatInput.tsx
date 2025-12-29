@@ -144,6 +144,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
               )}
               onClick={handleSend}
               disabled={!input.trim() || disabled}
+              aria-label="Send message"
             >
               <Send size={18} />
             </button>

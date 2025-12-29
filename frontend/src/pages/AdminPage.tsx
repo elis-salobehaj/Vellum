@@ -47,15 +47,21 @@ const AdminPage = () => {
       if (!res.ok) throw new Error("Failed to fetch models");
       const data = await res.json();
       setModels(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err));
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+
     fetchModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, accounts]);
 
   const handleModelChange = async (modelId: string) => {
@@ -86,8 +92,12 @@ const AdminPage = () => {
       setSuccessMsg(`Switched to ${model.name}`);
       setTimeout(() => setSuccessMsg(null), 3000);
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err));
+      }
     }
   };
 
