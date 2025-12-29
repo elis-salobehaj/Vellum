@@ -1,0 +1,82 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_test_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  backend:
+    image: vellum-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    environment:
+      - BYPASS_AUTH=true
+      - PYTHONPATH=/app
+      - HF_HOME=/app/data/cache/huggingface
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./data/cache:/app/data/cache
+    ports:
+      - "8000:8000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  frontend:
+    image: vellum-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_API_URL=/api/v1
+        - VITE_BYPASS_AUTH=true
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /usr/share/nginx/html/index.html || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  e2e:
+    image: vellum-e2e:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: test
+    command: npx playwright test tests/e2e.spec.ts
+    environment:
+      - BASE_URL=http://frontend
+      - RUN_WEB_SERVER=false
+      - CI=true
+    depends_on:
+      frontend:
+        condition: service_healthy
+    volumes:
+      - ./frontend/tests:/app/tests
+      - ./frontend/playwright.config.ts:/app/playwright.config.ts
+    ipc: host
+
+volumes:
+  ollama_test_data:

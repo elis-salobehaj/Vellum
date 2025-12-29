@@ -8,11 +8,18 @@ import MessageBubble from '../components/Chat/MessageBubble';
 import SourcePanel from '../components/Chat/SourcePanel';
 import ChatInput from '../components/Chat/ChatInput';
 
-interface Message {
-  id: string;
+import type { Citation, Message } from '../types';
+
+interface BackendCitation {
+  source: string;
+  page?: number;
+  text: string;
+}
+
+interface BackendMessage {
   role: 'user' | 'assistant';
   content: string;
-  citations?: any[];
+  citations: BackendCitation[];
 }
 
 const ChatPage = () => {
@@ -23,7 +30,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Hello! I am Vellum. How can I help you analyze your documents today?' }
   ]);
-  const [selectedSource, setSelectedSource] = useState(null);
+  const [selectedSource, setSelectedSource] = useState<Citation | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Auto-scroll
@@ -69,11 +76,11 @@ const ChatPage = () => {
 
           if (Array.isArray(data) && data.length > 0) {
             // Map backend messages to frontend format
-            const mapped = data.map((msg: any, idx: number) => ({
+            const mapped = data.map((msg: BackendMessage, idx: number) => ({
               id: `hist-${idx}`,
               role: msg.role,
               content: msg.content,
-              citations: msg.citations?.map((c: any, i: number) => ({
+              citations: msg.citations?.map((c: BackendCitation, i: number) => ({
                 id: `hist-${idx}-${i}`,
                 source: c.source,
                 page: c.page,
@@ -139,7 +146,7 @@ const ChatPage = () => {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.response,
-        citations: data.citations?.map((c: any, i: number) => ({
+        citations: data.citations?.map((c: BackendCitation, i: number) => ({
           id: `c${i}`,
           source: c.source,
           page: c.page,

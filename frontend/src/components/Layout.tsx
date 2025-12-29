@@ -5,7 +5,7 @@ import { useMsal } from "@azure/msal-react";
 import { loginRequest } from '../authConfig';
 
 const Sidebar = () => {
-  const [history, setHistory] = React.useState<any[]>([]);
+  const [history, setHistory] = React.useState<Array<{ id: string; title?: string }>>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { instance, accounts } = useMsal();

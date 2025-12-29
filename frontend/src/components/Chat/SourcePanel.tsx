@@ -1,7 +1,8 @@
 import { FileText, X } from 'lucide-react';
+import type { Citation } from '../../types';
 
 interface SourcePanelProps {
-  source: any | null;
+  source: Citation | null;
   onClose: () => void;
 }
 

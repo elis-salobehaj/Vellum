@@ -1,11 +1,7 @@
-__pycache__
 venv
-.env
+__pycache__
 .git
-.gitignore
-data/chroma_db
+.env
+.pytest_cache
 *.pyc
-*.pyo
-*.pyd
-.Python
-env
+data
