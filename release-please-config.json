@@ -3,11 +3,6 @@
     ".": {
       "release-type": "python",
       "package-name": "Vellum"
-    },
-    "frontend": {
-      "release-type": "node",
-      "package-name": "vellum-frontend",
-      "skip-github-release": true
     }
   }
 }
