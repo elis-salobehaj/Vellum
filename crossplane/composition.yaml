@@ -1,0 +1,138 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xvellumplatforms.infrastructure.vellum.io
+  labels:
+    provider: helm
+spec:
+  compositeTypeRef:
+    apiVersion: infrastructure.vellum.io/v1alpha1
+    kind: XVellumPlatform
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: istio-system-ns
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                name: istio-system
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: istio-system
+                providerConfigRef:
+                  name: default
+          - name: istio-base
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                name: istio-base
+              spec:
+                forProvider:
+                  chart:
+                    name: base
+                    repository: https://istio-release.storage.googleapis.com/charts
+                    version: "1.23.0"
+                  namespace: istio-system
+                  set:
+                    - name: global.istioNamespace
+                      value: istio-system
+                providerConfigRef:
+                  name: default
+            patches:
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.state
+                toFieldPath: status.istioBaseState
+          - name: istiod
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                name: istiod
+              spec:
+                forProvider:
+                  chart:
+                    name: istiod
+                    repository: https://istio-release.storage.googleapis.com/charts
+                    version: "1.23.0"
+                  namespace: istio-system
+                providerConfigRef:
+                  name: default
+            patches:
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.state
+                toFieldPath: status.istiodState
+          - name: knative-operator
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                name: knative-operator
+              spec:
+                forProvider:
+                  chart:
+                    name: knative-operator
+                    repository: https://knative.github.io/operator
+                    version: "v1.20.0"
+                  namespace: knative-operator
+                  set:
+                    - name: operator.namespace
+                      value: knative-operator
+                providerConfigRef:
+                  name: default
+            patches:
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.state
+                toFieldPath: status.knativeOperatorState
+          - name: knative-serving-ns
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                name: knative-serving-ns
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: knative-serving
+                providerConfigRef:
+                  name: default
+          - name: knative-serving
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                name: knative-serving
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: operator.knative.dev/v1beta1
+                    kind: KnativeServing
+                    metadata:
+                      name: knative-serving
+                      namespace: knative-serving
+                    spec:
+                      version: "1.16.0"
+                      ingress:
+                        istio:
+                          enabled: true
+                      config:
+                        istio:
+                          local-gateway.mesh: |
+                            cluster-local-gateway.istio-system.svc.cluster.local
+                providerConfigRef:
+                  name: default
+

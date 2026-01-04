@@ -30,6 +30,11 @@ backend/data/db/
 backend/data/source_documents/
 ollama_data/
 
+# Documentation
+CONTRIBUTING.md
+ROADMAP.md
+architecture/
+
 # OS
 .DS_Store
 Thumbs.db

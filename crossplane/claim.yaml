@@ -1,0 +1,8 @@
+apiVersion: infrastructure.vellum.io/v1alpha1
+kind: VellumPlatform
+metadata:
+  name: vellum-mlops-stack
+  namespace: default
+spec:
+  parameters:
+    version: "v0.1.0"
