@@ -1,0 +1,95 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- github.com/kubeflow/pipelines/manifests/kustomize/env/platform-agnostic-emissary?ref=2.2.0
+- hardcoded-secrets.yaml
+
+# Generate the ConfigMap for External Connections
+configMapGenerator:
+- name: pipeline-install-config
+  behavior: merge
+  literals:
+  - dbHost=vellum-mlops-stack-9hnwf-1bb657336ff0-mysql.kubeflow.svc.cluster.local
+  - dbPort=3306
+  - bucketName=mlpipeline
+  - minioServiceHost=vellum-mlops-stack-9hnwf-134b452807fc-minio.kubeflow.svc.cluster.local
+  - minioServicePort=9000
+  - mysqlHost=vellum-mlops-stack-9hnwf-1bb657336ff0-mysql.kubeflow.svc.cluster.local
+  - mysqlPort=3306
+
+# Remove embedded components AND apply fixes
+patches:
+- target:
+    kind: Deployment
+    name: minio
+  patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: minio
+    $patch: delete
+- target:
+    kind: Deployment
+    name: mysql
+  patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: mysql
+    $patch: delete
+- path: patches/minio-service-patch.yaml
+  target:
+    kind: Service
+    name: minio-service
+- path: patches/mysql-service-patch.yaml
+  target:
+    kind: Service
+    name: mysql
+- path: patches/ml-pipeline-minio-patch.yaml
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: ml-pipeline
+- path: patches/ml-pipeline-persistenceagent-patch.yaml
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: ml-pipeline-persistenceagent
+- path: patches/ml-pipeline-mlmd-patch.yaml
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: ml-pipeline
+- path: patches/workflow-controller-configmap-patch.yaml
+  target:
+    version: v1
+    kind: ConfigMap
+    name: workflow-controller-configmap
+- path: patches/workflow-controller-deployment-patch.yaml
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: workflow-controller
+
+images:
+- name: gcr.io/ml-pipeline/frontend
+  newName: ghcr.io/deploykf/kubeflow-pipelines/frontend
+  newTag: 2.0.5-deploykf.0
+
+secretGenerator:
+- name: mysql-secret
+  behavior: merge
+  literals:
+    - password=mysql123
+    - username=root
+    - mysql-root-password=mysql123
+- name: mlpipeline-minio-artifact
+  behavior: merge
+  literals:
+    - accesskey=minio
+    - secretkey=minio123

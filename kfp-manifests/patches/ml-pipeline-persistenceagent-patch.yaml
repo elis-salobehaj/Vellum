@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-pipeline-persistenceagent
+  namespace: kubeflow
+spec:
+  template:
+    spec:
+      containers:
+      - name: ml-pipeline-persistenceagent
+        env:
+        - name: METADATA_GRPC_SERVICE_HOST
+          value: "metadata-grpc-service"
+        - name: METADATA_GRPC_SERVICE_PORT
+          value: "8080"

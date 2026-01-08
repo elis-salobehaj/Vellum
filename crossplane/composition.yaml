@@ -134,5 +134,57 @@ spec:
                           local-gateway.mesh: |
                             cluster-local-gateway.istio-system.svc.cluster.local
                 providerConfigRef:
+          - name: minio
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                name: minio
+              spec:
+                forProvider:
+                  chart:
+                    name: minio
+                    repository: https://charts.min.io/
+                    version: "5.4.0"
+                  namespace: kubeflow
+                  set:
+                    - name: mode
+                      value: "standalone"
+                    - name: existingSecret
+                      value: "minio-secret"
+                    - name: persistence.enabled
+                      value: "true"
+                    - name: persistence.size
+                      value: "20Gi"
+                    - name: makeBucketJob.enabled
+                      value: "false"
+                    - name: resources.requests.memory
+                      value: "512Mi"
+                providerConfigRef:
                   name: default
-
+          - name: mysql
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                name: mysql
+              spec:
+                forProvider:
+                  chart:
+                    name: mysql
+                    repository: https://charts.bitnami.com/bitnami
+                    version: "14.0.3"
+                  namespace: kubeflow
+                  set:
+                    - name: auth.existingSecret
+                      value: "mysql-secret"
+                    - name: primary.persistence.enabled
+                      value: "true"
+                    - name: primary.persistence.size
+                      value: "8Gi"
+                    - name: image.tag
+                      value: "8.0.36-debian-11-r0"
+                    - name: auth.authenticationPolicy
+                      value: "mysql_native_password"
+                providerConfigRef:
+                  name: default

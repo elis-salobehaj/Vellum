@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: kubeflow
+spec:
+  type: ClusterIP
+  selector:
+    app: null
+    app.kubernetes.io/name: mysql
+    application-crd-id: null
