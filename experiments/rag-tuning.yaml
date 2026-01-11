@@ -1,0 +1,64 @@
+apiVersion: kubeflow.org/v1beta1
+kind: Experiment
+metadata:
+  name: rag-tuning
+  namespace: kubeflow
+spec:
+  parallelTrialCount: 1
+  maxTrialCount: 6
+  maxFailedTrialCount: 3
+  objective:
+    type: maximize
+    goal: 0.99
+    objectiveMetricName: accuracy
+    additionalMetricNames: []
+  algorithm:
+    algorithmName: grid
+  metricsCollectorSpec:
+    collector:
+      kind: StdOut
+  parameters:
+    - name: chunk_size
+      parameterType: categorical
+      feasibleSpace:
+        list: ["256", "512", "1024"]
+    - name: chunk_overlap
+      parameterType: categorical
+      feasibleSpace:
+        list: ["20", "50"]
+  trialTemplate:
+    primaryContainerName: main
+    retain: true
+    successCondition: status.phase == Succeeded
+    failureCondition: status.phase == Failed
+    trialParameters:
+      - name: chunkSize
+        description: Chunk size for modification
+        reference: chunk_size
+      - name: chunkOverlap
+        description: Chunk overlap for modification
+        reference: chunk_overlap
+    trialSpec:
+      apiVersion: v1
+      kind: Pod
+      spec:
+        restartPolicy: Never
+        containers:
+          - name: main
+            image: vellum-ingest:local
+            command:
+              - "python"
+              - "/app/run_ingestion.py"
+              - "--bucket"
+              - "documents"
+              - "--minio_endpoint"
+              - "minio-service.kubeflow.svc:9000"
+              - "--chroma_host"
+              - "chroma-service.kubeflow.svc.cluster.local"
+              - "--chunk_size"
+              - "${trialParameters.chunkSize}"
+              - "--chunk_overlap"
+              - "${trialParameters.chunkOverlap}"
+              - "--max_docs"
+              - "1"
+            imagePullPolicy: Never

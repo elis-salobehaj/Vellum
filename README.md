@@ -40,6 +40,7 @@ PROJECT_NAME=Vellum
 - [Manual Installation](#manual-installation)
 - [Local Model Setup](#local-model-setup)
 - [Project Structure](#project-structure)
+- [Infrastructure Setup](#infrastructure-setup)
 - [Troubleshooting](#troubleshooting)
 
 ## Features
@@ -51,7 +52,7 @@ PROJECT_NAME=Vellum
 
 **📚 Advanced RAG Pipeline**:
 -   **Semantic Chunking**: Context-aware text splitting.
--   **Hybrid-Ready Search**: LlamaIndex + ChromaDB vector store.
+-   **Hybrid-Ready Search**: LlamaIndex + Qdrant vector store.
 -   **Multimodal Ingestion**: Supports PDFs, DOCX, and rich text with tables.
 
 **🔐 Enterprise Security**:
@@ -89,7 +90,7 @@ PROJECT_NAME=Vellum
 
 -   **API**: FastAPI (Python 3.12)
 -   **Orchestration**: LlamaIndex
--   **Vector DB**: ChromaDB (Persistent)
+-   **Vector DB**: Qdrant (Production Grade)
 -   **LLM Serving**: Ollama (Dockerized)
 
 ## Architecture
@@ -97,7 +98,7 @@ PROJECT_NAME=Vellum
 The system uses a **Retrieval-Augmented Generation (RAG)** architecture:
 1.  **Ingestion**: Documents in `data/source_documents` are loaded.
 2.  **Indexing**: Text is split semantically and embedded using `BAAI/bge-large-en`.
-3.  **Storage**: Embeddings are stored in ChromaDB (`data/chroma`).
+3.  **Storage**: Embeddings are stored in **Qdrant** (Vector Database).
 4.  **Retrieval**: User queries fetch relevant chunks (k=5).
 5.  **Synthesis**: The active LLM (e.g., Mistral) generates a response using the chunks as context.
 
@@ -151,6 +152,24 @@ Vellum/
 ├── scripts/            # Infrastructure scripts
 ├── docker-compose.yml  # Deployment config
 └── README.md           # Documentation
+```
+
+## Infrastructure Setup
+
+For setting up the full MLOps platform (Kubeflow + Qdrant) on Kubernetes, please refer to the [Infrastructure Setup Guide](docs/infrastructure-setup.md).
+
+Quick command:
+```bash
+./scripts/setup-platform.sh
+```
+
+## Infrastructure Setup
+
+For setting up the full MLOps platform (Kubeflow + Qdrant) on Kubernetes, please refer to the [Infrastructure Setup Guide](docs/infrastructure-setup.md).
+
+Quick command:
+```bash
+./scripts/setup-platform.sh
 ```
 
 ## Troubleshooting

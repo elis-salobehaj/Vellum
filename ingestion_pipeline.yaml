@@ -2,15 +2,24 @@
 # Name: vellum-ingestion-pipeline
 # Description: Ingests documents from MinIO to ChromaDB using LlamaIndex
 # Inputs:
+#    breakpoint_threshold: int [Default: 95.0]
 #    bucket: str [Default: 'documents']
 #    chroma_host: str [Default: 'chroma-service.kubeflow.svc.cluster.local']
+#    chunk_overlap: int [Default: 20.0]
+#    chunk_size: int [Default: 1024.0]
+#    max_docs: int [Default: 5.0]
 #    minio_endpoint: str [Default: 'minio-service.kubeflow.svc:9000']
 #    prefix: str [Default: '']
+#    splitter_mode: str [Default: 'fixed']
 components:
   comp-ingest-documents-op:
     executorLabel: exec-ingest-documents-op
     inputDefinitions:
       parameters:
+        breakpoint_threshold:
+          defaultValue: 95.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
         bucket:
           parameterType: STRING
         chroma_host:
@@ -19,6 +28,18 @@ components:
           parameterType: STRING
         chroma_port:
           defaultValue: 8000.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        chunk_overlap:
+          defaultValue: 20.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        chunk_size:
+          defaultValue: 1024.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        max_docs:
+          defaultValue: 5.0
           isOptional: true
           parameterType: NUMBER_INTEGER
         minio_access_key:
@@ -35,6 +56,10 @@ components:
           parameterType: STRING
         prefix:
           defaultValue: ''
+          isOptional: true
+          parameterType: STRING
+        splitter_mode:
+          defaultValue: fixed
           isOptional: true
           parameterType: STRING
 deploymentSpec:
@@ -69,16 +94,21 @@ deploymentSpec:
           ,\n    minio_endpoint: str = \"minio-service.kubeflow.svc:9000\",\n    minio_access_key:\
           \ str = \"minio\",\n    minio_secret_key: str = \"minio123\",\n    chroma_host:\
           \ str = \"chroma-service.kubeflow.svc.cluster.local\",\n    chroma_port:\
-          \ int = 8000\n):\n    import subprocess\n    import sys\n\n    print(f\"\
-          Launching ingestion from MinIO {bucket}/{prefix}\")\n\n    # Call the script\
-          \ that resides at /app/run_ingestion.py (from Dockerfile)\n    cmd = [\n\
-          \        \"python\", \n        \"/app/run_ingestion.py\",\n        \"--bucket\"\
-          , bucket,\n        \"--prefix\", prefix,\n        \"--minio_endpoint\",\
-          \ minio_endpoint,\n        \"--minio_access_key\", minio_access_key,\n \
-          \       \"--minio_secret_key\", minio_secret_key,\n        \"--chroma_host\"\
-          , chroma_host,\n        \"--chroma_port\", str(chroma_port)\n    ]\n\n \
-          \   result = subprocess.run(cmd, capture_output=True, text=True)\n\n   \
-          \ print(result.stdout)\n    if result.stderr:\n        print(\"STDERR:\"\
+          \ int = 8000,\n    chunk_size: int = 1024,\n    chunk_overlap: int = 20,\n\
+          \    splitter_mode: str = \"fixed\",\n    breakpoint_threshold: int = 95,\n\
+          \    max_docs: int = 5\n):\n    import subprocess\n    import sys\n\n  \
+          \  print(f\"Launching ingestion from MinIO {bucket}/{prefix}\")\n\n    #\
+          \ Call the script that resides at /app/run_ingestion.py (from Dockerfile)\n\
+          \    cmd = [\n        \"python\", \n        \"/app/run_ingestion.py\",\n\
+          \        \"--bucket\", bucket,\n        \"--prefix\", prefix,\n        \"\
+          --minio_endpoint\", minio_endpoint,\n        \"--minio_access_key\", minio_access_key,\n\
+          \        \"--minio_secret_key\", minio_secret_key,\n        \"--chroma_host\"\
+          , chroma_host,\n        \"--chroma_port\", str(chroma_port),\n        \"\
+          --chunk_size\", str(chunk_size),\n        \"--chunk_overlap\", str(chunk_overlap),\n\
+          \        \"--splitter_mode\", splitter_mode,\n        \"--breakpoint_threshold\"\
+          , str(breakpoint_threshold),\n        \"--max_docs\", str(max_docs)\n  \
+          \  ]\n\n    result = subprocess.run(cmd, capture_output=True, text=True)\n\
+          \n    print(result.stdout)\n    if result.stderr:\n        print(\"STDERR:\"\
           , result.stderr, file=sys.stderr)\n\n    if result.returncode != 0:\n  \
           \      raise RuntimeError(f\"Ingestion failed with code {result.returncode}\"\
           )\n\n"
@@ -96,18 +126,32 @@ root:
           name: comp-ingest-documents-op
         inputs:
           parameters:
+            breakpoint_threshold:
+              componentInputParameter: breakpoint_threshold
             bucket:
               componentInputParameter: bucket
             chroma_host:
               componentInputParameter: chroma_host
+            chunk_overlap:
+              componentInputParameter: chunk_overlap
+            chunk_size:
+              componentInputParameter: chunk_size
+            max_docs:
+              componentInputParameter: max_docs
             minio_endpoint:
               componentInputParameter: minio_endpoint
             prefix:
               componentInputParameter: prefix
+            splitter_mode:
+              componentInputParameter: splitter_mode
         taskInfo:
           name: ingest-documents-op
   inputDefinitions:
     parameters:
+      breakpoint_threshold:
+        defaultValue: 95.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
       bucket:
         defaultValue: documents
         isOptional: true
@@ -116,12 +160,28 @@ root:
         defaultValue: chroma-service.kubeflow.svc.cluster.local
         isOptional: true
         parameterType: STRING
+      chunk_overlap:
+        defaultValue: 20.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      chunk_size:
+        defaultValue: 1024.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      max_docs:
+        defaultValue: 5.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
       minio_endpoint:
         defaultValue: minio-service.kubeflow.svc:9000
         isOptional: true
         parameterType: STRING
       prefix:
         defaultValue: ''
+        isOptional: true
+        parameterType: STRING
+      splitter_mode:
+        defaultValue: fixed
         isOptional: true
         parameterType: STRING
 schemaVersion: 2.1.0

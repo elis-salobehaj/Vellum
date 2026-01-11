@@ -1,7 +1,7 @@
 import time
 from kfp import Client
 
-def submit_run():
+def submit_run(chunk_size=1024, chunk_overlap=20, max_docs=5):
     client = Client(host='http://localhost:3000') # Connects via port-forward
     
     print("🚀 Submitting Ingestion Pipeline...")
@@ -10,7 +10,10 @@ def submit_run():
         arguments={
             'bucket': 'documents',
             'minio_endpoint': 'minio-service.kubeflow.svc:9000',
-            'chroma_host': 'chroma-service.kubeflow.svc.cluster.local'
+            'chroma_host': 'chroma-service.kubeflow.svc.cluster.local',
+            'chunk_size': chunk_size,
+            'chunk_overlap': chunk_overlap,
+            'max_docs': max_docs
         },
         run_name=f'ingestion-run-{int(time.time())}'
     )
@@ -18,4 +21,11 @@ def submit_run():
     print(f"🔗 View run: http://localhost:3000/#/runs/details/{run.run_id}")
 
 if __name__ == '__main__':
-    submit_run()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--chunk_size', type=int, default=1024)
+    parser.add_argument('--chunk_overlap', type=int, default=20)
+    parser.add_argument('--max_docs', type=int, default=5)
+    args = parser.parse_args()
+
+    submit_run(args.chunk_size, args.chunk_overlap, args.max_docs)
