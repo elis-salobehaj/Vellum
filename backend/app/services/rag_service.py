@@ -16,7 +16,8 @@ LlamaSettings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-large-en-v
 class RAGService:
     def __init__(self):
         self.index = None
-        self.chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+        # Use HttpClient for Kubernetes (Remote Service)
+        self.chroma_client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
         self.chroma_collection = self.chroma_client.get_or_create_collection("kbase_docs")
         self.vector_store = ChromaVectorStore(chroma_collection=self.chroma_collection)
         self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
@@ -74,7 +75,7 @@ class RAGService:
             citations.append(Citation(
                 source=node.metadata.get("file_name", "unknown"),
                 page=int(node.metadata.get("page_label", 0)) if node.metadata.get("page_label") else 0,
-                text=node.node.get_content()[:200] + "...", # Truncate for display
+                text=node.node.get_content(), # Return full text for LLM Context
                 score=node.score
             ))
         return citations

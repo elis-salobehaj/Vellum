@@ -13,7 +13,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
-      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
+      - CHROMA_HOST=host.docker.internal
+      - CHROMA_PORT=8001
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
     env_file:
       - .env
@@ -38,7 +39,7 @@ services:
         VITE_AZURE_AUTHORITY: ${VITE_AZURE_AUTHORITY}
         VITE_BYPASS_AUTH: ${VITE_BYPASS_AUTH}
     ports:
-      - "3000:80"
+      - "3001:80"
     depends_on:
       - backend
 

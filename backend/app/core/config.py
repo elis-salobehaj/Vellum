@@ -15,10 +15,12 @@ class Settings(BaseSettings):
     
     # Vector DB
     CHROMA_PERSIST_DIRECTORY: str = "data/chroma"
+    CHROMA_HOST: str = "chroma-service.kubeflow.svc.cluster.local"
+    CHROMA_PORT: int = 8000
     
     # Security
     BYPASS_AUTH: bool = False
     
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

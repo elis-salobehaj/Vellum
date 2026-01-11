@@ -1,0 +1,23 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies (build-essential for some pip packages)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements relevant to ingestion
+COPY backend/requirements.txt .
+
+# Install dependencies
+# We specifically need llama-index, chromadb, sentence-transformers
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+# We copy the 'app' directory as it contains core logic (rag_service, etc.)
+COPY backend/app ./app
+# Copy the ingestion script (we will create this next)
+COPY pipelines/ingestion/scripts/run_ingestion.py ./run_ingestion.py
+
+CMD ["python", "run_ingestion.py"]

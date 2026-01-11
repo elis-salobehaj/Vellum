@@ -27,7 +27,7 @@ PROJECT_NAME=Vellum
 
 > **Note**: The first startup may take **15-20 minutes** (depending on internet speed) as the system automatically downloads the requested LLM models: **Mistral**, **Llama 3**, **Gemma 2**, **Llama 3.2**, and others. Watch the container logs for "All models provisioned".
 
-**Access the App**: [http://localhost:3000](http://localhost:3000)
+**Access the App**: [http://localhost:3001](http://localhost:3001)
 
 ---
 

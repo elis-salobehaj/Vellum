@@ -32,3 +32,12 @@ spec:
                 - version
             required:
             - parameters
+          status:
+            type: object
+            properties:
+              istioBaseState:
+                type: string
+              istiodState:
+                type: string
+              knativeOperatorState:
+                type: string

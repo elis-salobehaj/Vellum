@@ -188,3 +188,27 @@ spec:
                       value: "mysql_native_password"
                 providerConfigRef:
                   name: default
+          - name: chroma
+            base:
+              apiVersion: helm.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                name: chroma
+              spec:
+                forProvider:
+                  chart:
+                    name: chromadb
+                    repository: https://amikos-tech.github.io/chromadb-chart/
+                    version: "0.1.24"
+                  namespace: kubeflow
+                  set:
+                    - name: chromadb.allowReset
+                      value: "true"
+                    - name: chromadb.auth.enabled
+                      value: "false"
+                    - name: persistence.enabled
+                      value: "true"
+                    - name: persistence.size
+                      value: "10Gi"
+                providerConfigRef:
+                  name: default

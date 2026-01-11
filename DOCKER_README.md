@@ -37,7 +37,7 @@ docker-compose up --build
 
 ## Accessing the App
 
-- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Frontend**: [http://localhost:3001](http://localhost:3001)
 - **Backend API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Troubleshooting

@@ -16,11 +16,18 @@
 
 ## Phase 2: Modern Data Engineering
 Migrate ingestion logic to high-performance standard tools.
-- [ ] **Data Lineage**: Implement KFP pipeline with explicit Input/Output Artifacts.
+- [x] **Data Lineage**: Implement KFP pipeline with explicit Input/Output Artifacts.
+- [x] **Retrieval API**: Implement Backend API to query ChromaDB (RAG).
+
+> **Status**: Phase 2 Complete. See [Phase 2 Walkthrough](docs/architecture/phase2-walkthrough.md).
 
 ## Phase 3: Experimentation & Tuning
 Automate the scientific loop.
-- [ ] **Hyperparameter Tuning**: Create Katib Experiment to optimize RAG `chunk_size`.
+- [ ] Install Katib (Kubernetes Operator)
+- [ ] Parameterize Ingestion Pipeline (`chunk_size`, `chunk_overlap`)
+- [ ] Implement Evaluation Logic (LLM-as-a-Judge)
+- [ ] Create Katib Experiment (Hyperparameter Sweep)
+- [ ] Analyze Results
 - [ ] **Hybrid Registry**: Implement promotion workflow (MLflow -> KMR).
 
 ## Phase 4: Production Serving
