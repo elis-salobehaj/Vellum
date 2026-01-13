@@ -1,9 +1,9 @@
 import os
 import argparse
-import chromadb
+import qdrant_client
 from minio import Minio
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
-from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import Settings
 from llama_index.core.node_parser import SemanticSplitterNodeParser
@@ -22,8 +22,8 @@ def download_from_minio(minio_client, bucket: str, prefix: str, local_dir: str):
     print(f"✅ Downloaded {count} files.")
 
 def ingest(
-    chroma_host: str, 
-    chroma_port: int,
+    qdrant_host: str, 
+    qdrant_port: int,
     minio_endpoint: str,
     minio_access_key: str,
     minio_secret_key: str,
@@ -53,11 +53,10 @@ def ingest(
     
     download_from_minio(minio_client, bucket, prefix, input_dir)
 
-    # 2. Connect to ChromaDB (Remote)
-    print(f"🔌 Connecting to ChromaDB at {chroma_host}:{chroma_port}")
-    chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
-    collection = chroma_client.get_or_create_collection("kbase_docs")
-    vector_store = ChromaVectorStore(chroma_collection=collection)
+    # 2. Connect to Qdrant (Remote)
+    print(f"🔌 Connecting to Qdrant at {qdrant_host}:{qdrant_port}")
+    client = qdrant_client.QdrantClient(host=qdrant_host, port=qdrant_port)
+    vector_store = QdrantVectorStore(client=client, collection_name="vellum_vectors")
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
     # 3. Configure Embeddings
@@ -117,7 +116,7 @@ def ingest(
         )
 
     # 6. Indexing
-    print("🧠 Indexing documents...")
+    print("🧠 Indexing documents (this handles persistence to Qdrant)...")
     index = VectorStoreIndex.from_documents(
         documents,
         storage_context=storage_context,
@@ -131,7 +130,7 @@ def ingest(
     # In a real setup, we'd use a Golden Dataset.
     print("⚖️ Running Evaluation...")
     # Re-connect (read-only)
-    eval_vector_store = ChromaVectorStore(chroma_collection=collection)
+    eval_vector_store = QdrantVectorStore(client=client, collection_name="vellum_vectors")
     eval_index = VectorStoreIndex.from_vector_store(
         eval_vector_store,
         embed_model=Settings.embed_model
@@ -155,7 +154,7 @@ def ingest(
     print(f"accuracy={avg_score:.4f}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingest documents from MinIO to ChromaDB")
+    parser = argparse.ArgumentParser(description="Ingest documents from MinIO to Qdrant")
     # MinIO Args
     parser.add_argument("--minio_endpoint", type=str, default="minio-service.kubeflow.svc:9000")
     parser.add_argument("--minio_access_key", type=str, default="minio")
@@ -163,9 +162,9 @@ if __name__ == "__main__":
     parser.add_argument("--bucket", type=str, required=True)
     parser.add_argument("--prefix", type=str, default="")
     
-    # Chroma Args
-    parser.add_argument("--chroma_host", type=str, default="chroma-service.kubeflow.svc.cluster.local")
-    parser.add_argument("--chroma_port", type=int, default=8000)
+    # Qdrant Args
+    parser.add_argument("--qdrant_host", type=str, default="qdrant.qdrant.svc.cluster.local")
+    parser.add_argument("--qdrant_port", type=int, default=6333)
 
     # Tuning Args
     parser.add_argument("--chunk_size", type=int, default=1024)
@@ -176,8 +175,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     ingest(
-        args.chroma_host, 
-        args.chroma_port,
+        args.qdrant_host, 
+        args.qdrant_port,
         args.minio_endpoint,
         args.minio_access_key,
         args.minio_secret_key,

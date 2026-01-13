@@ -14,9 +14,8 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
     
     # Vector DB
-    CHROMA_PERSIST_DIRECTORY: str = "data/chroma"
-    CHROMA_HOST: str = "chroma-service.kubeflow.svc.cluster.local"
-    CHROMA_PORT: int = 8000
+    QDRANT_HOST: str = "qdrant.qdrant.svc.cluster.local"
+    QDRANT_PORT: int = 6333
     
     # Security
     BYPASS_AUTH: bool = False

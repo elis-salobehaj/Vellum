@@ -6,14 +6,14 @@ python-jose[cryptography]
 passlib[bcrypt]
 msal
 llama-index
-llama-index-vector-stores-chroma
+llama-index-vector-stores-qdrant
 llama-index-embeddings-openai
 llama-index-embeddings-huggingface
 huggingface-hub==0.23.0
 sentence-transformers==3.0.1
 llama-index-llms-ollama
 llama-index-llms-gemini
-chromadb
+qdrant-client
 pypdf
 httpx
 python-dotenv

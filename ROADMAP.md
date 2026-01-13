@@ -44,3 +44,4 @@ Standardize inference on KServe.
 
 ## Future / Backlog
 - [ ] **Scale: Spark Operator**: Adopt `SparkApplication` for petabyte-scale ingestion.
+- [ ] **Infrastructure**: Investigate Istio OIDC `Jwt issuer is not configured` error to enable proper `kubectl create token` auth on port 8080.

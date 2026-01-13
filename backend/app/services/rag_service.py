@@ -1,10 +1,10 @@
 import os
 from typing import List
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
-from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core import Settings as LlamaSettings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-import chromadb
+import qdrant_client
 from app.core.config import settings
 from app.models.schemas import Citation
 from llama_index.core.node_parser import SemanticSplitterNodeParser
@@ -16,10 +16,9 @@ LlamaSettings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-large-en-v
 class RAGService:
     def __init__(self):
         self.index = None
-        # Use HttpClient for Kubernetes (Remote Service)
-        self.chroma_client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
-        self.chroma_collection = self.chroma_client.get_or_create_collection("kbase_docs")
-        self.vector_store = ChromaVectorStore(chroma_collection=self.chroma_collection)
+        # Use Qdrant Client (Remote Service)
+        self.client = qdrant_client.QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+        self.vector_store = QdrantVectorStore(client=self.client, collection_name="vellum_vectors")
         self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
         
     async def ingest_documents(self, source_dir: str):

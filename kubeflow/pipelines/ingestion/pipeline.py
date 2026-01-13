@@ -11,8 +11,8 @@ def ingest_documents_op(
     minio_endpoint: str = "minio-service.kubeflow.svc:9000",
     minio_access_key: str = "minio",
     minio_secret_key: str = "minio123",
-    chroma_host: str = "chroma-service.kubeflow.svc.cluster.local",
-    chroma_port: int = 8000,
+    qdrant_host: str = "qdrant.qdrant.svc.cluster.local",
+    qdrant_port: int = 6333,
     chunk_size: int = 1024,
     chunk_overlap: int = 20,
     splitter_mode: str = "fixed",
@@ -33,8 +33,8 @@ def ingest_documents_op(
         "--minio_endpoint", minio_endpoint,
         "--minio_access_key", minio_access_key,
         "--minio_secret_key", minio_secret_key,
-        "--chroma_host", chroma_host,
-        "--chroma_port", str(chroma_port),
+        "--qdrant_host", qdrant_host,
+        "--qdrant_port", str(qdrant_port),
         "--chunk_size", str(chunk_size),
         "--chunk_overlap", str(chunk_overlap),
         "--splitter_mode", splitter_mode,
@@ -53,13 +53,14 @@ def ingest_documents_op(
 
 @dsl.pipeline(
     name='vellum-ingestion-pipeline',
-    description='Ingests documents from MinIO to ChromaDB using LlamaIndex'
+    description='Ingests documents from MinIO to Qdrant using LlamaIndex'
 )
 def ingestion_pipeline(
     bucket: str = "documents",
     prefix: str = "",
     minio_endpoint: str = "minio-service.kubeflow.svc:9000",
-    chroma_host: str = "chroma-service.kubeflow.svc.cluster.local",
+    qdrant_host: str = "qdrant.qdrant.svc.cluster.local",
+    qdrant_port: int = 6333,
     chunk_size: int = 1024,
     chunk_overlap: int = 20,
     splitter_mode: str = "fixed",
@@ -71,7 +72,8 @@ def ingestion_pipeline(
         bucket=bucket,
         prefix=prefix,
         minio_endpoint=minio_endpoint,
-        chroma_host=chroma_host,
+        qdrant_host=qdrant_host,
+        qdrant_port=qdrant_port,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         splitter_mode=splitter_mode,

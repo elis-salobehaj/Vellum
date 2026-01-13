@@ -14,4 +14,15 @@ echo "✅ Dashboard: http://localhost:8080 (Ingress Gateway)"
 nohup kubectl port-forward -n qdrant svc/qdrant 6333:6333 > /dev/null 2>&1 &
 echo "✅ Qdrant: http://localhost:6333"
 
+# 3. Kubeflow Pipelines (API)
+# Useful for SDK access bypassing Istio Auth (port 8888)
+# Use 'ml-pipeline' in 'kubeflow' namespace
+nohup kubectl port-forward -n kubeflow svc/ml-pipeline 8888:8888 > /dev/null 2>&1 &
+echo "✅ KFP API: http://localhost:8888"
+
+# 4. MinIO (S3)
+# Access at localhost:9000
+nohup kubectl port-forward -n kubeflow svc/minio-service 9000:9000 > /dev/null 2>&1 &
+echo "✅ MinIO: http://localhost:9000"
+
 echo "Running in background. Kill with 'pkill -f port-forward'."
