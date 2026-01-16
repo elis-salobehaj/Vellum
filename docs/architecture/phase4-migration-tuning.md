@@ -1,56 +1,53 @@
-# Phase 4 Walkthrough: Qdrant Migration & Katib Tuning
+# Phase 4: Experimentation & Tuning (Qdrant & Katib)
 
-## 1. Goal
-Evaluate specific chunking strategies (Size: 256/512/1024, Overlap: 20/50) to optimize Retrieval Accuracy (`accuracy` metric).
-Migrate from ChromaDB to Qdrant for vector storage.
+## Goal
+Optimize the Retrieval Augmented Generation (RAG) pipeline by:
+1.  Migrating the vector store from **ChromaDB** (Developer) to **Qdrant** (Production).
+2.  Using **Katib** to tune the `chunk_size` and `chunk_overlap` hyperparameters.
+3.  Verifying the end-to-end loop (Seeding -> Ingestion -> Retrieval) on the platform.
 
-## 2. Changes Implemented
-- **Ingestion Pipeline**: Refactored `pipelines/ingestion` to use `llama-index-vector-stores-qdrant`.
-- **Backend API**: Updated `rag_service.py` to query Qdrant.
-- **Experiment**: Configured `experiments/rag-tuning.yaml` to run Grid Search on Qdrant-backed ingestion.
-- **Infrastructure**: Updated `setup-platform.sh` and `connect.sh` to include Qdrant and MinIO.
+## 1. Migration to Qdrant
+We replaced the standalone ChromaDB with a production-grade Qdrant namespace.
+-   **Namespace**: `qdrant`
+-   **Service**: `qdrant.qdrant.svc.cluster.local:6333`
+-   **Ingestion Pipeline**: Updated `kubeflow/pipelines/ingestion/pipeline.py` to use `llama-index-vector-stores-qdrant`.
+-   **Backend**: Updated `backend/app/services/rag_service.py` to query Qdrant directly.
 
-## 3. Troubleshooting & Fixes
+## 2. Katib Hyperparameter Tuning
+We ran a **Grid Search** experiment (`rag-tuning-v3`) to find the best chunking strategy for our documents ("Architectures for Building Agentic AI").
 
-#### Istio Certificate Expiry
-*   **Issue**: Global `503 Service Unavailable` and `upstream connect error` due to expired Istio sidecar and gateway certificates.
-*   **Root Cause**: 11-hour network disconnect prevented automatic CSR rotation.
-*   **Fix**: Performed a rollout restart of the `kubeflow` namespace and `istio-system` gateway to refresh all certificates.
+### Experiment Configuration
+-   **Search Space**:
+    -   `chunk_size`: `[128, 256, 512, 1024]`
+    -   `chunk_overlap`: `[20, 50, 100]`
+-   **Metric**: `accuracy` (simulated evaluation).
+-   **Parallel Trials**: 3
 
-#### Katib RBAC Permissions
-*   **Issue**: Katib trials failed to create worker pods with `forbidden: User "system:serviceaccount:kubeflow:katib-controller" cannot create resource "pods"`.
-*   **Fix**: Created a `RoleBinding` granting the `katib-controller` service account `edit` access to the `kubeflow-user-example-com` namespace.
+### Results
+The experiment completed successfully with the following optimal parameters:
+-   **Best Trial**: `rag-tuning-v3-kzhpndjj`
+-   **Chunk Size**: **256**
+-   **Chunk Overlap**: **50**
+-   **Accuracy**: **0.8046**
+
+## 3. Application Updates
+We baked these optimal parameters into the platform defaults:
+-   **Ingestion Pipeline**: Defaults set to `256/50`.
+-   **Backend Service**: `rag_service.py` now uses `SentenceSplitter(chunk_size=256, chunk_overlap=50)`.
+
+## 4. Verification
+We verified the retrieval quality using the `verify_retrieval.py` script.
+-   **Input**: "Agentic AI"
+-   **Retrieved**: 3 Chunks
+-   **Top Score**: ~0.808
+-   **Source**: `Architectures for Building Agentic AI.pdf`
+
+## How to Reproduce
+1.  **Submit Ingestion**:
     ```bash
-    kubectl apply -f deployment/katib-rbac.yaml
+    uv run kubeflow/pipelines/ingestion/submit_run.py --chunk_size 256 --chunk_overlap 50
     ```
-
-## 4. Verification Steps
-### A. Ingestion Verification
-Ran `scripts/verify_ingest.py` which:
-1.  Compiled the modified KFP pipeline.
-2.  Submitted a run to Kubeflow.
-3.  Verified `vellum_vectors` collection creation in Qdrant.
-4.  Checked Vector Count (1 document).
-
-**Result**: ✅ SUCESS
-- Pipeline Run ID: `689bd1a9-75fc-453f-b2b3-bf5e0caa6713`
-- Status: `SUCCEEDED`
-- Qdrant Vector Count: `1`
-
-### B. Experiment Launch
-Launched Katib Experiment `rag-tuning`.
-- **Namespace**: `kubeflow-user-example-com`
-- **Objective**: Maximize `accuracy` (Goal: 0.7)
-- **Parameters**: `chunk_size`, `chunk_overlap`
-- **Algorithm**: Grid Search (6 Trials)
-
-## 4. How to Monitor results
-1.  **Dashboard**: Open Kubeflow Dashboard (via `scripts/connect.sh`).
-2.  **Katib Link**: Navigate to "Experiments (AutoML)".
-3.  **CLI**:
+2.  **Verify Retrieval**:
     ```bash
-    kubectl get trials -n kubeflow-user-example-com
-    kubectl describe experiment rag-tuning -n kubeflow-user-example-com
+    uv run scripts/verify_retrieval.py
     ```
-4.  **Best Trial**:
-    Check `status.currentOptimalTrial` in the experiment YAML or UI.

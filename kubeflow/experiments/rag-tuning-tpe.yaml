@@ -1,31 +1,48 @@
 apiVersion: kubeflow.org/v1beta1
 kind: Experiment
 metadata:
-  name: rag-tuning-v4
+  name: rag-tuning-tpe
   namespace: kubeflow-user-example-com
 spec:
-  parallelTrialCount: 6
-  maxTrialCount: 12
+  parallelTrialCount: 1
+  maxTrialCount: 35
   maxFailedTrialCount: 3
   objective:
     type: maximize
-    goal: 0.85
+    goal: 0.90
     objectiveMetricName: accuracy
     additionalMetricNames: []
   algorithm:
-    algorithmName: grid
+    algorithmName: tpe
+    algorithmSettings:
+      - name: "random_state"
+        value: "10"
   metricsCollectorSpec:
     collector:
       kind: StdOut
   parameters:
     - name: chunk_size
-      parameterType: categorical
+      parameterType: int
       feasibleSpace:
-        list: ["128", "256", "512", "1024"]
+        min: "128"
+        max: "1024"
+        step: "128"
     - name: chunk_overlap
+      parameterType: int
+      feasibleSpace:
+        min: "0"
+        max: "200"
+        step: "10"
+    - name: top_k
+      parameterType: int
+      feasibleSpace:
+        min: "2"
+        max: "10"
+        step: "1"
+    - name: splitter_mode
       parameterType: categorical
       feasibleSpace:
-        list: ["20", "50", "100"]
+        list: ["fixed", "semantic"]
   trialTemplate:
     primaryContainerName: main
     retain: true
@@ -38,10 +55,17 @@ spec:
       - name: chunkOverlap
         description: Chunk overlap for modification
         reference: chunk_overlap
+      - name: topK
+        description: Top K for retrieval
+        reference: top_k
+      - name: splitterMode
+        description: Splitter mode
+        reference: splitter_mode
     trialSpec:
       apiVersion: batch/v1
       kind: Job
       spec:
+        backoffLimit: 0
         template:
           metadata:
             annotations:
@@ -51,6 +75,9 @@ spec:
             containers:
               - name: main
                 image: vellum-ingest:local
+                resources:
+                  limits:
+                    nvidia.com/gpu: 1
                 command:
                   - "python"
                   - "/app/run_ingestion.py"
@@ -64,6 +91,10 @@ spec:
                   - "${trialParameters.chunkSize}"
                   - "--chunk_overlap"
                   - "${trialParameters.chunkOverlap}"
+                  - "--top_k"
+                  - "${trialParameters.topK}"
+                  - "--splitter_mode"
+                  - "${trialParameters.splitterMode}"
                   - "--max_docs"
                   - "2"
                   - "--model_name"

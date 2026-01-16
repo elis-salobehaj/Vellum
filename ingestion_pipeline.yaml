@@ -6,7 +6,6 @@
 #    bucket: str [Default: 'documents']
 #    chunk_overlap: int [Default: 40.0]
 #    chunk_size: int [Default: 512.0]
-#    enable_cache: bool [Default: False]
 #    max_docs: int [Default: 5.0]
 #    minio_endpoint: str [Default: 'minio-service.kubeflow.svc:9000']
 #    model_name: str [Default: 'BAAI/bge-small-en-v1.5']
@@ -183,10 +182,6 @@ root:
         defaultValue: 512.0
         isOptional: true
         parameterType: NUMBER_INTEGER
-      enable_cache:
-        defaultValue: false
-        isOptional: true
-        parameterType: BOOLEAN
       max_docs:
         defaultValue: 5.0
         isOptional: true

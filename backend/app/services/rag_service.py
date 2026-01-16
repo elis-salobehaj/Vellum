@@ -7,11 +7,12 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 import qdrant_client
 from app.core.config import settings
 from app.models.schemas import Citation
-from llama_index.core.node_parser import SemanticSplitterNodeParser
+
 
 # Configure global settings
-# Use BAAI/bge-large-en-v1.5 for better embedding performance (fits in 8GB VRAM)
-LlamaSettings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-large-en-v1.5")
+# Configure global settings
+# Use BAAI/bge-small-en-v1.5 (Tuned Winner: 512/40)
+LlamaSettings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
 class RAGService:
     def __init__(self):
@@ -37,12 +38,11 @@ class RAGService:
         )
         documents = reader.load_data()
         
-        # Configure Semantic Chunking
-        # Uses the embedding model to find "natural breakpoints" in text
-        text_splitter = SemanticSplitterNodeParser(
-            buffer_size=1,
-            breakpoint_percentile_threshold=95,
-            embed_model=LlamaSettings.embed_model
+        # Configure Fixed Splitter (Optimized via Katib: 512/40)
+        from llama_index.core.node_parser import SentenceSplitter
+        text_splitter = SentenceSplitter(
+            chunk_size=512,
+            chunk_overlap=40
         )
         
         # Create index from documents with explicit transformations

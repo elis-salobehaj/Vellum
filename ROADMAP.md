@@ -5,12 +5,11 @@
 - [x] Install **Istio** (Service Mesh)
 - [x] Install **Knative** (Serverless)
 - [x] Install **KFP Dependencies** (MinIO, MySQL)
-- [ ] Install **Cert Manager**
-- [ ] Install **Kubeflow Core Components**:
+- [x] Install **Cert Manager** (via Kubeflow Manifests)
+- [x] Install **Kubeflow Core Components**:
     -   [x] Dashboard (KFP UI)
     -   [x] Pipelines (KFP) + ML Metadata (MLMD)
-    -   [ ] Katib (Tuning)
-    -   [ ] Model Registry
+    -   [x] Katib (Tuning)
 
 > **Status**: Phase 1 Infrastructure Complete. See [Phase 1 Walkthrough](docs/architecture/phase1-infrastructure-walkthrough.md).
 
@@ -30,12 +29,15 @@ Upgrade from "Developer Standalone" to "Production Platform".
 - [x] **Vector DB**: Install Qdrant (Production Grade).
 - [ ] **Migration**: *Moved to Phase 4 (Re-ingestion)*.
 
+> **Status**: Phase 3 Complete. See [Phase 3 Walkthrough](docs/architecture/phase3-platform-upgrade.md).
+
 ## Phase 4: Experimentation & Tuning (Verified on Platform)
 Automate the scientific loop (re-verifying on the new stack).
-- [ ] **Re-verify Katib**: Ensure experiment CRDs work on the new platform.
-- [ ] **Refactor RAG**: Port Ingestion/Retrieval to Qdrant SDK.
-- [ ] **Re-verify RAG Tuning**: Run the 1-doc optimization sweep.
-- [ ] **Hybrid Registry**: Implement promotion workflow (MLflow -> KMR).
+- [x] **Re-verify Katib**: Ensure experiment CRDs work on the new platform.
+- [x] **Refactor RAG**: Port Ingestion/Retrieval to Qdrant SDK.
+- [x] **Re-verify RAG Tuning**: Run the 1-doc optimization sweep.
+
+> **Status**: Phase 4 Complete. See [Phase 4 Walkthrough](docs/architecture/phase4-migration-tuning.md).
 
 ## Phase 5: Production Serving
 Standardize inference on KServe.
@@ -45,3 +47,4 @@ Standardize inference on KServe.
 ## Future / Backlog
 - [ ] **Scale: Spark Operator**: Adopt `SparkApplication` for petabyte-scale ingestion.
 - [ ] **Infrastructure**: Investigate Istio OIDC `Jwt issuer is not configured` error to enable proper `kubectl create token` auth on port 8080.
+- [ ] **MLOps**: Implement **Hybrid Registry** (MLflow -> KMR) and **Model Registry** for versioning/promotion.

@@ -33,7 +33,10 @@ def ingest(
     chunk_overlap: int = 20,
     splitter_mode: str = "fixed",
     breakpoint_threshold: int = 95,
-    max_docs: int = 5
+    max_docs: int = 5,
+    top_k: int = 3,
+    model_name: str = "BAAI/bge-small-en-v1.5",
+    trust_remote_code: bool = False
 ):
     print(f"🚀 Starting ingestion logic (Max Docs: {max_docs})...")
     
@@ -60,8 +63,8 @@ def ingest(
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
     # 3. Configure Embeddings
-    print("⚙️ Loading Embedding Model (BAAI/bge-large-en-v1.5)...")
-    Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-large-en-v1.5")
+    print(f"⚙️ Loading Embedding Model ({model_name})...")
+    Settings.embed_model = HuggingFaceEmbedding(model_name=model_name, trust_remote_code=trust_remote_code)
 
     # 4. Load Documents
     print("📂 Reading documents...")
@@ -135,7 +138,7 @@ def ingest(
         eval_vector_store,
         embed_model=Settings.embed_model
     )
-    retriever = eval_index.as_retriever(similarity_top_k=3)
+    retriever = eval_index.as_retriever(similarity_top_k=top_k)
     
     # Test Query
     query = "agentic ai"
@@ -172,6 +175,9 @@ if __name__ == "__main__":
     parser.add_argument("--splitter_mode", type=str, default="fixed", choices=["fixed", "semantic"])
     parser.add_argument("--breakpoint_threshold", type=int, default=95)
     parser.add_argument("--max_docs", type=int, default=5)
+    parser.add_argument("--top_k", type=int, default=3)
+    parser.add_argument("--model_name", type=str, default="BAAI/bge-small-en-v1.5")
+    parser.add_argument("--trust_remote_code", action="store_true", help="Trust remote code for custom models")
 
     args = parser.parse_args()
     ingest(
@@ -186,5 +192,8 @@ if __name__ == "__main__":
         args.chunk_overlap,
         args.splitter_mode,
         args.breakpoint_threshold,
-        args.max_docs
+        args.max_docs,
+        args.top_k,
+        args.model_name,
+        args.trust_remote_code
     )
