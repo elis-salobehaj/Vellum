@@ -11,3 +11,11 @@ pytest>=8.0.0
 pytest-asyncio
 openai
 tiktoken
+# Minimal llama-index deps for test imports (no heavy ML libs)
+llama-index-core
+llama-index-llms-openai-like
+llama-index-embeddings-openai
+llama-index-vector-stores-qdrant
+qdrant-client
+kfp
+minio

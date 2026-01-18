@@ -16,8 +16,20 @@ jobs:
     # Use Docker Build for consistency and caching via Docker layers (local to runner)
     - name: Build and Run Backend Tests
       run: |
-        docker build --target test --build-arg BUILD_MODE=ci -t backend-test ./backend
+        docker build --target test --build-arg BUILD_MODE=ci -t backend-test -f backend/Dockerfile .
         docker run --rm -e BYPASS_AUTH=true backend-test
+
+  ingestion-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Backend Base Image
+      run: docker build -t vellum-backend:latest -f backend/Dockerfile .
+
+    - name: Build Ingestion Image
+      run: |
+        docker build -t vellum-ingest -f kubeflow/pipelines/ingestion/Dockerfile .
   
   frontend-build:
     runs-on: ubuntu-latest

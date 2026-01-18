@@ -1,7 +1,8 @@
 # Stage 1: Base
 FROM python:3.12-slim AS base
 WORKDIR /app
-ENV PYTHONUNBUFFERED=1 \
+ENV PYTHONPATH=. \
+    PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
@@ -20,8 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-COPY requirements-test.txt .
+COPY backend/requirements.txt .
+COPY backend/requirements-test.txt .
 
 ARG BUILD_MODE="production"
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -38,13 +39,15 @@ FROM base AS test
 ENV PYTHONPATH=/app
 # Copy installed dependencies to system path
 COPY --from=builder /install /usr/local
-COPY . .
+COPY backend/ .
+COPY kubeflow/ kubeflow/
 CMD ["pytest"]
 
 # Stage 4: Production
 FROM base AS production
 # Copy installed dependencies (prod only) to system path
 COPY --from=builder /install /usr/local
-COPY . .
+COPY backend/ .
+COPY kubeflow/ kubeflow/
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

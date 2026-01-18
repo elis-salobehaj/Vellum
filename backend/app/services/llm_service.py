@@ -1,5 +1,4 @@
 from typing import List, Optional, Dict, Any
-import torch
 import os
 from llama_index.llms.openai import OpenAI
 # from llama_index.llms.anthropic import Anthropic
@@ -24,6 +23,86 @@ class LLMService:
              raise ValueError(f"Model ID {model_id} not found")
         return config
 
+    async def _get_llm(self, config: ModelConfig):
+        if config.provider == "openai":
+            api_key = config.api_key or os.getenv("OPENAI_API_KEY")
+            api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+            if not api_key:
+                raise ValueError("Error: OpenAI API Key not configured.")
+            return OpenAI(model=config.id, api_key=api_key, api_base=api_base)
+
+        elif config.provider == "kubeflow":
+            # KServe/LocalAI endpoint. We assume standard OpenAI-compatible protocol.
+            # We use OpenAILike to bypass strict model name validation in LlamaIndex.
+            api_base = config.base_url or os.getenv("LLM_SERVICE_URL")
+            # If still None, default to internal DNS
+            if not api_base:
+                 # Fallback to internal service DNS if not set in env
+                 # Note: "llm-service-predictor" is defined in the deployment for KServe
+                 api_base = "http://llm-service-predictor.kubeflow-user-example-com.svc.cluster.local:80/v1"
+            
+            api_key = config.api_key or "dummy" # Internal services usually don't need real keys
+            
+            from llama_index.llms.openai_like import OpenAILike
+            return OpenAILike(
+                model=config.id, 
+                api_key=api_key, 
+                api_base=api_base,
+                is_chat_model=True,
+                max_tokens=2048
+            )
+
+        elif config.provider == "google":
+             from llama_index.llms.gemini import Gemini
+             api_key = config.api_key or os.getenv("GOOGLE_API_KEY")
+             if not api_key:
+                 raise ValueError("Error: Google API Key not configured.")
+             
+             # Gemini maps 'model' kwarg to specific model name, e.g. models/gemini-1.5-flash
+             # If config.id already lacks "models/", Gemini class might expect it depending on version.
+             # Safe pattern is let the class handle or prepend if needed.
+             # The SDK usually expects "models/gemini-1.5-flash-latest" or similar.
+             model_name = config.id if config.id.startswith("models/") else f"models/{config.id}"
+             return Gemini(model=model_name, api_key=api_key)
+        
+        elif config.provider == "anthropic":
+            raise NotImplementedError("Anthropic provider not yet fully implemented.")
+             
+        else:
+            raise ValueError(f"Provider {config.provider} not supported.")
+
+    async def chat(self, messages: List[Dict[str, str]], model_id: Optional[str] = None) -> str:
+        """
+        Send a list of messages (dicts) to the LLM and get a response string.
+        """
+        from llama_index.core.llms import ChatMessage, MessageRole
+        
+        config = self._get_config(model_id)
+        try:
+            llm = await self._get_llm(config)
+            
+            # Convert dicts to ChatMessage
+            llama_messages = []
+            for msg in messages:
+                role_str = msg.get("role", "user")
+                content = msg.get("content", "")
+                
+                role = MessageRole.USER
+                if role_str == "system":
+                    role = MessageRole.SYSTEM
+                elif role_str == "assistant":
+                    role = MessageRole.ASSISTANT
+                elif role_str == "tool":
+                    role = MessageRole.TOOL
+                    
+                llama_messages.append(ChatMessage(role=role, content=content))
+            
+            response = await llm.achat(llama_messages)
+            return str(response)
+            
+        except Exception as e:
+            return f"Error communicating with LLM: {str(e)}"
+
     async def generate_response(
         self, 
         message: str, 
@@ -31,9 +110,7 @@ class LLMService:
         history: List[Dict[str, str]], 
         model_id: Optional[str] = None
     ) -> str:
-        config = self._get_config(model_id)
-        
-        # Prepare system        # Prepare messages
+        # Prepare system prompt
         system_prompt = (
             "You are an expert AI assistant specializing in Artificial Intelligence, Agentic AI, and Large Language Models (LLMs). "
             "Your goal is to provide technical, accurate, and concise insights based on the provided context.\n"
@@ -46,62 +123,16 @@ class LLMService:
             f"Context:\n{context}\n"
         )
 
-        from llama_index.core.llms import ChatMessage, MessageRole
-
         messages = [
-            ChatMessage(role=MessageRole.SYSTEM, content=system_prompt),
+            {"role": "system", "content": system_prompt},
         ]
         # Append history (limited to last 5 pairs to save tokens)
-        for msg in history[-10:]:
-             role = MessageRole.USER if msg["role"] == "user" else MessageRole.ASSISTANT
-             messages.append(ChatMessage(role=role, content=msg["content"]))
+        for msg in history[-5:]:
+             role = "user" if msg["role"] == "user" else "assistant"
+             messages.append({"role": role, "content": msg["content"]})
         
-        messages.append(ChatMessage(role=MessageRole.USER, content=message))
-
-        try:
-            if config.provider == "openai":
-                # Ensure API key is set
-                api_key = config.api_key or os.getenv("OPENAI_API_KEY")
-                if not api_key:
-                    return "Error: OpenAI API Key not configured."
-                
-                llm = OpenAI(model=config.id, api_key=api_key)
-                response = await llm.achat(messages) # LlamaIndex chat
-                return str(response)
-
-            elif config.provider == "google":
-                from llama_index.llms.gemini import Gemini
-                api_key = config.api_key or os.getenv("GOOGLE_API_KEY")
-                if not api_key:
-                    return "Error: Google API Key not configured."
-                
-                # Gemini maps 'model' kwarg to the specific model name e.g. models/gemini-pro
-                llm = Gemini(model=f"models/{config.id}", api_key=api_key)
-                response = await llm.achat(messages)
-                return str(response)
-            
-            elif config.provider == "anthropic":
-                # Placeholder for Anthropic
-                return "Anthropic provider not yet fully implemented."
-                
-            elif config.provider == "local" or config.provider == "ollama":
-                 from llama_index.llms.ollama import Ollama
-                 
-                 # Using Ollama (requires Ollama running on host or container)
-                 # base_url is from env or default
-                 llm = Ollama(
-                    model=config.id, 
-                    base_url=os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434"),
-                    request_timeout=300.0
-                 )
-                 
-                 response = await llm.achat(messages)
-                 return str(response)
-            
-            else:
-                return f"Provider {config.provider} not supported."
-
-        except Exception as e:
-            return f"Error communicating with LLM: {str(e)}"
+        messages.append({"role": "user", "content": message})
+        
+        return await self.chat(messages, model_id)
 
 llm_service = LLMService()

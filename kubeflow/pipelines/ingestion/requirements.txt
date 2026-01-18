@@ -1,0 +1,10 @@
+llama-index==0.10.50
+llama-index-vector-stores-qdrant
+llama-index-embeddings-huggingface
+llama-index-readers-s3
+qdrant-client
+pypdf
+minio
+boto3
+kfp
+numpy<2.0.0

@@ -22,6 +22,12 @@ interface BackendMessage {
   citations: BackendCitation[];
 }
 
+interface Model {
+  id: string;
+  is_active: boolean;
+  name?: string;
+}
+
 const ChatPage = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
@@ -32,6 +38,10 @@ const ChatPage = () => {
   ]);
   const [selectedSource, setSelectedSource] = useState<Citation | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // State for Models
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   // Auto-scroll
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,6 +60,40 @@ const ChatPage = () => {
     }
   };
   useEffect(scrollToBottom, [messages]);
+
+  // Fetch Models
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const account = accounts[0];
+        let token = "mock-token";
+        if (account) {
+          const response = await instance.acquireTokenSilent({
+            ...loginRequest,
+            account: account
+          });
+          token = response.accessToken;
+        }
+
+        const res = await fetch(`${config.apiUrl}/admin/models`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setModels(data);
+          // Default to active model or first
+          const active = data.find((m: Model) => m.is_active);
+          if (active) setSelectedModel(active.id);
+          else if (data.length > 0) setSelectedModel(data[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch models", err);
+      }
+    };
+    fetchModels();
+  }, [instance, accounts]);
 
   // Load History
   useEffect(() => {
@@ -129,8 +173,8 @@ const ChatPage = () => {
         },
         body: JSON.stringify({
           message: message,
-          model_id: null,
-          session_id: sessionId // Pass session ID
+          model_id: selectedModel || null, // Use selected model
+          session_id: sessionId
         })
       });
 
@@ -172,6 +216,24 @@ const ChatPage = () => {
     <div className="flex h-full overflow-hidden relative">
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative">
+        {/* Header / Model Selector */}
+        <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0">
+          <h2 className="font-semibold text-gray-700">Chat</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Model:</span>
+            <select
+              value={selectedModel}
+              onChange={e => setSelectedModel(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white"
+            >
+              {models.length === 0 && <option value="">Loading...</option>}
+              {models.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
           {messages.map(m => (
             <MessageBubble

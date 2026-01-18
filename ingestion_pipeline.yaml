@@ -1,0 +1,223 @@
+# PIPELINE DEFINITION
+# Name: vellum-ingestion-pipeline
+# Description: Ingests documents from MinIO to Qdrant using LlamaIndex
+# Inputs:
+#    breakpoint_threshold: int [Default: 95.0]
+#    bucket: str [Default: 'documents']
+#    chunk_overlap: int [Default: 40.0]
+#    chunk_size: int [Default: 512.0]
+#    enable_cache: bool [Default: False]
+#    max_docs: int [Default: 15.0]
+#    minio_endpoint: str [Default: 'minio-service.kubeflow.svc:9000']
+#    model_name: str [Default: 'BAAI/bge-small-en-v1.5']
+#    prefix: str [Default: '']
+#    qdrant_host: str [Default: 'qdrant.qdrant.svc.cluster.local']
+#    qdrant_port: int [Default: 6333.0]
+#    splitter_mode: str [Default: 'semantic']
+#    top_k: int [Default: 2.0]
+components:
+  comp-ingest-documents-op:
+    executorLabel: exec-ingest-documents-op
+    inputDefinitions:
+      parameters:
+        breakpoint_threshold:
+          defaultValue: 95.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        bucket:
+          parameterType: STRING
+        chunk_overlap:
+          defaultValue: 40.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        chunk_size:
+          defaultValue: 512.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        max_docs:
+          defaultValue: 15.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        minio_access_key:
+          defaultValue: minio
+          isOptional: true
+          parameterType: STRING
+        minio_endpoint:
+          defaultValue: minio-service.kubeflow.svc:9000
+          isOptional: true
+          parameterType: STRING
+        minio_secret_key:
+          defaultValue: minio123
+          isOptional: true
+          parameterType: STRING
+        model_name:
+          defaultValue: BAAI/bge-small-en-v1.5
+          isOptional: true
+          parameterType: STRING
+        prefix:
+          defaultValue: ''
+          isOptional: true
+          parameterType: STRING
+        qdrant_host:
+          defaultValue: qdrant.qdrant.svc.cluster.local
+          isOptional: true
+          parameterType: STRING
+        qdrant_port:
+          defaultValue: 6333.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        splitter_mode:
+          defaultValue: semantic
+          isOptional: true
+          parameterType: STRING
+        top_k:
+          defaultValue: 2.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+deploymentSpec:
+  executors:
+    exec-ingest-documents-op:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - ingest_documents_op
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.2.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef ingest_documents_op(\n    bucket: str,\n    prefix: str = \"\"\
+          ,\n    minio_endpoint: str = \"minio-service.kubeflow.svc:9000\",\n    minio_access_key:\
+          \ str = \"minio\",\n    minio_secret_key: str = \"minio123\",\n    qdrant_host:\
+          \ str = \"qdrant.qdrant.svc.cluster.local\",\n    qdrant_port: int = 6333,\n\
+          \    chunk_size: int = 512,\n    chunk_overlap: int = 40,\n    splitter_mode:\
+          \ str = \"semantic\",\n    breakpoint_threshold: int = 95,\n    max_docs:\
+          \ int = 15,\n    top_k: int = 2,\n    model_name: str = \"BAAI/bge-small-en-v1.5\"\
+          \n):\n    import subprocess\n    import sys\n\n    print(f\"Launching ingestion\
+          \ from MinIO {bucket}/{prefix}\")\n\n    # Call the script that resides\
+          \ at /app/run_ingestion.py (from Dockerfile)\n    cmd = [\n        \"python\"\
+          , \n        \"/app/run_ingestion.py\",\n        \"--bucket\", bucket,\n\
+          \        \"--prefix\", prefix,\n        \"--minio_endpoint\", minio_endpoint,\n\
+          \        \"--minio_access_key\", minio_access_key,\n        \"--minio_secret_key\"\
+          , minio_secret_key,\n        \"--qdrant_host\", qdrant_host,\n        \"\
+          --qdrant_port\", str(qdrant_port),\n        \"--chunk_size\", str(chunk_size),\n\
+          \        \"--chunk_overlap\", str(chunk_overlap),\n        \"--splitter_mode\"\
+          , splitter_mode,\n        \"--breakpoint_threshold\", str(breakpoint_threshold),\n\
+          \        \"--max_docs\", str(max_docs),\n        \"--top_k\", str(top_k),\n\
+          \        \"--model_name\", model_name\n    ]\n\n    result = subprocess.run(cmd,\
+          \ capture_output=True, text=True)\n\n    print(result.stdout)\n    if result.stderr:\n\
+          \        print(\"STDERR:\", result.stderr, file=sys.stderr)\n\n    if result.returncode\
+          \ != 0:\n        raise RuntimeError(f\"Ingestion failed with code {result.returncode}\"\
+          )\n\n"
+        image: vellum-ingest:local
+pipelineInfo:
+  description: Ingests documents from MinIO to Qdrant using LlamaIndex
+  name: vellum-ingestion-pipeline
+root:
+  dag:
+    tasks:
+      ingest-documents-op:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-ingest-documents-op
+        inputs:
+          parameters:
+            breakpoint_threshold:
+              componentInputParameter: breakpoint_threshold
+            bucket:
+              componentInputParameter: bucket
+            chunk_overlap:
+              componentInputParameter: chunk_overlap
+            chunk_size:
+              componentInputParameter: chunk_size
+            max_docs:
+              componentInputParameter: max_docs
+            minio_endpoint:
+              componentInputParameter: minio_endpoint
+            model_name:
+              componentInputParameter: model_name
+            prefix:
+              componentInputParameter: prefix
+            qdrant_host:
+              componentInputParameter: qdrant_host
+            qdrant_port:
+              componentInputParameter: qdrant_port
+            splitter_mode:
+              componentInputParameter: splitter_mode
+            top_k:
+              componentInputParameter: top_k
+        taskInfo:
+          name: ingest-documents-op
+  inputDefinitions:
+    parameters:
+      breakpoint_threshold:
+        defaultValue: 95.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      bucket:
+        defaultValue: documents
+        isOptional: true
+        parameterType: STRING
+      chunk_overlap:
+        defaultValue: 40.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      chunk_size:
+        defaultValue: 512.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      enable_cache:
+        defaultValue: false
+        isOptional: true
+        parameterType: BOOLEAN
+      max_docs:
+        defaultValue: 15.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      minio_endpoint:
+        defaultValue: minio-service.kubeflow.svc:9000
+        isOptional: true
+        parameterType: STRING
+      model_name:
+        defaultValue: BAAI/bge-small-en-v1.5
+        isOptional: true
+        parameterType: STRING
+      prefix:
+        defaultValue: ''
+        isOptional: true
+        parameterType: STRING
+      qdrant_host:
+        defaultValue: qdrant.qdrant.svc.cluster.local
+        isOptional: true
+        parameterType: STRING
+      qdrant_port:
+        defaultValue: 6333.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      splitter_mode:
+        defaultValue: semantic
+        isOptional: true
+        parameterType: STRING
+      top_k:
+        defaultValue: 2.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.2.0

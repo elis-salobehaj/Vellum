@@ -10,21 +10,16 @@ app = FastAPI(title="Vellum Chatbot API", description="Backend for Vellum Enterp
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:9090",
+        "http://127.0.0.1:9090"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 from app.api.api import api_router
-
-from fastapi.staticfiles import StaticFiles
-
-# Create data/source_documents if not exists (for Docker volume)
-os.makedirs("data/source_documents", exist_ok=True)
-
-# Mount files
-app.mount("/api/v1/files", StaticFiles(directory="data/source_documents"), name="files")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

@@ -1,82 +1,94 @@
-from fastapi import APIRouter, HTTPException, Depends
-from app.models.schemas import ChatRequest, ChatResponse
-from app.services.rag_service import rag_service
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import List, Dict, Any
 from app.services.llm_service import llm_service
+from app.services.rag_service import rag_service
 from app.core.auth import get_current_user
-import uuid
-from app.services.history_service import history_service # Added this import as it's used in the new code
+from app.core.config import settings
+from minio import Minio
 
 router = APIRouter()
 
+from typing import List, Dict, Any, Optional
+# Removed uuid import as generation is now handled by frontend or history service
+
+from app.models.schemas import ChatRequest, ChatResponse, Citation
+
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current_user)):
+async def chat(request: ChatRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Chat endpoint.
+    1. Retrieve relevant context from Qdrant via RAG Service.
+    2. Augment prompt.
+    3. Generate response via LLM Service.
+    """
+    # 0. Handle Session ID (pass-through from request)
+    session_id = request.session_id
+
+    # 1. Retrieve Context
+    context_nodes = await rag_service.query(request.message, k=request.context_window)
+    
+    # Map context nodes to Citations
+    citations = []
+    for node in context_nodes:
+        metadata = node.get("metadata", {})
+        citations.append(Citation(
+            text=node["text"],
+            source=metadata.get("file_name", "unknown"),
+            page=int(metadata.get("page_label", 0)) if metadata.get("page_label") else 0,
+            score=node.get("score")
+        ))
+    
+    # 2. Augment Prompt
+    context_text = "\n\n".join([c.text for c in citations])
+    system_prompt = (
+         "You are an AI assistant for Vellum. "
+         "Use the following context to answer the user's question. "
+         "If the answer is not in the context, say you don't know. "
+         "Answer directly.\n\n"
+         f"Context:\n{context_text}"
+    )
+    
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": request.message}
+    ]
+
+    # 3. Generate Response
+    # Note: We currently ignore request.model_id as the backend is configured centrally or via env.
+    # Future work: Pass model_id to llm_service if dynamic switching is needed.
+    response_text = await llm_service.chat(messages)
+    
+    return ChatResponse(
+        response=response_text, 
+        citations=citations, 
+        session_id=session_id
+    )
+
+@router.get("/files/{filename:path}")
+async def get_file_proxy(filename: str):
+    """
+    Proxy request to MinIO to serve the file directly.
+    """
     try:
-        # Default session ID if not provided (transient session)
-        session_id = request.session_id or str(uuid.uuid4())
-        
-        # Determine model
-        model_id = request.model_id
-        
-        # Get history (for context window)
-        history = history_service.get_messages(session_id)
-        
-        # Get Context from RAG
-        citations = []
-        context = ""
-        # Only use RAG if we have documents (check count or just try)
-        # We let the service handle lazy loading of the index
-        rag_output = await rag_service.query(request.message)
-        
-        # Build context from ALL chunks
-        context = "\n\n".join([c.text for c in rag_output])
-        
-        # Deduplicate citations for UI (Unique by source filename)
-        seen_files = set()
-        citations = []
-        for c in rag_output:
-            if c.source not in seen_files:
-                citations.append(c)
-                seen_files.add(c.source)
-            
-        # Generate Response using History + Context
-        response_text = ""
-        try:
-            response_text = await llm_service.generate_response(
-                message=request.message,
-                context=context,
-                history=history,
-                model_id=model_id
-            )
-            # Save to history only on success
-            history_service.add_message(session_id, "user", request.message)
-            cleaned_response = response_text.replace("assistant: ", "").replace("Assistant: ", "").strip()
-            # Convert citations to dicts for storage
-            # Pydantic v2 uses model_dump(), v1 used dict()
-            citations_dicts = [c.model_dump() for c in citations] if citations else None
-            history_service.add_message(session_id, "assistant", cleaned_response, citations=citations_dicts)
-            
-        except Exception as llm_error:
-            import traceback
-            traceback.print_exc()
-            print(f"LLM Generation Error: {llm_error}", flush=True)
-            cleaned_response = "I found some relevant documents, but I'm having trouble generating a response right now. Please check the sources below."
-
-        return ChatResponse(
-            response=cleaned_response,
-            citations=citations,
-            history=history_service.get_messages(session_id),
-            session_id=session_id
+        # Initialize MinIO client locally for the proxy
+        # We use the internal kubeflow svc endpoint
+        client = Minio(
+            settings.MINIO_ENDPOINT,
+            access_key=settings.MINIO_ACCESS_KEY,
+            secret_key=settings.MINIO_SECRET_KEY,
+            secure=False
         )
-            
+        
+        # Get object from MinIO
+        response = client.get_object(settings.MINIO_BUCKET, filename)
+        
+        # Stream the response back to the user
+        return StreamingResponse(
+            response.stream(32*1024),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"Endpoint Error: {e}", flush=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/ingest")
-async def ingest_documents(current_user: dict = Depends(get_current_user)):
-    # Trigger ingestion
-    # Logic to point to data/source_documents
-    result = await rag_service.ingest_documents("data/source_documents")
-    return result
+        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")

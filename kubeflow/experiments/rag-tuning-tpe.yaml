@@ -1,0 +1,102 @@
+apiVersion: kubeflow.org/v1beta1
+kind: Experiment
+metadata:
+  name: rag-tuning-tpe
+  namespace: kubeflow-user-example-com
+spec:
+  parallelTrialCount: 1
+  maxTrialCount: 35
+  maxFailedTrialCount: 3
+  objective:
+    type: maximize
+    goal: 0.90
+    objectiveMetricName: accuracy
+    additionalMetricNames: []
+  algorithm:
+    algorithmName: tpe
+    algorithmSettings:
+      - name: "random_state"
+        value: "10"
+  metricsCollectorSpec:
+    collector:
+      kind: StdOut
+  parameters:
+    - name: chunk_size
+      parameterType: int
+      feasibleSpace:
+        min: "128"
+        max: "1024"
+        step: "128"
+    - name: chunk_overlap
+      parameterType: int
+      feasibleSpace:
+        min: "0"
+        max: "200"
+        step: "10"
+    - name: top_k
+      parameterType: int
+      feasibleSpace:
+        min: "2"
+        max: "10"
+        step: "1"
+    - name: splitter_mode
+      parameterType: categorical
+      feasibleSpace:
+        list: ["fixed", "semantic"]
+  trialTemplate:
+    primaryContainerName: main
+    retain: true
+    successCondition: status.conditions.#(type=="Complete")#|#(status=="True")#
+    failureCondition: status.conditions.#(type=="Failed")#|#(status=="True")#
+    trialParameters:
+      - name: chunkSize
+        description: Chunk size for modification
+        reference: chunk_size
+      - name: chunkOverlap
+        description: Chunk overlap for modification
+        reference: chunk_overlap
+      - name: topK
+        description: Top K for retrieval
+        reference: top_k
+      - name: splitterMode
+        description: Splitter mode
+        reference: splitter_mode
+    trialSpec:
+      apiVersion: batch/v1
+      kind: Job
+      spec:
+        backoffLimit: 0
+        template:
+          metadata:
+            annotations:
+              sidecar.istio.io/inject: "false"
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: main
+                image: vellum-ingest:local
+                resources:
+                  limits:
+                    nvidia.com/gpu: 1
+                command:
+                  - "python"
+                  - "/app/run_ingestion.py"
+                  - "--bucket"
+                  - "documents"
+                  - "--minio_endpoint"
+                  - "minio-service.kubeflow.svc:9000"
+                  - "--qdrant_host"
+                  - "qdrant.qdrant.svc.cluster.local"
+                  - "--chunk_size"
+                  - "${trialParameters.chunkSize}"
+                  - "--chunk_overlap"
+                  - "${trialParameters.chunkOverlap}"
+                  - "--top_k"
+                  - "${trialParameters.topK}"
+                  - "--splitter_mode"
+                  - "${trialParameters.splitterMode}"
+                  - "--max_docs"
+                  - "2"
+                  - "--model_name"
+                  - "BAAI/bge-small-en-v1.5"
+                imagePullPolicy: Never

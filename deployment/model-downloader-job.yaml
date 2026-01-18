@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-downloader
+  namespace: kubeflow-user-example-com
+spec:
+  template:
+    spec:
+      containers:
+        - name: downloader
+          image: vllm/vllm-openai:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              echo "Cleaning target directory..."
+              rm -rf /mnt/models/Qwen2.5-1.5B-Instruct
+              mkdir -p /mnt/models/Qwen2.5-1.5B-Instruct
+              
+              echo "Downloading Model: Qwen2.5-1.5B-Instruct..."
+              huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct --local-dir /mnt/models/Qwen2.5-1.5B-Instruct --local-dir-use-symlinks False
+              
+              echo "Downloading Embedding Model: BAAI/bge-small-en-v1.5..."
+              rm -rf /mnt/models/bge-small-en-v1.5
+              mkdir -p /mnt/models/bge-small-en-v1.5
+              huggingface-cli download BAAI/bge-small-en-v1.5 --local-dir /mnt/models/bge-small-en-v1.5 --local-dir-use-symlinks False
+
+              echo "Download Complete! Listing files:"
+              ls -R /mnt/models
+          volumeMounts:
+            - name: model-volume
+              mountPath: /mnt/models
+      restartPolicy: OnFailure
+      volumes:
+        - name: model-volume
+          persistentVolumeClaim:
+            claimName: llm-models-pvc
