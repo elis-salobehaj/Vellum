@@ -1,82 +1,89 @@
 import os
-from typing import List
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
+from llama_index.core import VectorStoreIndex, StorageContext, Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.core import Settings as LlamaSettings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.openai import OpenAIEmbedding
 import qdrant_client
 from app.core.config import settings
-from app.models.schemas import Citation
 
+from llama_index.core.postprocessor.types import BaseNodePostprocessor
+from llama_index.core.schema import NodeWithScore, QueryBundle
+from typing import List, Optional
 
-# Configure global settings
-# Configure global settings
-# Use BAAI/bge-small-en-v1.5 (Tuned Winner: 512/40)
-LlamaSettings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+class UniqueFilePostprocessor(BaseNodePostprocessor):
+    """Keep only the first node for each unique file_name."""
+    
+    def _postprocess_nodes(
+        self, nodes: List[NodeWithScore], query_bundle: Optional[QueryBundle] = None
+    ) -> List[NodeWithScore]:
+        unique_files = set()
+        filtered_nodes = []
+        
+        for node_with_score in nodes:
+            file_name = node_with_score.node.metadata.get("file_name")
+            if file_name not in unique_files:
+                unique_files.add(file_name)
+                filtered_nodes.append(node_with_score)
+        
+        return filtered_nodes
 
 class RAGService:
     def __init__(self):
-        self.index = None
-        # Use Qdrant Client (Remote Service)
-        self.client = qdrant_client.QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
-        self.vector_store = QdrantVectorStore(client=self.client, collection_name="vellum_vectors")
+        self.client = qdrant_client.QdrantClient(
+            host=settings.QDRANT_HOST,
+            port=settings.QDRANT_PORT
+        )
+        self.aclient = qdrant_client.AsyncQdrantClient(
+            host=settings.QDRANT_HOST,
+            port=settings.QDRANT_PORT
+        )
+        self.vector_store = QdrantVectorStore(
+            client=self.client,
+            aclient=self.aclient,
+            collection_name=settings.QDRANT_COLLECTION
+        )
         self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
-        
-    async def ingest_documents(self, source_dir: str):
-        """
-        Ingest documents from the directory using LlamaIndex.
-        Uses Semantic Chunking for context-aware splitting.
-        Supports: .pdf, .txt, .md, .docx
-        """
-        if not os.path.exists(source_dir):
-            return {"status": "error", "message": "Directory not found"}
-            
-        reader = SimpleDirectoryReader(
-            input_dir=source_dir, 
-            recursive=True, 
-            required_exts=[".pdf", ".txt", ".md", ".docx"]
-        )
-        documents = reader.load_data()
-        
-        # Configure Fixed Splitter (Optimized via Katib: 512/40)
-        from llama_index.core.node_parser import SentenceSplitter
-        text_splitter = SentenceSplitter(
-            chunk_size=512,
-            chunk_overlap=40
-        )
-        
-        # Create index from documents with explicit transformations
-        self.index = VectorStoreIndex.from_documents(
-            documents, 
-            storage_context=self.storage_context,
-            transformations=[text_splitter]
-        )
-        
-        return {"status": "success", "count": len(documents)}
 
-    async def query(self, question: str, k: int = 3) -> List[Citation]:
-        if not self.index:
-            # Try to load if exists
-            try:
-                self.index = VectorStoreIndex.from_vector_store(
-                    self.vector_store, storage_context=self.storage_context
-                )
-            except Exception as e:
-                print(f"ERROR: Failed to load index from storage: {e}", flush=True)
-                return []
-             
-        # Retrieve nodes
-        retriever = self.index.as_retriever(similarity_top_k=k)
-        nodes = retriever.retrieve(question)
+        # Configure Embedding Model (Remote TEI Service)
+        # We use OpenAIEmbedding client to talk to our self-hosted Text Embeddings Inference service
+        # This removes the need for 'torch' and 'transformers' in the backend.
+        Settings.embed_model = OpenAIEmbedding(
+            model_name=settings.EMBEDDING_MODEL_NAME,
+            api_base=settings.EMBEDDINGS_SERVICE_URL,
+            api_key="EMPTY",
+            embed_batch_size=30
+        )
+
+    async def query(self, query_text: str, k: int = 5):
+        """
+        Query the RAG system using the remote embedding service and Qdrant.
+        """
+        index = VectorStoreIndex.from_vector_store(
+            self.vector_store,
+            storage_context=self.storage_context,
+            embed_model=Settings.embed_model
+        )
+
+        # 1. Configure retriever for Source Diversity using MMR (Maximal Marginal Relevance)
+        retriever = index.as_retriever(
+            similarity_top_k=k * 4, 
+            vector_store_query_mode="mmr",
+            mmr_threshold=0.7
+        )
+        nodes = await retriever.aretrieve(query_text)
         
-        citations = []
-        for node in nodes:
-            citations.append(Citation(
-                source=node.metadata.get("file_name", "unknown"),
-                page=int(node.metadata.get("page_label", 0)) if node.metadata.get("page_label") else 0,
-                text=node.node.get_content(), # Return full text for LLM Context
-                score=node.score
-            ))
-        return citations
+        # 2. Apply Postprocessor for Unique Files
+        postprocessor = UniqueFilePostprocessor()
+        filtered_nodes = postprocessor.postprocess_nodes(nodes)
+        
+        # 3. Format results (limit to k)
+        context = []
+        for node in filtered_nodes[:k]:
+            context.append({
+                "text": node.node.get_text(),
+                "metadata": node.node.metadata,
+                "score": node.score
+            })
+            
+        return context
 
 rag_service = RAGService()

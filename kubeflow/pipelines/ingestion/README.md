@@ -1,39 +1,51 @@
-# Vellum Ingestion Pipeline
+# Vellum Ingestion Pipeline (Ultra-Pro Approach)
 
-This directory contains the Kubeflow Pipeline definition for document ingestion.
+This directory contains the robust, streaming-based ingestion pipeline for Vellum.
 
-## Directory Structure
-- `pipeline.py`: The KFP pipeline definition (using KFP v2 SDK).
-- `Dockerfile`: Dedicated Dockerfile for the ingestion worker.
-- `requirements.txt`: Python dependencies for the ingestion worker (includes `kfp`, `chromadb`, `llama-index`).
-- `scripts/run_ingestion.py`: The core logic script executed by the pipeline.
+## Architecture
 
-## Build Instructions
-To build the ingestion image for the local Minikube environment:
+1.  **Storage (MinIO)**: Documents are stored in the `documents` bucket.
+2.  **Streaming Ingestion**: The ingestion worker (`vellum-ingest`) fetches files one by one directly from MinIO to avoid memory exhaustion (OOM).
+3.  **Vector Store (Qdrant)**: Chunks are embedded using `BAAI/bge-small-en-v1.5` and stored in the `vellum_vectors` collection.
+4.  **Orchestration (Kubeflow)**: The ingestion is managed as a Kubeflow Pipeline (KFP), allowing for scalability, retries, and monitoring.
+
+## How to Trigger Ingestion
+
+### Methodology 1: Via Backend (Recommended)
+The backend provides an endpoint that triggers the Kubeflow pipeline:
+
 ```bash
-# Run from project root
-./scripts/build-ingest-local.sh
+# Triggers the KFP pipeline immediately
+curl -X POST http://localhost:8000/api/v1/ingest
 ```
 
-## Running the Pipeline
-To submit a run to the KFP cluster:
+The call returns a `run_id`. You can track the progress in the Kubeflow Dashboard at `http://localhost:8080/_/pipeline-dashboard/`.
+
+### Methodology 2: CLI (Manual)
+You can run the ingestion script manually using `uv` if you have the dependencies installed. Ensure your port-forwards are active (via `connect.sh`).
+
 ```bash
-# Run from project root
-uv run pipelines/ingestion/submit_run.py
+# Set the embedding service URL to your local port-forward
+export EMBEDDINGS_SERVICE_URL="http://localhost:8082/v1"
+
+# Run from the ingestion directory
+cd kubeflow/pipelines/ingestion
+uv run scripts/run_ingestion.py \
+  --bucket documents \
+  --minio_endpoint localhost:9000 \
+  --qdrant_host localhost \
+  --qdrant_port 6333 \
+  --cleanup
 ```
 
-## MinIO Integration
-The pipeline expects documents in the `documents` bucket in MinIO.
-To upload local documents to MinIO:
-```bash
-# Ensure MinIO is port-forwarded (localhost:9000)
-uv run scripts/upload_to_minio.py --local_dir backend/data/source_documents
-```
+## Configuration
 
-## Dependencies
-The ingestion worker runs in a separate container from the backend API.
-Key dependencies:
-- `kfp`: Required for KFP v2 Python components.
-- `chromadb`: Client library (ensure compatibility with server version).
-- `llama-index`: For document processing and RAG.
-- `boto3/minio`: For fetching documents from S3/MinIO.
+The pipeline behavior is controlled by several parameters:
+- `splitter_mode`: `fixed` (default) or `semantic`.
+- `chunk_size`: Size of chunks (recommended 512-1024).
+- `max_docs`: Limit number of files (default 100).
+
+## Why This Approach?
+- **Isolation**: Ingestion runs in a separate pod, keeping the frontend/backend stable.
+- **Scalability**: Can process thousands of large PDFs without crashing.
+- **Observability**: Every ingestion run is logged and versioned in Kubeflow.

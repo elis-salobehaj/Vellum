@@ -1,7 +1,7 @@
 import time
 from kfp import Client
 
-def submit_run(chunk_size=512, chunk_overlap=40, max_docs=2, top_k=2, splitter_mode="semantic", model_name="BAAI/bge-small-en-v1.5", enable_cache=False):
+def submit_run(chunk_size=512, chunk_overlap=40, max_docs=2, top_k=2, splitter_mode="semantic", model_name="BAAI/bge-small-en-v1.5", enable_cache=False, embeddings_service_url="http://embeddings-service.kubeflow-user-example-com/v1", cleanup=False):
     client = Client(host='http://localhost:8888', namespace='kubeflow-user-example-com')
     
     # Aggressively inject header into all underlying API clients
@@ -25,7 +25,9 @@ def submit_run(chunk_size=512, chunk_overlap=40, max_docs=2, top_k=2, splitter_m
             'top_k': top_k,
             'splitter_mode': splitter_mode,
             'model_name': model_name,
-            'enable_cache': enable_cache
+            'enable_cache': enable_cache,
+            'embeddings_service_url': embeddings_service_url,
+            'cleanup': cleanup
         },
         run_name=f'ingestion-run-{int(time.time())}'
     )
@@ -42,6 +44,8 @@ if __name__ == '__main__':
     parser.add_argument('--splitter_mode', type=str, default="semantic")
     parser.add_argument('--model_name', type=str, default="BAAI/bge-small-en-v1.5")
     parser.add_argument('--enable_cache', action='store_true', help="Enable KFP caching")
+    parser.add_argument('--embeddings_service_url', type=str, default="http://embeddings-service.kubeflow-user-example-com/v1")
+    parser.add_argument('--cleanup', action='store_true', help="Cleanup collection before ingestion")
     args = parser.parse_args()
 
-    submit_run(args.chunk_size, args.chunk_overlap, args.max_docs, args.top_k, args.splitter_mode, args.model_name, args.enable_cache)
+    submit_run(args.chunk_size, args.chunk_overlap, args.max_docs, args.top_k, args.splitter_mode, args.model_name, args.enable_cache, args.embeddings_service_url, args.cleanup)

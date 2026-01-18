@@ -97,8 +97,8 @@ resources:
 # User namespace
 - manifests/common/user-namespace/base
 # KServe (DISABLED to save resources)
-# - manifests/applications/kserve/kserve
-# - manifests/applications/kserve/models-web-app/overlays/kubeflow
+- manifests/applications/kserve/kserve
+- manifests/applications/kserve/models-web-app/overlays/kubeflow
 # Spark Operator (DISABLED to save resources)
 # - manifests/applications/spark/spark-operator/overlays/kubeflow
 

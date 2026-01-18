@@ -60,18 +60,36 @@ def test_history_service_logic():
         assert "Hello" in recent[0]["title"]
 
 # --- LLM Service Tests ---
-def test_llm_service_config():
+@pytest.mark.asyncio
+async def test_llm_service_providers():
     clean_sys_modules()
+    
+    # Mock Google and OpenAILike imports
+    sys.modules["llama_index.llms.gemini"] = MagicMock()
+    sys.modules["llama_index.llms.openai_like"] = MagicMock()
+    
     from app.services import llm_service as ls_module
+    from app.models.schemas import ModelConfig
     reload(ls_module)
     
     service = ls_module.LLMService()
     
-    # Test finding existing model
-    config = service._get_config("gpt-4")
-    assert config.id == "gpt-4"
-    assert config.provider == "openai"
+    # 1. Test OpenAI
+    config_openai = ModelConfig(id="gpt-4", name="GPT4", provider="openai", api_key="sk-test")
+    llm = await service._get_llm(config_openai)
+    assert llm.model == "gpt-4"
     
-    # Test invalid
+    # 2. Test Kubeflow
+    config_kfp = ModelConfig(id="qwen", name="Qwen", provider="kubeflow", base_url="http://kfp:80")
+    llm = await service._get_llm(config_kfp)
+    # OpenAILike mock check
+    
+    # 3. Test Google
+    with patch.dict("os.environ", {"GOOGLE_API_KEY": "fake-key"}):
+        config_google = ModelConfig(id="gemini-1.5", name="Gemini", provider="google")
+        await service._get_llm(config_google)
+        # Should succeed with mock
+        
+    # 4. Invalid
     with pytest.raises(ValueError):
-        service._get_config("non-existent-model-id-999")
+        await service._get_llm(ModelConfig(id="bad", name="bad", provider="unknown"))

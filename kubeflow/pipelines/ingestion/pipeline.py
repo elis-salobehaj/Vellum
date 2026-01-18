@@ -17,14 +17,19 @@ def ingest_documents_op(
     chunk_overlap: int = 40,
     splitter_mode: str = "semantic",
     breakpoint_threshold: int = 95,
-    max_docs: int = 5,
+    max_docs: int = 15,
     top_k: int = 2,
-    model_name: str = "BAAI/bge-small-en-v1.5"
+    model_name: str = "BAAI/bge-small-en-v1.5",
+    embeddings_service_url: str = "http://embeddings-service.kubeflow-user-example-com/v1",
+    cleanup: bool = False
 ):
     import subprocess
     import sys
     
     print(f"Launching ingestion from MinIO {bucket}/{prefix}")
+    
+    import os
+    os.environ["EMBEDDINGS_SERVICE_URL"] = embeddings_service_url
     
     # Call the script that resides at /app/run_ingestion.py (from Dockerfile)
     cmd = [
@@ -45,6 +50,8 @@ def ingest_documents_op(
         "--top_k", str(top_k),
         "--model_name", model_name
     ]
+    if cleanup:
+        cmd.append("--cleanup")
     
     result = subprocess.run(cmd, capture_output=True, text=True)
     
@@ -69,9 +76,11 @@ def ingestion_pipeline(
     chunk_overlap: int = 40,
     splitter_mode: str = "semantic",
     breakpoint_threshold: int = 95,
-    max_docs: int = 5,
+    max_docs: int = 15,
     top_k: int = 2,
     model_name: str = "BAAI/bge-small-en-v1.5",
+    embeddings_service_url: str = "http://embeddings-service.kubeflow-user-example-com/v1",
+    cleanup: bool = False,
     enable_cache: bool = False
 ):
     # Create the task
@@ -87,7 +96,9 @@ def ingestion_pipeline(
         breakpoint_threshold=breakpoint_threshold,
         max_docs=max_docs,
         top_k=top_k,
-        model_name=model_name
+        model_name=model_name,
+        embeddings_service_url=embeddings_service_url,
+        cleanup=cleanup
     )
     if not enable_cache:
         task.set_caching_options(False)
@@ -99,5 +110,5 @@ def ingestion_pipeline(
 if __name__ == '__main__':
     compiler.Compiler().compile(
         pipeline_func=ingestion_pipeline,
-        package_path='ingestion_pipeline.yaml'
+        package_path='/tmp/ingestion_pipeline.yaml'
     )

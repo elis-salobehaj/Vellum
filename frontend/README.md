@@ -1,36 +1,35 @@
 # Vellum Frontend
 
-The modern React-based frontend for the Vellum Chatbot.
+Modern Chat Interface built with React 19, Vite, and Tailwind CSS v4.
 
-## Technology Stack
-- **Framework**: React 19 + Vite
-- **Styling**: Tailwind CSS v4
-- **Formatting**: `@tailwindcss/typography` (prose), `react-markdown`
-- **Animation**: Framer Motion
-- **Auth**: `@azure/msal-react`
-- **Routing**: React Router v7
+## Features
 
-## Key Features
-- **Responsive Chat Interface**: Animated input, auto-scrolling message list.
-- **Markdown Rendering**: Supports bold, italics, lists, code blocks, and tables.
-- **Admin Dashboard**: (`/admin`) for model configuration.
-- **SSO Integration**: Microsoft Entra ID login flow.
+-   **Streaming Chat**: Real-time token streaming.
+-   **Citations**: Displays source documents (PDFs) with accuracy scores.
+-   **Markdown Support**: Renders tables, code blocks, and lists.
+-   **Dark/Light Mode**: System-aware theming.
 
-## Local Development
+## Development
 
-```bash
-# Install dependencies
-npm install
+The frontend expects the backend to be available at `/api/v1`.
 
-# Run dev server
-npm run dev
-```
+1.  **Install**:
+    ```bash
+    npm install
+    ```
 
-## Environment Variables
-Create `.env` based on `.env.example`:
-```env
-VITE_API_URL=http://localhost:8000/api/v1
-VITE_AZURE_CLIENT_ID=...
-VITE_AZURE_AUTHORITY=...
-VITE_BYPASS_AUTH=true  # For dev testing
-```
+2.  **Run (Local)**:
+    ```bash
+    npm run dev
+    # Runs on http://localhost:5173 (proxies to backend:8000)
+    ```
+
+3.  **Run (Production)**:
+    In Kubernetes, this is served via Nginx on port **9090**.
+
+## Configuration
+
+| Variable | Description |
+| :--- | :--- |
+| `VITE_API_URL` | Backend API URL (default: `/api/v1`) |
+| `VITE_BYPASS_AUTH` | Disable login for dev |

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embeddings-service
+  namespace: kubeflow-user-example-com
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embeddings-service
+  template:
+    metadata:
+      labels:
+        app: embeddings-service
+    spec:
+      containers:
+      - name: tei
+        image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        command: ["text-embeddings-router"]
+        args:
+          - "--model-id"
+          - "/mnt/models/bge-small-en-v1.5"
+          - "--port"
+          - "80"
+          - "--cors-allow-origin"
+          - "*"
+          - "--auto-truncate"
+          - "--max-client-batch-size"
+          - "128"
+          - "--max-batch-tokens"
+          - "65536"
+        volumeMounts:
+        - name: model-volume
+          mountPath: /mnt/models
+        ports:
+        - containerPort: 80
+      volumes:
+      - name: model-volume
+        persistentVolumeClaim:
+          claimName: llm-models-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: embeddings-service
+  namespace: kubeflow-user-example-com
+spec:
+  selector:
+    app: embeddings-service
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80

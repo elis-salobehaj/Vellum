@@ -1,40 +1,45 @@
-# Vellum Backend
+# Vellum Backend API
 
-The Python FastAPI backend for the Vellum Chatbot.
+A lightweight FastAPI service acting as the central router for the Vellum chatbot.
 
-## Technology Stack
-- **Framework**: FastAPI
-- **LLM Orchestration**: LlamaIndex
-- **Vector DB**: ChromaDB (Persistent)
-- **Local LLMs**: Ollama integration
-- **Embeddings**: `BAAI/bge-large-en-v1.5` (HuggingFace)
+## Architecture Change (Phase 5)
 
-## Key Features
-- **RAG Pipeline**: Ingests documents from `data/source_documents` and indexes them.
-- **Model Management**: API to plug in different Ollama models (Mistral, Llama 3, Gemma).
-- **History Service**: Stores chat sessions.
-- **Secure API**: MSAL token validation (optional/configurable).
+This backend has been **decoupled** from heavy ML operations:
+-   **NO** `torch` or `transformers` dependencies embedded.
+-   **Ingestion**: Offloaded to Kubeflow Pipelines (triggered via `POST /admin/ingest`).
+-   **Embeddings**: Delegated to the remote TEI (`text-embeddings-inference`) service.
 
-## Local Development
+## Key Endpoints
 
-```bash
-# Create venv
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate
+### Chat
+-   `POST /api/v1/chat`: Main RAG endpoint.
+    -   Retrieves context from Qdrant (via TEI embeddings).
+    -   Generates response via LLM Service.
 
-# Install dependencies
-pip install -r requirements.txt
+### Admin
+-   `POST /api/v1/admin/ingest`: Triggers a new ingestion run on Kubeflow.
+    -   Payload: `{"bucket": "documents", "cleanup": true}`
 
-# Run server
-uvicorn main:app --reload
-```
+## Local Development (Kubernetes Proxy)
 
-## Docker Configuration
-- **Ollama**: Connects to `kbase-ai-ollama` container.
-- **Data Persistence**: Maps `data/` to container volume.
-- **Optimization**: `.dockerignore` excludes `venv` to speed up builds.
+Since dependencies are external, you need the platform running:
 
-## API Endpoints
-- `GET /api/v1/health`: Health check
-- `POST /api/v1/chat`: Chat interaction
-- `GET /api/v1/admin/models`: List available LLMs
+1.  Start Platform:
+    ```bash
+    ../scripts/setup-platform.sh
+    ../scripts/connect.sh
+    ```
+
+2.  Run Backend (if not using the K8s pod):
+    ```bash
+    python -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    
+    # Env vars must point to forwarded ports
+    export QDRANT_HOST=localhost
+    export QDRANT_PORT=6333
+    export EMBEDDINGS_SERVICE_URL=http://localhost:8082
+    
+    uvicorn main:app --reload
+    ```

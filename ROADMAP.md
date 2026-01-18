@@ -39,12 +39,17 @@ Automate the scientific loop (re-verifying on the new stack).
 
 > **Status**: Phase 4 Complete. See [Phase 4 Walkthrough](docs/architecture/phase4-migration-tuning.md).
 
-## Phase 5: Production Serving
-Standardize inference on KServe.
-- [ ] **Custom Predictor**: Wrap LlamaIndex application in KServe V2 Protocol.
-- [ ] **Deployment**: Deploy `InferenceService` with scale-to-zero.
+## Phase 5: Production Ingestion & Serving (Scalable Architecture)
+Decouple Monolith to Microservices & Event-Driven Architecture.
+- [x] **Distribute Ingestion**: Move ingestion logic from Backend to Kubeflow Pipelines (KFP).
+- [x] **Streaming ETL**: Implement iterative S3 streaming to handle 1000s of files (OOM-proof).
+- [x] **Lightweight Backend**: Remove all ML dependencies (`torch`, `transformers`) from API server.
+- [x] **Self-Hosted Embeddings**: Deploy TEI (`text-embeddings-inference`) Service for low-latency vectorization.
+- [x] **KServe Inference**: Deploy LLM as a KServe `InferenceService` with Custom Predictor.
 
 ## Future / Backlog
-- [ ] **Scale: Spark Operator**: Adopt `SparkApplication` for petabyte-scale ingestion.
 - [ ] **Infrastructure**: Investigate Istio OIDC `Jwt issuer is not configured` error to enable proper `kubectl create token` auth on port 8080.
 - [ ] **MLOps**: Implement **Hybrid Registry** (MLflow -> KMR) and **Model Registry** for versioning/promotion.
+- [ ] **Auth: Service Account Integration**: Port KFP/Infra triggers from hardcoded user IDs to secure Kubernetes Service Account tokens.
+- [ ] **Scale: Spark Operator**: Adopt `SparkApplication` for petabyte-scale ingestion.
+- [ ] **Security**: Implement true RBAC in Admin API by decoding OIDC roles/groups from the JWT token (e.g., allow only `groups: [admins]`).

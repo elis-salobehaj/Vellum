@@ -1,32 +1,8 @@
-import sys
-from unittest.mock import MagicMock, AsyncMock
-
-# Mock heavy dependencies BEFORE importing main to avoid model downloads
-mock_rag_service = MagicMock()
-mock_rag_service.rag_service = MagicMock()
-mock_rag_service.rag_service.query = AsyncMock(return_value=[])
-sys.modules["app.services.rag_service"] = mock_rag_service
-
-mock_llm_service = MagicMock()
-mock_llm_service.llm_service = MagicMock()
-mock_llm_service.llm_service.generate_response = AsyncMock(return_value="Mocked Response")
-sys.modules["app.services.llm_service"] = mock_llm_service
-
-# Mock history service
-mock_history_service = MagicMock()
-mock_history_service.history_service = MagicMock()
-mock_history_service.history_service.get_messages.return_value = []
-
-# Mock get_recent_conversations for history test
-mock_history_service.history_service.get_recent_conversations.return_value = [
-    {"id": "1", "title": "Test Chat", "date": "2023-01-01"}
-]
-
-
-sys.modules["app.services.history_service"] = mock_history_service
-
+import pytest
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from main import app
+from app.api.endpoints.admin import MODEL_CONFIGS
 
 client = TestClient(app)
 
@@ -37,65 +13,86 @@ def test_read_main():
 
 def test_health_check():
     response = client.get("/health")
-    # Health check doesn't use services, so it should pass
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
-def test_chat_endpoint():
-    response = client.post("/api/v1/chat", json={"message": "Hello", "model_id": "mistral"})
+@patch("app.api.endpoints.chat.rag_service.query", new_callable=AsyncMock)
+@patch("app.api.endpoints.chat.llm_service.chat", new_callable=AsyncMock)
+@patch("app.services.history_service.history_service.get_messages")
+def test_chat_endpoint(mock_get_msgs, mock_chat, mock_query):
+    # Mock the service layer functions that the endpoint calls
+    mock_query.return_value = [{"text": "context", "metadata": {"file_name": "test.pdf", "page_label": "1"}, "score": 0.9}]
+    mock_chat.return_value = "Test response"
+    mock_get_msgs.return_value = [] 
+
+    # Payload includes new fields
+    response = client.post("/api/v1/chat", json={
+        "message": "Hello", 
+        "context_window": 3,
+        "model_id": "gpt-4"
+    })
+    
     assert response.status_code == 200
     data = response.json()
-    assert data["response"] == "Mocked Response"
-    assert "session_id" in data
+    assert data["response"] == "Test response"
+    assert len(data["citations"]) == 1
+    assert data["session_id"] is None # Should NOT generate a new one if not provided
+    
+    mock_chat.assert_called_once()
+    mock_query.assert_called_with("Hello", k=3)
 
 def test_chat_validation_error():
-    # Missing required message field
-    response = client.post("/api/v1/chat", json={"model_id": "mistral"})
+    # Missing message is 422
+    response = client.post("/api/v1/chat", json={"context_window": 5})
+    # Only context_window provided, message missing -> 422
     assert response.status_code == 422
 
 def test_admin_models_crud():
-    # 1. GET Models
+    original_len = len(MODEL_CONFIGS)
+    
+    # 1. GET
     response = client.get("/api/v1/admin/models")
     assert response.status_code == 200
-    models = response.json()
-    assert isinstance(models, list)
-    assert len(models) >= 1
+    assert len(response.json()) == original_len
     
-    # 2. POST New Model
-    new_model_id = "test-model-custom"
+    # 2. POST
     new_model = {
-        "id": new_model_id,
+        "id": "test-model-custom",
         "name": "Test Model",
         "provider": "ollama",
         "is_active": True
     }
-    response = client.post("/api/v1/admin/models", json=new_model)
-    assert response.status_code == 200
-    created = response.json()
-    assert created["id"] == new_model_id
-    assert created["is_active"] is True
+    
+    try:
+        response = client.post("/api/v1/admin/models", json=new_model)
+        assert response.status_code == 200
+        assert response.json()["id"] == "test-model-custom"
+        
+        # 3. Verify
+        response = client.get("/api/v1/admin/models")
+        assert len(response.json()) == original_len + 1
+        
+        # 4. Duplicate
+        response = client.post("/api/v1/admin/models", json=new_model)
+        assert response.status_code == 400
+        
+    finally:
+        # Cleanup: remove the added model
+        MODEL_CONFIGS[:] = [m for m in MODEL_CONFIGS if m.id != "test-model-custom"]
 
-    # 3. Verify it appears in list and active state
-    response = client.get("/api/v1/admin/models")
-    models = response.json()
-    model_obj = next((m for m in models if m["id"] == new_model_id), None)
-    assert model_obj is not None
-    assert model_obj["is_active"] is True
-
-    # 4. Error on Duplicate
-    response = client.post("/api/v1/admin/models", json=new_model)
-    assert response.status_code == 400
-
-def test_history_endpoints():
-    # 1. GET Recent History
+@patch("app.services.history_service.history_service.get_recent_conversations")
+@patch("app.services.history_service.history_service.get_messages")
+def test_history_endpoints(mock_get_msgs, mock_get_recent):
+    mock_get_recent.return_value = [{"id": "1", "title": "Test Chat", "date": "2023-01-01"}]
+    mock_get_msgs.return_value = []
+    
+    # 1. GET Recent
     response = client.get("/api/v1/history/")
     assert response.status_code == 200
-    history = response.json()
-    assert len(history) == 1
-    assert history[0]["title"] == "Test Chat"
-
-    # 2. GET Specific Session (mocked to return empty list messages)
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Test Chat"
+    
+    # 2. GET Session
     response = client.get("/api/v1/history/session_123")
     assert response.status_code == 200
     assert response.json() == []
-

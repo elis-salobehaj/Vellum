@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: kubeflow-user-example-com
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: vellum-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PROJECT_NAME
+          value: "Vellum"
+        - name: API_V1_STR
+          value: "/api/v1"
+        - name: VECTOR_STORE
+          value: "qdrant"
+        - name: QDRANT_HOST
+          value: "qdrant.qdrant.svc.cluster.local"
+        - name: QDRANT_PORT
+          value: "6333"
+        - name: LLM_SERVICE_URL
+          value: "http://llm-service-predictor.kubeflow-user-example-com.svc.cluster.local:80/v1"
+        - name: OPENAI_API_BASE
+          value: "https://api.openai.com/v1"
+        - name: OPENAI_API_KEY
+          value: "dummy"
+        - name: BYPASS_AUTH
+          value: "True"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: kubeflow-user-example-com
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP

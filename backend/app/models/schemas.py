@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
     # History passed from frontend (deprecated if using server-side session, but kept for compat)
     history: Optional[List[Dict[str, Any]]] = []
     session_id: Optional[str] = None
+    context_window: int = 5
 
 class ChatResponse(BaseModel):
     response: str
@@ -29,3 +30,8 @@ class ChatResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     history: Optional[List[Dict[str, Any]]] = None
     session_id: Optional[str] = None
+
+class IngestRequest(BaseModel):
+    bucket: Optional[str] = None
+    prefix: Optional[str] = ""
+    cleanup: bool = False

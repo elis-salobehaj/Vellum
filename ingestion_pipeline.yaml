@@ -6,7 +6,8 @@
 #    bucket: str [Default: 'documents']
 #    chunk_overlap: int [Default: 40.0]
 #    chunk_size: int [Default: 512.0]
-#    max_docs: int [Default: 5.0]
+#    enable_cache: bool [Default: False]
+#    max_docs: int [Default: 15.0]
 #    minio_endpoint: str [Default: 'minio-service.kubeflow.svc:9000']
 #    model_name: str [Default: 'BAAI/bge-small-en-v1.5']
 #    prefix: str [Default: '']
@@ -34,7 +35,7 @@ components:
           isOptional: true
           parameterType: NUMBER_INTEGER
         max_docs:
-          defaultValue: 5.0
+          defaultValue: 15.0
           isOptional: true
           parameterType: NUMBER_INTEGER
         minio_access_key:
@@ -107,7 +108,7 @@ deploymentSpec:
           \ str = \"qdrant.qdrant.svc.cluster.local\",\n    qdrant_port: int = 6333,\n\
           \    chunk_size: int = 512,\n    chunk_overlap: int = 40,\n    splitter_mode:\
           \ str = \"semantic\",\n    breakpoint_threshold: int = 95,\n    max_docs:\
-          \ int = 5,\n    top_k: int = 2,\n    model_name: str = \"BAAI/bge-small-en-v1.5\"\
+          \ int = 15,\n    top_k: int = 2,\n    model_name: str = \"BAAI/bge-small-en-v1.5\"\
           \n):\n    import subprocess\n    import sys\n\n    print(f\"Launching ingestion\
           \ from MinIO {bucket}/{prefix}\")\n\n    # Call the script that resides\
           \ at /app/run_ingestion.py (from Dockerfile)\n    cmd = [\n        \"python\"\
@@ -182,8 +183,12 @@ root:
         defaultValue: 512.0
         isOptional: true
         parameterType: NUMBER_INTEGER
+      enable_cache:
+        defaultValue: false
+        isOptional: true
+        parameterType: BOOLEAN
       max_docs:
-        defaultValue: 5.0
+        defaultValue: 15.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       minio_endpoint:

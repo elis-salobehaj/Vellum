@@ -1,20 +1,10 @@
-FROM python:3.10-slim
+FROM vellum-backend:latest
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Ensure we have the latest ingestion script and required readers
+RUN pip install llama-index-readers-s3
+COPY kubeflow/pipelines/ingestion/scripts/run_ingestion.py /app/run_ingestion.py
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy Ingestion Script
-COPY scripts/run_ingestion.py /app/run_ingestion.py
-
-# Create data directory
-RUN mkdir -p /app/data/downloads
-
+# Redefine entrypoint for the ingestion task
 ENTRYPOINT ["python", "/app/run_ingestion.py"]

@@ -1,0 +1,43 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llm-service
+  namespace: kubeflow-user-example-com
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    containers:
+      - name: kserve-container
+        image: vllm/vllm-openai:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+        args:
+          - "--model"
+          - "/mnt/models/Qwen2.5-1.5B-Instruct"
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "8080"
+          - "--gpu-memory-utilization"
+          - "0.8" # Adjusted for 8GB VRAM with system overhead (6.94GB free)
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: 8Gi
+          requests:
+            nvidia.com/gpu: 1
+            memory: 6Gi
+        volumeMounts:
+          - name: model-volume
+            mountPath: /mnt/models
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+    volumes:
+      - name: model-volume
+        persistentVolumeClaim:
+          claimName: llm-models-pvc

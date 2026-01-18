@@ -2,7 +2,7 @@
 set -e
 
 echo "🐳 Building Ingestion Image..."
-docker build -t vellum-ingest:local -f pipelines/ingestion/Dockerfile pipelines/ingestion
+docker build -t vellum-ingest:local -f kubeflow/pipelines/ingestion/Dockerfile kubeflow/pipelines/ingestion
 
 echo "📦 Loading into Minikube..."
 minikube image load vellum-ingest:local

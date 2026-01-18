@@ -8,10 +8,11 @@ SECRET_KEY = "minio123"
 BUCKET = "documents"
 
 SOURCE_DIR = "/mnt/d/projects/Vellum/backend/data/source_documents"
-FILES_TO_UPLOAD = [
-    "OpenAI a-practical-guide-to-building-agents.pdf",
-    "Architectures for Building Agentic AI.pdf"
-]
+# FILES_TO_UPLOAD = [
+#     "OpenAI a-practical-guide-to-building-agents.pdf",
+#     "Architectures for Building Agentic AI.pdf"
+# ]
+FILES_TO_UPLOAD = [f for f in os.listdir(SOURCE_DIR) if os.path.isfile(os.path.join(SOURCE_DIR, f))]
 
 def reset_and_upload():
     print(f"🔌 Connecting to MinIO at {MINIO_ENDPOINT}...")
