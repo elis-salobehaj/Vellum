@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v1.2.0...Vellum-v2.0.0) (2026-01-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* Vellum v2.0.0 - MLOps Platform & Microservices Architecture ([#7](https://github.com/elis-salobehaj/Vellum/issues/7))
+
+### Features
+
+* Vellum v2.0.0 - MLOps Platform & Microservices Architecture ([#7](https://github.com/elis-salobehaj/Vellum/issues/7)) ([161d375](https://github.com/elis-salobehaj/Vellum/commit/161d375e712dbe38bfbd0c9a7fb6bee437d34645))
+
 ## [1.2.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v1.1.0...Vellum-v1.2.0) (2025-12-29)
 
 
