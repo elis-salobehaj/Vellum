@@ -26,7 +26,7 @@ except ImportError:
 HEAVY_LIBS = [
     # "llama_index.embeddings.openai", # Handled manually below
     "sentence_transformers",
-    "chromadb",
+    "qdrant_client",
     "torch"
 ]
 

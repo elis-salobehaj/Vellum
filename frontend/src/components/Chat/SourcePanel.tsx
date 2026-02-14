@@ -1,5 +1,6 @@
 import { FileText, X } from 'lucide-react';
 import type { Citation } from '../../types';
+import { config } from '../../config';
 
 interface SourcePanelProps {
   source: Citation | null;
@@ -28,7 +29,7 @@ const SourcePanel = ({ source, onClose }: SourcePanelProps) => {
 
         <div className="mb-6">
           <a
-            href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/files/${source.source}`}
+            href={`${config.apiUrl}/files/${source.source}`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center text-blue-600 hover:underline text-sm"

@@ -2,7 +2,7 @@ apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
   name: llm-service
-  namespace: kubeflow-user-example-com
+  namespace: kubeflow-vellum
   annotations:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:

@@ -72,7 +72,7 @@ const ChatPage = () => {
             ...loginRequest,
             account: account
           });
-          token = response.accessToken;
+          token = response.idToken;
         }
 
         const res = await fetch(`${config.apiUrl}/admin/models`, {
@@ -107,7 +107,7 @@ const ChatPage = () => {
               ...loginRequest,
               account: account
             });
-            token = response.accessToken;
+            token = response.idToken;
           }
 
           // Fetch history for this session
@@ -162,7 +162,8 @@ const ChatPage = () => {
           ...loginRequest,
           account: account
         });
-        token = response.accessToken;
+        token = response.idToken;
+
       }
 
       const response = await fetch(`${config.apiUrl}/chat`, {

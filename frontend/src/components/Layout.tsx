@@ -3,6 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { MessageSquare, Settings, LogOut, Plus } from 'lucide-react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from '../authConfig';
+import { config } from '../config';
 
 const Sidebar = () => {
   const [history, setHistory] = React.useState<Array<{ id: string; title?: string }>>([]);
@@ -15,12 +16,13 @@ const Sidebar = () => {
       const account = accounts[0];
       let token = "mock-token";
 
-      if (account) {
+      if (account && !config.auth.bypassAuth) {
         const response = await instance.acquireTokenSilent({
           ...loginRequest,
           account: account
         });
-        token = response.accessToken;
+        token = response.idToken;
+
       }
 
       // NOTE: Trailing slash is CRITICAL here. 

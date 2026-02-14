@@ -1,0 +1,20 @@
+# This file defines internal routing and namespace access for Vellum.
+# It is intentionally DECOUPLED from the main Kubeflow Gateway on port 8080
+# to avoid conflicts between Dex auth and Vellum's Entra ID auth.
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: vellum-ns-auth
+  namespace: kubeflow-vellum
+spec:
+  action: ALLOW
+  rules:
+  # Allow any valid authenticated user carrying an Azure JWT
+  - from:
+    - source:
+        requestPrincipals: ["*"]
+  # Allow internal service-to-service traffic
+  - from:
+    - source:
+        namespaces: ["kubeflow-vellum", "kubeflow", "istio-system"]

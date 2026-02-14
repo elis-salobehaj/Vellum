@@ -1,24 +1,19 @@
 import React from 'react';
-import { useMsal } from "@azure/msal-react";
-import { Navigate, useLocation } from "react-router-dom";
-
-import { InteractionStatus } from "@azure/msal-browser";
+import { useIsAuthenticated } from "@azure/msal-react";
+import { Navigate, useLocation } from 'react-router-dom';
+import { config } from '../config';
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { accounts, inProgress } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
   const location = useLocation();
 
-  if (import.meta.env.VITE_BYPASS_AUTH === 'true') {
-    return children;
+  if (config.auth.bypassAuth) {
+    return <>{children}</>;
   }
 
-  if (accounts.length > 0) {
-    return children;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (inProgress !== InteractionStatus.None) {
-    return <div className="flex items-center justify-center h-screen">Loading authentication...</div>;
-  }
-
-  return <Navigate to="/login" state={{ from: location }} replace />;
+  return <>{children}</>;
 }

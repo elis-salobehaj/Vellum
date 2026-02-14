@@ -54,7 +54,7 @@ def run_pipeline():
     # Actually, KFP Client accepts 'existing_token' or we can set headers on the context.
     
     # Newer KFP SDK approach for headers:
-    # client._client.api_client.default_headers['kubeflow-userid'] = 'user@example.com'
+    # client._client.api_client.default_headers['kubeflow-userid'] = 'vellum@example.com'
     
     # Let's try passing it via cookies or verify if we need to authenticate via Dex.
     # Since we are port-forwarding to ml-pipeline service directly (bypassing Istio Gateway), 
@@ -72,12 +72,12 @@ def run_pipeline():
             api_instance = getattr(client, api_name)
             if hasattr(api_instance, 'api_client'):
                 print(f"DEBUG: Setting header on {api_name}")
-                api_instance.api_client.default_headers["kubeflow-userid"] = "user@example.com"
+                api_instance.api_client.default_headers["kubeflow-userid"] = "vellum@example.com"
             else:
                 print(f"DEBUG: {api_name} has no api_client")
     
     # Create Experiment
-    experiment = client.create_experiment(name="End-to-End Verification", namespace="kubeflow-user-example-com")
+    experiment = client.create_experiment(name="End-to-End Verification", namespace="kubeflow-vellum")
     print(f"DEBUG: Experiment object: {experiment}")
     # Handle different object types
     exp_id = getattr(experiment, 'id', getattr(experiment, 'experiment_id', None))

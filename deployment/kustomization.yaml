@@ -102,6 +102,17 @@ resources:
 # Spark Operator (DISABLED to save resources)
 # - manifests/applications/spark/spark-operator/overlays/kubeflow
 
+# Vellum Applications
+- llm-models-pvc.yaml
+- llm-service.yaml
+- embeddings-service.yaml
+- model-downloader-job.yaml
+- vellum-backend.yaml
+- vellum-backend-rbac.yaml
+- vellum-frontend.yaml
+- vellum-istio.yaml
+
+
 # Ray is an experimental integration
 # Here is the documentation for Ray: https://docs.ray.io/en/latest/
 # Here is the internal documentation for Ray: - manifests/experimental/ray/README.md

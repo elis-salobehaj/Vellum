@@ -9,16 +9,28 @@ class KFPService:
         self.client = None
 
     def get_client(self):
-        if not self.client:
-            try:
-                self.client = kfp.Client(host=self.host)
-                # Inject auth header for multi-user Kubeflow
-                for key, value in self.client.__dict__.items():
-                    if hasattr(value, 'api_client'):
-                        value.api_client.default_headers['kubeflow-userid'] = 'user@example.com'
-            except Exception as e:
-                print(f"ERROR: Could not connect to KFP at {self.host}: {e}")
-        return self.client
+        """Lazy initialization of the KFP client with auth headers."""
+        if self.client:
+            return self.client
+            
+        try:
+            self.client = kfp.Client(host=self.host)
+            # Inject auth headers for multi-user Kubeflow environments
+            # This ensures we have permission to trigger runs in the vellum namespace
+            self._inject_auth_headers(self.client)
+            return self.client
+        except Exception as e:
+            # We use the system logger if available, otherwise fallback to print for visibility in logs
+            print(f"ERROR: KFP Connection failed at {self.host}: {e}")
+            return None
+
+    def _inject_auth_headers(self, client):
+        """Helper to inject necessary identity headers into KFP internal API clients."""
+        for attr_name, attr_value in client.__dict__.items():
+            if hasattr(attr_value, 'api_client'):
+                # Both headers are used by various Kubeflow ingress/auth configurations
+                attr_value.api_client.default_headers['kubeflow-userid'] = 'vellum@example.com'
+                attr_value.api_client.default_headers['X-Goog-Authenticated-User-Email'] = 'vellum@example.com'
 
     async def trigger_ingestion(self, bucket: str = None, prefix: str = "", cleanup: bool = False):
         client = self.get_client()
@@ -57,7 +69,8 @@ class KFPService:
             run_result = client.create_run_from_pipeline_package(
                 pipeline_file=yaml_path,
                 arguments=params,
-                experiment_name="Vellum_Ingestion"
+                experiment_name="Vellum_Ingestion",
+                namespace="kubeflow-vellum"
             )
             
             return {

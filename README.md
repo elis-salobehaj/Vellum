@@ -163,6 +163,6 @@ Vellum/
 
 ## Troubleshooting
 
--   **"CrashLoopBackOff"**: Check logs with `kubectl -n kubeflow-user-example-com logs <pod>`.
+-   **"CrashLoopBackOff"**: Check logs with `kubectl -n kubeflow-vellum logs <pod>`.
 -   **"Connection Refused"**: Ensure you ran `./scripts/connect.sh`.
 -   **"401 Unauthorized"**: KFP requires `kubeflow-userid` header (handled by backend).

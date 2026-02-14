@@ -33,7 +33,7 @@ COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 COPY . .
-ENV VITE_BYPASS_AUTH=true
+ENV VITE_BYPASS_AUTH=$VITE_BYPASS_AUTH
 CMD ["npx", "playwright", "test"]
 
 # Stage 5: Production

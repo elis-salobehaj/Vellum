@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
-  namespace: kubeflow-user-example-com
+  namespace: kubeflow-vellum
   labels:
     app: frontend
 spec:
@@ -21,12 +21,15 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: vellum-env
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend
-  namespace: kubeflow-user-example-com
+  namespace: kubeflow-vellum
 spec:
   selector:
     app: frontend

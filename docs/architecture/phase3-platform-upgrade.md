@@ -10,7 +10,7 @@ We deleted the `kubeflow` namespace and replaced standalone installs with the of
 -   **Old Stack**: Manual Bitnami Helm Charts (MinIO, MySQL), Standalone KFP.
 -   **New Stack**: `kubeflow/manifests` v1.11.0.
     -   **Istio**: Ingress Gateway, mTLS.
-    -   **Dex**: OIDC Authentication (`user@example.com`).
+    -   **Dex**: OIDC Authentication (`vellum@example.com`).
     -   **KFP v2.2.0+**: Uses `ghcr.io` images (Fixed `gcr.io` deprecation issues).
 
 ### 2. Tuned for Minikube
@@ -36,7 +36,7 @@ We deleted the `kubeflow` namespace and replaced standalone installs with the of
 ```bash
 ./scripts/connect.sh
 ```
-**Login**: `user@example.com` / `12341234`
+**Login**: `vellum@example.com` / `12341234`
 
 ## Next Steps (Phase 4)
 1.  **Refactor Ingestion**: Update code to use `QdrantVectorStore`.

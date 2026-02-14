@@ -1,15 +1,15 @@
 import time
 from kfp import Client
 
-def submit_run(chunk_size=512, chunk_overlap=40, max_docs=2, top_k=2, splitter_mode="semantic", model_name="BAAI/bge-small-en-v1.5", enable_cache=False, embeddings_service_url="http://embeddings-service.kubeflow-user-example-com/v1", cleanup=False):
-    client = Client(host='http://localhost:8888', namespace='kubeflow-user-example-com')
+def submit_run(chunk_size=512, chunk_overlap=40, max_docs=2, top_k=2, splitter_mode="semantic", model_name="BAAI/bge-small-en-v1.5", enable_cache=False, embeddings_service_url="http://embeddings-service.kubeflow-vellum/v1", cleanup=False):
+    client = Client(host='http://localhost:8888', namespace='kubeflow-vellum')
     
     # Aggressively inject header into all underlying API clients
     # SDK v2 hides the raw api_client, but it's used inside _run_api, _experiment_api, etc.
     for key, value in client.__dict__.items():
         if hasattr(value, 'api_client'):
             print(f"Injecting auth header into {key}...")
-            value.api_client.default_headers['kubeflow-userid'] = 'user@example.com'
+            value.api_client.default_headers['kubeflow-userid'] = 'vellum@example.com'
     
     print("🚀 Submitting Ingestion Pipeline...")
     run = client.create_run_from_pipeline_package(
@@ -32,7 +32,7 @@ def submit_run(chunk_size=512, chunk_overlap=40, max_docs=2, top_k=2, splitter_m
         run_name=f'ingestion-run-{int(time.time())}'
     )
     print(f"✅ Run submitted! ID: {run.run_id}")
-    print(f"🔗 View run: http://localhost:8080/_/pipeline/?ns=kubeflow-user-example-com#/runs/details/{run.run_id}")
+    print(f"🔗 View run: http://localhost:8080/_/pipeline/?ns=kubeflow-vellum#/runs/details/{run.run_id}")
 
 if __name__ == '__main__':
     import argparse
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('--splitter_mode', type=str, default="semantic")
     parser.add_argument('--model_name', type=str, default="BAAI/bge-small-en-v1.5")
     parser.add_argument('--enable_cache', action='store_true', help="Enable KFP caching")
-    parser.add_argument('--embeddings_service_url', type=str, default="http://embeddings-service.kubeflow-user-example-com/v1")
+    parser.add_argument('--embeddings_service_url', type=str, default="http://embeddings-service.kubeflow-vellum/v1")
     parser.add_argument('--cleanup', action='store_true', help="Cleanup collection before ingestion")
     args = parser.parse_args()
 

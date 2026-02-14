@@ -6,6 +6,8 @@ import remarkBreaks from 'remark-breaks';
 
 import type { Citation, Message } from '../../types';
 
+import { config } from '../../config';
+
 interface MessageBubbleProps {
   message: Message;
   onCitationClick: (citation: Citation) => void;
@@ -45,7 +47,7 @@ const MessageBubble = ({ message, onCitationClick }: MessageBubbleProps) => {
               {message.citations.map((c, i) => (
                 <div key={i} className="flex items-center gap-1 rounded-md bg-blue-50 border border-blue-100 overflow-hidden hover:bg-blue-100 transition-colors">
                   <a
-                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/files/${c.source}`}
+                    href={`${config.apiUrl}/files/${c.source}`}
                     target="_blank"
                     rel="noreferrer"
                     className="px-2 py-1 text-blue-700 text-xs flex items-center gap-1 hover:underline"

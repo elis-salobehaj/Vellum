@@ -26,10 +26,10 @@ class Settings(BaseSettings):
     
     # Embeddings
     EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
-    EMBEDDINGS_SERVICE_URL: str = "http://embeddings-service.kubeflow-user-example-com/v1"
+    EMBEDDINGS_SERVICE_URL: str = "http://embeddings-service.kubeflow-vellum.svc.cluster.local/v1"
     
     # Security
-    BYPASS_AUTH: bool = True
+    BYPASS_AUTH: bool = False
     
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
