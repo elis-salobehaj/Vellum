@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.0.0...Vellum-v2.1.0) (2026-02-15)
+
+
+### Features
+
+* fix ingestion pipeline, update RBAC policies, and migrate to Qdrant ([f8a9fbb](https://github.com/elis-salobehaj/Vellum/commit/f8a9fbb680fe41314f2bada2d7b793871b0e3e67))
+
+
+### Bug Fixes
+
+* resolve backend test failures and correct qdrant mocking ([6e6a508](https://github.com/elis-salobehaj/Vellum/commit/6e6a508bc44391116b4bb13f490fa3d77e4b072c))
+
 ## [2.0.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v1.2.0...Vellum-v2.0.0) (2026-01-18)
 
 
