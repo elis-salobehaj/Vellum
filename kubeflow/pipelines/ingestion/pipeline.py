@@ -20,7 +20,7 @@ def ingest_documents_op(
     max_docs: int = 15,
     top_k: int = 2,
     model_name: str = "BAAI/bge-small-en-v1.5",
-    embeddings_service_url: str = "http://embeddings-service.kubeflow-user-example-com/v1",
+    embeddings_service_url: str = "http://embeddings-service.kubeflow-vellum/v1",
     cleanup: bool = False
 ):
     import subprocess
@@ -79,7 +79,7 @@ def ingestion_pipeline(
     max_docs: int = 15,
     top_k: int = 2,
     model_name: str = "BAAI/bge-small-en-v1.5",
-    embeddings_service_url: str = "http://embeddings-service.kubeflow-user-example-com/v1",
+    embeddings_service_url: str = "http://embeddings-service.kubeflow-vellum/v1",
     cleanup: bool = False,
     enable_cache: bool = False
 ):
@@ -103,9 +103,7 @@ def ingestion_pipeline(
     if not enable_cache:
         task.set_caching_options(False)
     
-    # Force use of local image in Minikube
-    # task.set_image_pull_policy("Never") # Not supported in V2 SDK directly on task
-    # We rely on Minikube finding the image locally.
+    # Reliance on default IfNotPresent for non-latest tags
 
 if __name__ == '__main__':
     compiler.Compiler().compile(

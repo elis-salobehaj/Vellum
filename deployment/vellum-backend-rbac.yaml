@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vellum-backend-sa
+  namespace: kubeflow-vellum
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vellum-backend-admin-binding
+  namespace: kubeflow-vellum
+subjects:
+- kind: ServiceAccount
+  name: vellum-backend-sa
+  namespace: kubeflow-vellum
+roleRef:
+  kind: ClusterRole
+  name: kubeflow-admin
+  apiGroup: rbac.authorization.k8s.io

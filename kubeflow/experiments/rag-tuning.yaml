@@ -2,7 +2,7 @@ apiVersion: kubeflow.org/v1beta1
 kind: Experiment
 metadata:
   name: rag-tuning-v4
-  namespace: kubeflow-user-example-com
+  namespace: kubeflow-vellum
 spec:
   parallelTrialCount: 6
   maxTrialCount: 12

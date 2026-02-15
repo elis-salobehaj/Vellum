@@ -11,7 +11,7 @@ NAMESPACES=(
     "knative-serving"
     "knative-eventing"
     "knative-operator"
-    "kubeflow-user-example-com"
+    "kubeflow-vellum"
     "qdrant"
     "kubeflow-system"
 )

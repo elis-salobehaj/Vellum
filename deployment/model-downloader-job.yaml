@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: model-downloader
-  namespace: kubeflow-user-example-com
+  namespace: kubeflow-vellum
 spec:
   template:
     spec:

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { loginRequest } from '../authConfig';
 import { useNavigate } from 'react-router-dom';
+import { loginRequest } from '../authConfig';
+import { config } from '../config';
 
 const LoginPage = () => {
   const { instance } = useMsal();
@@ -10,7 +11,7 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated || config.auth.bypassAuth) {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);

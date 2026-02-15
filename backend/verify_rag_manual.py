@@ -8,8 +8,8 @@ sys.path.append(os.path.join(os.getcwd(), 'backend'))
 load_dotenv()
 
 # Mock Settings if needed, but we used env vars
-os.environ["CHROMA_HOST"] = "localhost"
-os.environ["CHROMA_PORT"] = "8001"
+os.environ["QDRANT_HOST"] = "localhost"
+os.environ["QDRANT_PORT"] = "6333"
 
 try:
     from app.services.rag_service import rag_service

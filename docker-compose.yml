@@ -1,0 +1,53 @@
+services:
+  # Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: production
+      args:
+        - BUILD_MODE=production
+    image: vellum-backend:latest
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # These are pulled from the root .env file by Docker Compose
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_AZURE_CLIENT_ID=${VITE_AZURE_CLIENT_ID}
+        - VITE_AZURE_TENANT_ID=${VITE_AZURE_TENANT_ID}
+        - VITE_AZURE_AUTHORITY=${VITE_AZURE_AUTHORITY}
+        - VITE_BYPASS_AUTH=${VITE_BYPASS_AUTH}
+    image: vellum-frontend:latest
+    ports:
+      - "9090:80"
+    depends_on:
+      - backend
+
+  # Ingestion Pipeline Service (Utility)
+  ingestion:
+    build:
+      context: .
+      dockerfile: kubeflow/pipelines/ingestion/Dockerfile
+    image: vellum-ingest:local
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    # This service is meant to be run manually or as part of a pipeline, 
+    # not necessarily as a long-running container.
+    profiles:
+      - utility

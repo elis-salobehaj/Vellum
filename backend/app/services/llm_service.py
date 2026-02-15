@@ -39,7 +39,7 @@ class LLMService:
             if not api_base:
                  # Fallback to internal service DNS if not set in env
                  # Note: "llm-service-predictor" is defined in the deployment for KServe
-                 api_base = "http://llm-service-predictor.kubeflow-user-example-com.svc.cluster.local:80/v1"
+                 api_base = "http://llm-service-predictor.kubeflow-vellum.svc.cluster.local:80/v1"
             
             api_key = config.api_key or "dummy" # Internal services usually don't need real keys
             

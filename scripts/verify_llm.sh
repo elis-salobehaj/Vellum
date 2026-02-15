@@ -1,5 +1,5 @@
 #!/bin/bash
-NAMESPACE="kubeflow-user-example-com"
+NAMESPACE="kubeflow-vellum"
 POD=$(kubectl get pod -n $NAMESPACE -l app=backend -o jsonpath='{.items[0].metadata.name}')
 
 echo "Backend Pod: $POD"

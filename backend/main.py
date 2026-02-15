@@ -21,12 +21,12 @@ app.add_middleware(
 
 from app.api.api import api_router
 
+# Core API routes from api_router
+# We include them twice: once at root for legacy/direct access (e.g., /health, /files)
+# and once with the Version 1 prefix (e.g., /api/v1/health)
+app.include_router(api_router)
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
     return {"message": "Welcome to Vellum API"}
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}

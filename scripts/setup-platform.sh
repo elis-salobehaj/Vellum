@@ -14,6 +14,12 @@ if ! command -v helm &> /dev/null; then
     exit 1
 fi
 
+# 1.1 Create/Configure Namespace for Profile Controller Adoption
+echo "🌐 Configuring kubeflow-vellum namespace..."
+# We pre-create the Namespace with the correct labels so the Profile Controller (installed later)
+# will adopt it instead of failing. The actual Profile CR is applied in Step 2 via deployment/kustomization.yaml.
+kubectl apply -f deployment/vellum-namespace.yaml
+
 # 2. Install Kubeflow Manifests (v1.11.0)
 echo "📦 Applying Kubeflow Manifests (this may take a few minutes)..."
 
@@ -65,5 +71,9 @@ echo "⏳ Waiting for Central Dashboard to be ready..."
 kubectl wait --for=condition=ready pod -l app=centraldashboard -n kubeflow --timeout=300s
 
 echo "✅ Platform Setup Complete!"
-echo "➡️  Access the Dashboard: ./scripts/connect.sh"
-echo "   Login: user@example.com / 12341234"
+echo "➡️  Next Step: Deploy the Application:"
+echo "   ./scripts/deploy-local.sh"
+echo "   (This will build the frontend/backend images and deploy them)"
+echo ""
+echo "➡️  Then Access the Dashboard: ./scripts/connect.sh"
+echo "   Login: vellum@example.com / 12341234"

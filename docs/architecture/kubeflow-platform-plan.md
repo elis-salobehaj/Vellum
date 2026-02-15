@@ -58,7 +58,7 @@ graph TD
     -   Apply `kubeflow/manifests` (v1.9).
     -   Wait for all pods (Istio, CertManager, KFP, Katib, Auth).
 3.  **Access**: Port-forward the Istio Gateway (`localhost:8080`).
-4.  **Verify**: Log in (default: `user@example.com`) and see the Central Dashboard.
+4.  **Verify**: Log in (default: `vellum@example.com`) and see the Central Dashboard.
 
 ## Decision
 Proceeding with **Option B**. This moves us from "Developer Playground" to "SRE Platform" architecture.

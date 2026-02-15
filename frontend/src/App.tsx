@@ -7,8 +7,10 @@ import AdminPage from './pages/AdminPage';
 import { RequireAuth } from './components/RequireAuth';
 
 function App() {
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, "");
+
   return (
-    <Router>
+    <Router basename={basename}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={

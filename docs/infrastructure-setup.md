@@ -40,7 +40,7 @@ minikube start --cpus 6 --memory 12288 --disk-size=40g --driver=docker
 We provide a helper script to install all components in the correct order:
 -   **Kubeflow Manifests (v1.11.0)**: Core MLOps components (KFP, Katib, Dashboard).
 -   **Istio**: Service Mesh & Ingress.
--   **Dex**: OIDC Authentication (`user@example.com`).
+-   **Dex**: OIDC Authentication (`vellum@example.com`).
 -   **Qdrant**: Vector Database for RAG.
 -   **OAuth2 Proxy**: Fixes for dashboard authentication.
 
@@ -62,7 +62,7 @@ Once installation is complete, use the connection helper to establish port-forwa
 
 Access the UI:
 -   **URL**: [http://localhost:8080](http://localhost:8080)
--   **Email**: `user@example.com`
+-   **Email**: `vellum@example.com`
 -   **Password**: `12341234`
 
 ## Troubleshooting

@@ -48,10 +48,9 @@ def ingest(
     
     # 2. Configure Embeddings (Remote TEI Service)
     print(f"⚙️ Connecting to Remote Embedding Service ({model_name})...")
-    from llama_index.embeddings.openai import OpenAIEmbedding
     Settings.embed_model = OpenAIEmbedding(
         model_name=model_name,
-        api_base=os.getenv("EMBEDDINGS_SERVICE_URL", "http://embeddings-service.kubeflow-user-example-com/v1"),
+        api_base=os.getenv("EMBEDDINGS_SERVICE_URL", "http://embeddings-service.kubeflow-vellum/v1"),
         api_key="EMPTY",
         embed_batch_size=30
     )
