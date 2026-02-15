@@ -31,7 +31,7 @@ tags:
   - react19
 completion:
   - [x] Phase 1 — Design System Foundation
-  - [ ] Phase 2 — Core Layout & Navigation Overhaul
+  - [x] Phase 2 — Core Layout & Navigation Overhaul
   - [ ] Phase 3 — Chat Experience Redesign
   - [ ] Phase 4 — State Management & API Layer
   - [ ] Phase 5 — Theming & Dark Mode
@@ -103,26 +103,26 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 **Goal**: Replace the monolithic `Layout.tsx` with a modern, collapsible sidebar layout.
 
 ### 2.1 Sidebar Redesign
-- [ ] Create `frontend/src/components/layout/AppSidebar.tsx` — collapsible sidebar using shadcn `Sheet` (mobile) and CSS transitions (desktop).
-- [ ] Implement thread/history list with shadcn `ScrollArea` and `Button` primitives.
-- [ ] Add "New Chat" button with `+` icon and keyboard shortcut (`Ctrl+N`).
-- [ ] Show app branding: Vellum logo + version badge.
-- [ ] Add user profile section at bottom (avatar, name from MSAL, sign-out button).
+- [x] Create `frontend/src/components/layout/AppSidebar.tsx` — collapsible sidebar using shadcn `Sheet` (mobile) and CSS transitions (desktop).
+- [x] Implement thread/history list with shadcn `ScrollArea` and `Button` primitives.
+- [x] Add "New Chat" button with `+` icon and keyboard shortcut (`Ctrl+N`).
+- [x] Show app branding: Vellum logo + version badge.
+- [x] Add user profile section at bottom (avatar, name from MSAL, sign-out button).
 
 ### 2.2 App Shell
-- [ ] Create `frontend/src/components/layout/AppLayout.tsx` — replaces `Layout.tsx`.
-- [ ] Implement responsive breakpoints: collapsed sidebar on mobile, expanded on desktop.
-- [ ] Add top-level command bar / model selector in the header area.
+- [x] Create `frontend/src/components/layout/AppLayout.tsx` — replaces `Layout.tsx`.
+- [x] Implement responsive breakpoints: collapsed sidebar on mobile, expanded on desktop.
+- [x] Add top-level command bar / model selector in the header area.
 
 ### 2.3 Remove Unused Components
-- [ ] **Delete** `frontend/src/components/Chat/SourcePanel.tsx` — the right-side panel is not useful (confirmed by user).
-- [ ] Remove all `SourcePanel` references from `ChatPage.tsx` (the `selectedSource` state, the `onCitationClick` callback, and the panel rendering).
-- [ ] Simplify citation rendering in `MessageBubble.tsx` — citations become inline download links only.
+- [x] **Delete** `frontend/src/components/Chat/SourcePanel.tsx` — the right-side panel is not useful (confirmed by user).
+- [x] Remove all `SourcePanel` references from `ChatPage.tsx` (the `selectedSource` state, the `onCitationClick` callback, and the panel rendering).
+- [x] Simplify citation rendering in `MessageBubble.tsx` — citations become inline download links only.
 
 ### 2.4 Login Page Update
-- [ ] Update branding from "kbase-ai" to "Vellum".
-- [ ] Style with shadcn `Card` + `Button` components.
-- [ ] Add subtle background gradient or pattern.
+- [x] Update branding from "kbase-ai" to "Vellum".
+- [x] Style with shadcn `Card` + `Button` components.
+- [x] Add subtle background gradient or pattern.
 
 **Files created/modified**:
 - `frontend/src/components/layout/AppSidebar.tsx` (new)

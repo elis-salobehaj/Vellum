@@ -5,11 +5,11 @@ import { useMsal } from "@azure/msal-react";
 import { loginRequest } from '../authConfig';
 
 import MessageBubble from '../components/Chat/MessageBubble';
-import SourcePanel from '../components/Chat/SourcePanel';
 import ChatInput from '../components/Chat/ChatInput';
+import { Header } from '../components/layout/Header';
 import { logger } from '../lib/logger';
 
-import type { Citation, Message } from '../types';
+import type { Message } from '../types';
 
 interface BackendCitation {
   source: string;
@@ -37,7 +37,6 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Hello! I am Vellum. How can I help you analyze your documents today?' }
   ]);
-  const [selectedSource, setSelectedSource] = useState<Citation | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // State for Models
@@ -222,29 +221,17 @@ const ChatPage = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative">
         {/* Header / Model Selector */}
-        <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0">
-          <h2 className="font-semibold text-gray-700">Chat</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Model:</span>
-            <select
-              value={selectedModel}
-              onChange={e => setSelectedModel(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white"
-            >
-              {models.length === 0 && <option value="">Loading...</option>}
-              {models.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <Header
+          models={models}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+        />
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
           {messages.map(m => (
             <MessageBubble
               key={m.id}
               message={m}
-              onCitationClick={setSelectedSource}
             />
           ))}
           {isProcessing && (
@@ -261,11 +248,6 @@ const ChatPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Right Panel (Sources) */}
-      {selectedSource && (
-        <SourcePanel source={selectedSource} onClose={() => setSelectedSource(null)} />
-      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
-import Layout from './components/Layout';
+import AppLayout from '@/components/layout/AppLayout';
 import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
@@ -20,7 +20,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={
           <RequireAuth>
-            <Layout />
+            <AppLayout />
           </RequireAuth>
         }>
           <Route path="/" element={<ChatPage />} />

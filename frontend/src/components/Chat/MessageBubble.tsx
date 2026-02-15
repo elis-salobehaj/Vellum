@@ -4,16 +4,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 
-import type { Citation, Message } from '../../types';
+import type { Message } from '../../types';
 
 import { config } from '../../config';
 
 interface MessageBubbleProps {
   message: Message;
-  onCitationClick: (citation: Citation) => void;
 }
 
-const MessageBubble = ({ message, onCitationClick }: MessageBubbleProps) => {
+const MessageBubble = ({ message }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -58,14 +57,6 @@ const MessageBubble = ({ message, onCitationClick }: MessageBubbleProps) => {
                   >
                     [{i + 1}] {c.source}
                   </a>
-                  <button
-                    onClick={() => onCitationClick(c)}
-                    className="px-1 py-1 text-blue-400 hover:text-blue-600 border-l border-blue-100"
-                    title="View Preview"
-                  >
-                    <span className="sr-only">Preview</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                  </button>
                 </div>
               ))}
             </div>
