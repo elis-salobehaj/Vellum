@@ -1,4 +1,6 @@
 venv
+.venv
+.uv
 __pycache__
 .git
 .env

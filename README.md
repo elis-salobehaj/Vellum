@@ -9,7 +9,8 @@ This platform is designed to run on **Kubernetes** (Minikube for local dev).
 **Prerequisites**:
 - Docker & Minikube
 - `kubectl` & `helm`
-- Python 3.12+ (for scripts)
+- **uv** (Python 3.12+ package manager)
+- **pnpm** (Node.js package manager)
 
 **Launch Platform**:
 ```bash
@@ -32,6 +33,20 @@ After setup, use the connect script to port-forward all services:
 
 ---
 
+## 📖 Documentation Hub
+
+Comprehensive documentation is located in the [**docs/**](./docs/README.md) directory.
+
+| Guide | Description |
+| :--- | :--- |
+| 🚀 [**Getting Started**](./docs/guides/GETTING_STARTED.md) | First-time installation, prerequisites, and Minikube setup. |
+| 💻 [**Development Guide**](./docs/guides/DEVELOPMENT.md) | Running locally, hybrid development mode, and critical commands. |
+| 🏰 [**Architecture**](./docs/context/ARCHITECTURE.md) | Deep dive into the stack, project structure, and code conventions. |
+| 🔐 [**Authentication**](./docs/guides/AUTHENTICATION.md) | Details on Entra ID SSO, Dex, and security configuration. |
+| 🧪 [**RAG Ingestion**](./docs/guides/INGESTION_VERIFICATION.md) | How to trigger and verify the Kubeflow ingestion pipeline. |
+
+---
+
 ## 📋 Table of Contents
 
 - [Features](#features)
@@ -40,6 +55,7 @@ After setup, use the connect script to port-forward all services:
 - [Configuration](#configuration)
 - [Ingestion Pipeline](#ingestion-pipeline)
 - [Project Structure](#project-structure)
+- [Development & Testing](#development--testing)
 - [Troubleshooting](#troubleshooting)
 
 ## Features
@@ -60,44 +76,25 @@ After setup, use the connect script to port-forward all services:
 
 ## Architecture
 
-**Vellum** follows a phased architectural evolution, designed for high scalability and enterprise security.
+Vellum is built on a **Decoupled Microservices Architecture** designed for high scalability and enterprise security.
 
-### Phase 1: The Foundation (Infrastructure)
-Establishment of the core Kubernetes operators:
--   **Service Mesh**: Istio for mTLS and traffic management.
--   **Serverless**: Knative for scale-to-zero inference.
--   **ML Platform**: Kubeflow Pipelines (KFP), Katib (Tuning), and ML Metadata.
+### 🌐 System Overview
 
-### Phase 2: Modern Data Engineering
-Migration from legacy scripts to robust data pipelines:
--   **Data Lineage**: Explicit Input/Output artifacts in KFP.
--   **Retrieval API**: RAG implementation with Qdrant.
--   **Streaming ETL**: iterative S3 streaming for large-scale ingestion.
+- **Frontend**: A modern React 19 application providing a seamless chat interface with built-in Entra ID SSO.
+- **Backend (API Gatekeeper)**: A lightweight FastAPI service that manages user sessions, chat history, and retrieval-augmented generation (RAG) queries.
+- **Distributed Ingestion**: Orchestrated by **Kubeflow Pipelines (KFP)**, handling document parsing, semantic chunking, and vectorization in isolated ML-optimized environments.
+- **Vector Storage**: **Qdrant** provides high-performance vector search and metadata filtering.
+- **AI Infrastructure**:
+    - **Embeddings**: Dedicated **TEI** (`text-embeddings-inference`) service for low-latency vectorization.
+    - **Inference**: Support for external LLM providers (OpenAI, Gemini) and self-hosted models via **KServe**.
 
-### Phase 3: Platform Engineering
-Production-grade platform upgrades:
--   **Unified Dashboard**: Central UI for KFP, Katib, and Notebooks.
--   **Identity Provider**: OIDC integration (Dex/Entra ID) for secure multi-user access.
--   **Vector Storage**: Qdrant (Production Grade) replacing basic vector stores.
+### 🏗️ Design Principles
 
-### Phase 4: Experimentation & Tuning
-Automating the scientific loop:
--   **Hyperparameter Tuning**: Katib experiments for RAG optimization.
--   **Verification**: automated validation of RAG performance.
+1. **Decoupled Execution**: Heavy ML workloads are strictly isolated from the API path, ensuring the backend remains responsive and lightweight.
+2. **Kubeflow Native**: Every data move is tracked and versioned through the Kubeflow ML platform.
+3. **Security First**: mTLS via **Istio** and identity-aware proxying via **Dex**.
 
-### Phase 5: Production Ingestion & Serving (Current)
-Decoupled Microservices Architecture:
--   **Distributed Ingestion**: KFP pipelines handle document processing (S3 -> Text -> Embedding -> Qdrant).
--   **Lightweight Backend**: API server stripped of heavy ML dependencies (`torch`, `transformers`).
--   **Remote Services**:
-    -   **Embeddings**: Dedicated **TEI** (`text-embeddings-inference`) service.
-    -   **Inference**: Integration with external LLM APIs or KServe.
-
-### Phase 6: Advanced Security & Scaling (Planned)
-Enterprise hardening:
--   **Auth**: Kubernetes Service Account tokens for KFP triggers.
--   **RBAC**: Granular role-based access control based on OIDC groups.
--   **Scale**: Spark Operator for petabyte-scale data processing.
+For a deep dive into the system components and a detailed architecture diagram, see [**docs/context/ARCHITECTURE.md**](./docs/context/ARCHITECTURE.md).
 
 ## Tech Stack
 
@@ -106,7 +103,8 @@ Enterprise hardening:
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
--   **Framework**: React 19 + Vite
+-   **Framework**: React 19 + Vite 7
+-   **Package Manager**: `pnpm`
 -   **Auth**: MSAL (`@azure/msal-react`)
 
 ### Backend
@@ -115,6 +113,8 @@ Enterprise hardening:
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-red?style=for-the-badge)
 
 -   **API**: FastAPI (Python 3.12)
+-   **Tooling**: `uv` + `pyproject.toml`
+-   **Protocol**: `httpx` (Async)
 -   **Orchestration**: Kubeflow Pipelines SDK
 -   **Storage**: MinIO (S3), Qdrant
 
@@ -131,35 +131,39 @@ See `deployment/manifests/` for details.
 
 ## Ingestion Pipeline
 
-Ingestion is no longer handled by the backend process. It is a strictly defined Kubeflow Pipeline.
+Ingestion is handled as a decoupled **Kubeflow Pipeline**. Documents are streamed from MinIO, processed (chunked/embedded), and stored in Qdrant.
 
-**Manual Trigger**:
-```bash
-cd kubeflow/pipelines/ingestion
-uv run scripts/run_ingestion.py --cleanup
-```
-
-**API Trigger**:
-POST `/api/v1/admin/ingest`
-```json
-{
-  "bucket": "documents",
-  "cleanup": true
-}
-```
+- **Manual Trigger**:
+  ```bash
+  cd kubeflow/pipelines/ingestion
+  uv run scripts/run_ingestion.py --bucket documents --cleanup
+  ```
+- **API Trigger**: `POST /api/v1/admin/ingest`
+- **Verification**: See the [Ingestion Verification Guide](./docs/guides/INGESTION_VERIFICATION.md).
 
 ## Project Structure
 
-```
+```text
 Vellum/
-├── backend/            # FastAPI (Business Logic)
-├── frontend/           # React App
-├── kubeflow/           # KFP Pipelines & Components
-│   └── pipelines/ingestion
-├── deployment/         # K8s Manifests (Helm/Kustomize)
-├── scripts/            # Platform Setup & Utilities
-└── README.md           # Documentation
+├── backend/            # FastAPI (Business Logic & RAG Query)
+├── frontend/           # React 19 + Vite 7 + Tailwind 4
+├── kubeflow/           # KFP Pipelines, Components, and isolated ML logic
+├── deployment/         # K8s Manifests (Istio, Dex, Kubeflow, Qdrant)
+├── docs/               # Architecture, Guides, and Project Plans
+├── scripts/            # Platform bootstrapping and automation
+└── .nvmrc              # Node version (24.13.0 LTS)
 ```
+
+## Development & Testing
+
+We use modern, fast tooling across the entire stack:
+
+- **Backend**: Python 3.12 managed by [**uv**](https://astral.sh/uv/). Run tests with `uv run pytest`.
+- **Frontend**: Node 24+ managed by [**pnpm**](https://pnpm.io/). Run tests with `pnpm test`.
+- **E2E**: Playwright tests are integrated into the frontend suite and CI/CD.
+- **CI/CD**: GitHub Actions handle Docker builds (multi-stage, optimized) and E2E validation.
+
+For detailed development workflows, see the [**Development Guide**](./docs/guides/DEVELOPMENT.md).
 
 ## Troubleshooting
 

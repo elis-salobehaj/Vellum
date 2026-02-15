@@ -21,11 +21,13 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 5 | **Production Ingestion & Serving** ([plan](plans/active/phase5-production-ingestion.md)) | 🚧 In Progress | Decoupled microservices: TEI embeddings, lightweight backend, KFP ingestion |
+| 6 | **Enterprise Auth Hardening** | ⏳ Backlog | RBAC, Service Account tokens, OIDC groups |
 
 **Last Status Update**: 2026-02-15
 
 **Recently Completed**:
+- ✅ **Phase 5: Production Ingestion & Serving** — Decoupled microservices, TEI embeddings, lightweight backend, KFP ingestion
+- ✅ **Dependency Standardization & Upgrades** — pnpm, uv, pyproject.toml, React 19, Vite 7, Playwright 1.58, httpx migration
 - ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite (16/16 passing)
 - ✅ **Phase 4: Experimentation & Tuning** — Katib hyperparameter optimization, Qdrant migration
 - ✅ **Phase 3: Platform Engineering** — Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard

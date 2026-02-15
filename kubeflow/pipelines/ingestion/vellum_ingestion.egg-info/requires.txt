@@ -1,6 +1,6 @@
-llama-index==0.10.50
+llama-index-core
 llama-index-vector-stores-qdrant
-llama-index-embeddings-huggingface
+llama-index-embeddings-openai
 llama-index-readers-s3
 qdrant-client
 pypdf

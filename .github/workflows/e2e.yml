@@ -16,7 +16,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('backend/Dockerfile', 'frontend/Dockerfile') }}
+          key: ${{ runner.os }}-buildx-${{ hashFiles('backend/uv.lock', 'frontend/pnpm-lock.yaml', 'backend/Dockerfile', 'frontend/Dockerfile') }}
           restore-keys: |
             ${{ runner.os }}-buildx-
 
@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/cache
-          key: hf-models-${{ hashFiles('backend/requirements.txt') }}
+          key: hf-models-${{ hashFiles('backend/uv.lock') }}
           restore-keys: |
             hf-models-
 
@@ -33,7 +33,7 @@ jobs:
       - name: Build Backend Image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
           file: ./backend/Dockerfile
           target: production
           push: false
@@ -45,7 +45,7 @@ jobs:
       - name: Build Frontend Image
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          context: .
           file: ./frontend/Dockerfile
           target: production
           build-args: |
@@ -60,7 +60,7 @@ jobs:
       - name: Build E2E Test Runner
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          context: .
           file: ./frontend/Dockerfile
           target: test
           push: false

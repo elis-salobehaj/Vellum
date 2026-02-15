@@ -1,4 +1,4 @@
-import requests
+import httpx
 import json
 
 def verify_chat_api():
@@ -19,7 +19,7 @@ def verify_chat_api():
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=120)
+        response = httpx.post(url, json=payload, timeout=120)
         response.raise_for_status()
         data = response.json()
         

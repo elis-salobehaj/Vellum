@@ -10,7 +10,6 @@ dependencies = [
     "pydantic-settings",
     "python-multipart",
     "python-jose[cryptography]",
-    "passlib[bcrypt]",
     "msal",
     "llama-index-core",
     "llama-index-vector-stores-qdrant",
@@ -21,11 +20,9 @@ dependencies = [
     "httpx",
     "python-dotenv",
     "openai",
-    "tiktoken",
     "kfp",
     "minio",
     "structlog",
-    "rich",
     "requests-toolbelt<1.0.0",
 ]
 
@@ -38,7 +35,7 @@ packages = ["app"]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0.2",
     "pytest-asyncio",
     "ruff",
     "mypy",

@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-import requests
+import httpx
 from app.core.config import settings
 from app.core.logging import logger
 from functools import lru_cache
@@ -15,9 +15,10 @@ def get_jwks():
     # We use the tenant-specific endpoint for better security
     jwks_uri = f"https://login.microsoftonline.com/{settings.AZURE_TENANT_ID}/discovery/v2.0/keys"
     try:
-        response = requests.get(jwks_uri)
-        response.raise_for_status()
-        return response.json()
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(jwks_uri)
+            response.raise_for_status()
+            return response.json()
     except Exception as e:
         logger.error("auth_jwks_fetch_failed", error=str(e), uri=jwks_uri)
         raise

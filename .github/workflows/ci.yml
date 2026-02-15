@@ -13,42 +13,71 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    # Use Docker Build for consistency and caching via Docker layers (local to runner)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('backend/uv.lock', 'frontend/pnpm-lock.yaml', 'backend/Dockerfile', 'frontend/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
     - name: Build and Run Backend Tests
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./backend/Dockerfile
+        target: test
+        build-args: BUILD_MODE=ci
+        push: false
+        load: true
+        tags: vellum-backend-test:latest
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+    - name: Run Tests
+      run: docker run --rm -e BYPASS_AUTH=true vellum-backend-test:latest
+
+    - name: Move cache
       run: |
-        docker build --target test --build-arg BUILD_MODE=ci -t backend-test -f backend/Dockerfile .
-        docker run --rm -e BYPASS_AUTH=true backend-test
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   ingestion-build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     
-    - name: Build Backend Base Image
-      run: docker build -t vellum-backend:latest -f backend/Dockerfile .
-
     - name: Build Ingestion Image
       run: |
+        docker build -t vellum-backend:latest -f backend/Dockerfile .
         docker build -t vellum-ingest -f kubeflow/pipelines/ingestion/Dockerfile .
-  
+
   frontend-build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     
-    # Build Frontend using Docker (verifies build works)
     - name: Build Frontend
       run: |
-        docker build --target builder -t frontend-build \
+        docker build --target builder -t vellum-frontend-build \
           --build-arg VITE_API_URL=/api/v1 \
           --build-arg VITE_BYPASS_AUTH=true \
-          ./frontend
+          -f frontend/Dockerfile .
   
   frontend-test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     - name: Run Lint in Playwright Container
       run: |
-        docker build --target test -t frontend-test ./frontend
-        docker run --rm frontend-test npm run lint
+        docker build --target test -t vellum-frontend-test -f frontend/Dockerfile .
+        docker run --rm vellum-frontend-test pnpm lint

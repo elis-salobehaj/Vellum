@@ -8,11 +8,9 @@ export const msalConfig: Configuration = {
     authority: `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID || "common"}/v2.0`,
     redirectUri: window.location.origin + "/",
     postLogoutRedirectUri: window.location.origin + "/",
-    navigateToLoginRequestUrl: true,
   },
   cache: {
     cacheLocation: "localStorage", // Changed to localStorage for better persistence
-    storeAuthStateInCookie: false,
   },
   system: {
     loggerOptions: {

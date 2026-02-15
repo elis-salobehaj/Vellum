@@ -7,9 +7,9 @@
 - **Minikube**: [Installation Guide](https://minikube.sigs.k8s.io/docs/start/)
 - **kubectl**: [Installation Guide](https://kubernetes.io/docs/tasks/tools/)
 - **Helm**: [Installation Guide](https://helm.sh/docs/intro/install/)
-- **Python 3.12+**: For backend and pipeline scripts
-- **uv**: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- **pnpm**: `npm install -g pnpm`
+- **Python 3.12+**: For backend and pipeline scripts (`uv` recommended)
+- **Node.js 24.13.0+**: For frontend development
+- **pnpm**: Enabled via `corepack enable` (Node.js 24+)
 
 ### Resource Requirements
 

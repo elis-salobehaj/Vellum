@@ -1,0 +1,24 @@
+[project]
+name = "vellum-ingestion"
+version = "0.1.0"
+description = "Vellum Kubeflow Ingestion Pipeline"
+requires-python = ">=3.12"
+dependencies = [
+    "llama-index-core",
+    "llama-index-vector-stores-qdrant",
+    "llama-index-embeddings-openai",
+    "llama-index-readers-s3",
+    "qdrant-client",
+    "pypdf",
+    "minio",
+    "boto3",
+    "kfp",
+    "numpy<2.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []
