@@ -10,7 +10,6 @@ dependencies = [
     "pydantic-settings",
     "python-multipart",
     "python-jose[cryptography]",
-    "passlib[bcrypt]",
     "msal",
     "llama-index-core",
     "llama-index-vector-stores-qdrant",
@@ -21,13 +20,38 @@ dependencies = [
     "httpx",
     "python-dotenv",
     "openai",
-    "tiktoken",
     "kfp",
     "minio",
+    "structlog",
+    "requests-toolbelt<1.0.0",
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.0.0",
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
     "pytest-asyncio",
+    "ruff",
+    "mypy",
+    "pytest-cov",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true

@@ -1,6 +1,7 @@
 import { FileText, X } from 'lucide-react';
 import type { Citation } from '../../types';
 import { config } from '../../config';
+import { logger } from '../../lib/logger';
 
 interface SourcePanelProps {
   source: Citation | null;
@@ -8,6 +9,9 @@ interface SourcePanelProps {
 }
 
 const SourcePanel = ({ source, onClose }: SourcePanelProps) => {
+  if (source) {
+    logger.debug("source_viewed", { source: source.source, page: source.page });
+  }
   if (!source) return null;
 
   return (

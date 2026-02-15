@@ -5,29 +5,26 @@
 ### ⚡ Hybrid Development (Recommended)
 Run backend and frontend locally against the Kubernetes cluster. This is the fastest iteration mode — no Docker rebuilds needed.
 
-**Terminal 1: Ensure Cluster is Running**
+**Option A: Single Command (Automatic)**
 ```bash
-minikube status
-# If not running: minikube start --cpus 6 --memory 12288 --disk-size=40g --driver=docker
+./scripts/dev.sh
 ```
+This script handles `./scripts/connect.sh --hybrid`, `uvicorn --reload`, and `pnpm dev` in a single terminal.
 
-**Terminal 2: Port-Forward Services**
-```bash
-./scripts/connect.sh
-```
+**Option B: Manual Control (Multiple Terminals)**
 
-**Terminal 3: Backend (port 8000)**
-```bash
-cd backend
-uv run uvicorn main:app --reload
-```
-
-**Terminal 4: Frontend (port 5173)**
-```bash
-cd frontend
-pnpm dev
-# Runs on http://localhost:5173 (proxies API to backend:8000)
-```
+1. **Terminal 1: Infrastructure**
+   ```bash
+   ./scripts/connect.sh --hybrid
+   ```
+2. **Terminal 2: Backend**
+   ```bash
+   cd backend && uv run uvicorn main:app --reload
+   ```
+3. **Terminal 3: Frontend**
+   ```bash
+   cd frontend && pnpm dev
+   ```
 
 > **Tip**: Use Vite's dev server (port 5173) for hot-reload during development. The Kubernetes frontend pod (port 9090) is the production Nginx build.
 
@@ -52,7 +49,10 @@ This script builds Docker images, applies K8s manifests, and restarts pods. Use 
 # Bootstrap entire platform (Kubeflow + Qdrant + Istio)
 ./scripts/setup-platform.sh
 
-# Port-forward all services
+# Recommended: Start hybrid dev (includes connect.sh --hybrid)
+./scripts/dev.sh
+
+# Port-forward all services (including K8s backend/frontend)
 ./scripts/connect.sh
 
 # Full redeploy (Docker build + K8s apply + pod restart)
@@ -72,9 +72,6 @@ uv run uvicorn main:app --reload
 
 # Run tests
 uv run pytest tests/
-
-# Run evals (DO NOT commit if evals fail)
-uv run pytest evals/
 ```
 
 ### Frontend
@@ -90,7 +87,48 @@ pnpm build
 
 # Lint
 pnpm lint
+
+# Run Playwright E2E tests
+pnpm test
 ```
+
+### Testing
+
+**Backend Tests**
+```bash
+cd backend
+
+# Run all tests
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_api.py -v
+
+# Run with coverage
+uv run pytest --cov=app --cov-report=html
+```
+
+**Frontend Tests**
+```bash
+cd frontend
+
+# Run Playwright E2E tests
+pnpm test
+
+# Run tests with UI
+pnpm test --ui
+
+# Run specific test file
+pnpm test tests/chat.spec.ts
+```
+
+**Full Stack Tests** (from project root)
+```bash
+# Runs backend + frontend E2E tests
+./scripts/test.sh --reporter=list
+```
+
+> **Note**: Playwright tests may exhibit flakiness in WSL2 environments. If tests fail intermittently, try running them again or use `--retries=2`.
 
 ### Ingestion Pipeline
 ```bash

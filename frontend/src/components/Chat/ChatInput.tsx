@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Plus, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { logger } from '../../lib/logger';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -43,6 +44,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
 
   const handleSend = () => {
     if (!input.trim() || disabled) return;
+    logger.info("chat_message_sent", { length: input.length });
     onSend(input);
     setInput('');
     setIsFocused(false);

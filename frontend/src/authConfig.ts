@@ -1,5 +1,6 @@
 import { LogLevel } from "@azure/msal-browser";
 import type { Configuration, PopupRequest } from "@azure/msal-browser";
+import { logger } from './lib/logger';
 
 export const msalConfig: Configuration = {
   auth: {
@@ -7,11 +8,9 @@ export const msalConfig: Configuration = {
     authority: `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID || "common"}/v2.0`,
     redirectUri: window.location.origin + "/",
     postLogoutRedirectUri: window.location.origin + "/",
-    navigateToLoginRequestUrl: true,
   },
   cache: {
     cacheLocation: "localStorage", // Changed to localStorage for better persistence
-    storeAuthStateInCookie: false,
   },
   system: {
     loggerOptions: {
@@ -21,20 +20,20 @@ export const msalConfig: Configuration = {
         }
         switch (level) {
           case LogLevel.Error:
-            console.error(message);
+            logger.error("msal_error", { message });
             return;
           case LogLevel.Info:
-            console.info(message);
+            logger.info("msal_info", { message });
             return;
           case LogLevel.Verbose:
-            console.debug(message);
+            logger.debug("msal_verbose", { message });
             return;
           case LogLevel.Warning:
-            console.warn(message);
+            logger.warn("msal_warning", { message });
             return;
         }
       },
-      logLevel: LogLevel.Verbose
+      logLevel: LogLevel.Warning // Reduce verbosity for MSAL
     }
   }
 };

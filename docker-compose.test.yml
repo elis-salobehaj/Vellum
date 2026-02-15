@@ -1,0 +1,14 @@
+services:
+  # E2E Test Runner Service
+  e2e:
+    image: vellum-e2e:latest
+    environment:
+      - VITE_API_URL=http://backend:8000/api/v1
+      - VITE_BYPASS_AUTH=true
+      - CI=true
+    depends_on:
+      backend:
+        condition: service_healthy
+    # Wait for the frontend to be up if needed, though we talk to backend directly in most tests
+    # or use the frontend URL if testing through the UI.
+    command: ["pnpm", "test"]

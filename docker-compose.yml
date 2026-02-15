@@ -21,16 +21,16 @@ services:
   # Frontend Service
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       target: production
       args:
         # These are pulled from the root .env file by Docker Compose
-        - VITE_API_URL=${VITE_API_URL}
+        - VITE_API_URL=${VITE_API_URL:-/api/v1}
         - VITE_AZURE_CLIENT_ID=${VITE_AZURE_CLIENT_ID}
         - VITE_AZURE_TENANT_ID=${VITE_AZURE_TENANT_ID}
         - VITE_AZURE_AUTHORITY=${VITE_AZURE_AUTHORITY}
-        - VITE_BYPASS_AUTH=${VITE_BYPASS_AUTH}
+        - VITE_BYPASS_AUTH=${VITE_BYPASS_AUTH:-true}
     image: vellum-frontend:latest
     ports:
       - "9090:80"

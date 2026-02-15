@@ -1,8 +1,9 @@
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-import requests
+import httpx
 from app.core.config import settings
+from app.core.logging import logger
 from functools import lru_cache
 
 # In a real Entra ID setup, this would point to the token endpoint
@@ -13,7 +14,14 @@ def get_jwks():
     """Fetch and cache Azure JWKS."""
     # We use the tenant-specific endpoint for better security
     jwks_uri = f"https://login.microsoftonline.com/{settings.AZURE_TENANT_ID}/discovery/v2.0/keys"
-    return requests.get(jwks_uri).json()
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(jwks_uri)
+            response.raise_for_status()
+            return response.json()
+    except Exception as e:
+        logger.error("auth_jwks_fetch_failed", error=str(e), uri=jwks_uri)
+        raise
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -23,13 +31,13 @@ async def get_current_user(
     Validates either a Bearer token (Entra ID) or a kubeflow-userid header (Istio/Dex).
     """
     if settings.BYPASS_AUTH:
-        print("DEBUG: Auth bypassed via settings.")
+        logger.warning("auth_bypassed", user="bypassed-user")
         return {"token": "bypass-token", "user": "bypassed-user", "roles": ["admin"]}
 
     # 1. Check for Kubeflow header (internal gateway auth)
     # When called in tests directly, userid_header may be the Header() object.
     if userid_header and isinstance(userid_header, str):
-        print(f"DEBUG: Authenticated via Kubeflow header: {userid_header}")
+        logger.info("auth_header_success", user=userid_header, provider="kubeflow")
         return {
             "token": None,
             "user": userid_header,
@@ -37,7 +45,7 @@ async def get_current_user(
         }
         
     if not token or token == "mock-token":
-        print(f"DEBUG: Missing or mock token: {token}")
+        logger.warning("auth_token_missing", token_provided=bool(token))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authentication token",
@@ -47,7 +55,7 @@ async def get_current_user(
     try:
         # 1. Get header to find kid
         unverified_header = jwt.get_unverified_header(token)
-        print(f"DEBUG: Validating Azure token for client {settings.AZURE_CLIENT_ID}")
+        logger.debug("auth_validating_token", client_id=settings.AZURE_CLIENT_ID, kid=unverified_header.get("kid"))
         
         # 2. Get JWKS
         jwks = get_jwks()
@@ -66,7 +74,7 @@ async def get_current_user(
                 break
         
         if not rsa_key:
-            print(f"DEBUG: kid {unverified_header.get('kid')} not found in JWKS")
+            logger.error("auth_kid_not_found", kid=unverified_header.get('kid'))
             raise HTTPException(status_code=401, detail="Invalid token header (kid not found)")
 
         # 4. Validate Token
@@ -86,30 +94,29 @@ async def get_current_user(
         aud = payload.get("aud")
         allowed_auds = [settings.AZURE_CLIENT_ID, f"api://{settings.AZURE_CLIENT_ID}"]
         if aud not in allowed_auds:
-            print(f"DEBUG: Invalid audience: {aud}. Expected one of: {allowed_auds}")
+            logger.error("auth_invalid_audience", audience=aud, expected=allowed_auds)
             raise JWTError(f"Invalid audience: {aud}")
         
         user_id = payload.get("preferred_username") or payload.get("sub")
-        print(f"DEBUG: Azure token validated for user: {user_id}")
+        logger.info("auth_token_success", user=user_id, provider="azure_ad")
         return {
             "token": token,
             "user": user_id,
             "payload": payload
         }
     except JWTError as e:
-        print(f"DEBUG: JWT Error: {str(e)}")
+        logger.error("auth_jwt_error", error=str(e))
         try:
             unverified_claims = jwt.get_unverified_claims(token)
             unverified_header = jwt.get_unverified_header(token)
-            print(f"DEBUG: Unverified Header: {unverified_header}")
-            print(f"DEBUG: Unverified Claims: {unverified_claims}")
+            logger.debug("auth_jwt_debug", header=unverified_header, claims=unverified_claims)
         except:
-            print("DEBUG: Could not even parse unverified claims.")
+            pass
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
-        print(f"DEBUG: Unexpected Auth Error: {str(e)}")
+        logger.error("auth_unexpected_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,5 +1,4 @@
 import time
-import requests
 import kfp
 import qdrant_client
 from kfp import dsl

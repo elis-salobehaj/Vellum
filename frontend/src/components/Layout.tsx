@@ -4,6 +4,7 @@ import { MessageSquare, Settings, LogOut, Plus } from 'lucide-react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from '../authConfig';
 import { config } from '../config';
+import { logger } from '../lib/logger';
 
 const Sidebar = () => {
   const [history, setHistory] = React.useState<Array<{ id: string; title?: string }>>([]);
@@ -47,9 +48,12 @@ const Sidebar = () => {
       }
 
       const data = JSON.parse(text);
-      if (Array.isArray(data)) setHistory(data);
+      if (Array.isArray(data)) {
+        logger.debug("sidebar_history_loaded", { count: data.length });
+        setHistory(data);
+      }
     } catch (err) {
-      console.error("Failed to load history", err);
+      logger.error("sidebar_history_failed", { error: err });
     }
   }, [instance, accounts]);
 

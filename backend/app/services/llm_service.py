@@ -4,6 +4,7 @@ from llama_index.llms.openai import OpenAI
 # from llama_index.llms.anthropic import Anthropic
 from app.models.schemas import ModelConfig
 from app.api.endpoints.admin import MODEL_CONFIGS
+from app.core.logging import logger
 
 class LLMService:
     def __init__(self):
@@ -79,6 +80,7 @@ class LLMService:
         
         config = self._get_config(model_id)
         try:
+            logger.info("llm_request_start", model=config.id, provider=config.provider)
             llm = await self._get_llm(config)
             
             # Convert dicts to ChatMessage
@@ -98,9 +100,11 @@ class LLMService:
                 llama_messages.append(ChatMessage(role=role, content=content))
             
             response = await llm.achat(llama_messages)
+            logger.info("llm_request_complete", model=config.id)
             return str(response)
             
         except Exception as e:
+            logger.error("llm_request_failed", error=str(e), model=config.id)
             return f"Error communicating with LLM: {str(e)}"
 
     async def generate_response(

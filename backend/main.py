@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 from app.core.config import settings
+from app.core.logging import setup_logging
+
+# Initialize Logging
+setup_logging()
 
 load_dotenv()
 
@@ -11,8 +15,10 @@ app = FastAPI(title="Vellum Chatbot API", description="Backend for Vellum Enterp
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
         "http://localhost:9090",
-        "http://127.0.0.1:9090"
     ],
     allow_credentials=True,
     allow_methods=["*"],

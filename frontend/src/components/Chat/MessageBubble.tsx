@@ -17,12 +17,16 @@ const MessageBubble = ({ message, onCitationClick }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
 
   return (
-    <div className={clsx("flex gap-4 max-w-3xl mx-auto p-4", isUser ? "flex-row-reverse" : "flex-row")}>
+    <div
+      className={clsx("flex gap-4 max-w-3xl mx-auto p-4", isUser ? "flex-row-reverse" : "flex-row")}
+      data-testid="message-bubble"
+      data-role={message.role}
+    >
       <div className={clsx(
         "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
         isUser ? "bg-gray-200" : "bg-blue-600 text-white"
       )}>
-        {isUser ? <User size={16} /> : <div className="text-xs font-bold">AI</div>}
+        {isUser ? <User size={16} /> : <div className="text-xs font-bold" data-testid="ai-avatar">AI</div>}
         {/* <Bot size={16} /> */}
       </div>
 

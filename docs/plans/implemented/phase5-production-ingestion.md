@@ -1,12 +1,13 @@
 ---
 title: "Phase 5: Production Ingestion & Serving"
-status: active
+status: implemented
 priority: high
 estimated_hours: 30-50
 dependencies:
   - docs/plans/implemented/phase4-experimentation-tuning.md
 created: 2026-01-15
-date_updated: 2026-02-14
+date_updated: 2026-02-15
+date_completed: 2026-02-15
 related_files:
   - kubeflow/pipelines/ingestion/pipeline.py
   - kubeflow/pipelines/ingestion/scripts/run_ingestion.py
@@ -25,8 +26,8 @@ completion:
   - [x] Dedicated TEI (Text Embeddings Inference) service deployment ✅
   - [x] S3 streaming ETL for large-scale document ingestion ✅
   - [x] KServe Inference with custom predictor ✅
-  - [ ] Remote embedding calls in ingestion pipeline (TEI instead of local CPU)
-  - [ ] API trigger for ingestion (`POST /api/v1/admin/ingest`)
+  - [x] Remote embedding calls in ingestion pipeline (TEI instead of local CPU) ✅
+  - [x] API trigger for ingestion (`POST /api/v1/admin/ingest`) ✅
 ---
 
 ## Goal

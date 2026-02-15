@@ -1,0 +1,85 @@
+import pytest
+from unittest.mock import patch, MagicMock
+from fastapi import HTTPException
+from app.core import auth
+from jose import JWTError
+
+@pytest.mark.asyncio
+async def test_get_current_user_bypass():
+    with patch("app.core.auth.settings.BYPASS_AUTH", True):
+        user = await auth.get_current_user()
+        assert user["user"] == "bypassed-user"
+        assert "roles" in user
+
+@pytest.mark.asyncio
+async def test_get_current_user_kubeflow_header():
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        user = await auth.get_current_user(userid_header="test-user")
+        assert user["user"] == "test-user"
+        assert user["token"] is None
+
+@pytest.mark.asyncio
+async def test_get_current_user_no_token():
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        with pytest.raises(HTTPException) as excinfo:
+            await auth.get_current_user(token=None, userid_header=None)
+        assert excinfo.value.status_code == 401
+
+@pytest.mark.asyncio
+async def test_get_current_user_mock_token():
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        with pytest.raises(HTTPException) as excinfo:
+            await auth.get_current_user(token="mock-token", userid_header=None)
+        assert excinfo.value.status_code == 401
+
+@pytest.mark.asyncio
+async def test_get_current_user_invalid_jwt_header():
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        with patch("jose.jwt.get_unverified_header", side_effect=JWTError("Invalid header")):
+            with pytest.raises(HTTPException) as excinfo:
+                await auth.get_current_user(token="invalid-token", userid_header=None)
+            assert excinfo.value.status_code == 401
+            assert "Invalid header" in str(excinfo.value.detail)
+
+@pytest.mark.asyncio
+async def test_get_current_user_kid_not_found():
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        with patch("jose.jwt.get_unverified_header", return_value={"kid": "missing-kid"}):
+            with patch("app.core.auth.get_jwks", return_value={"keys": [{"kid": "other-kid"}]}):
+                with pytest.raises(HTTPException) as excinfo:
+                    await auth.get_current_user(token="valid-looking-token", userid_header=None)
+                assert excinfo.value.status_code == 401
+                assert "kid not found" in excinfo.value.detail
+
+@pytest.mark.asyncio
+async def test_get_current_user_invalid_audience():
+    token = "some-token"
+    rsa_key = {"kid": "key1", "kty": "RSA", "n": "...", "e": "..."}
+    jwks = {"keys": [rsa_key]}
+    payload = {"aud": "wrong-client-id", "sub": "user1"}
+    
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        with patch("app.core.auth.settings.AZURE_CLIENT_ID", "correct-id"):
+            with patch("jose.jwt.get_unverified_header", return_value={"kid": "key1"}):
+                with patch("app.core.auth.get_jwks", return_value=jwks):
+                    with patch("jose.jwt.decode", return_value=payload):
+                        with pytest.raises(HTTPException) as excinfo:
+                            await auth.get_current_user(token=token, userid_header=None)
+                        assert excinfo.value.status_code == 401
+                        assert "Invalid audience" in str(excinfo.value.detail)
+
+@pytest.mark.asyncio
+async def test_get_current_user_success_with_preferred_username():
+    token = "some-token"
+    rsa_key = {"kid": "key1", "kty": "RSA", "n": "...", "e": "..."}
+    jwks = {"keys": [rsa_key]}
+    payload = {"aud": "correct-id", "preferred_username": "jane.doe@example.com"}
+    
+    with patch("app.core.auth.settings.BYPASS_AUTH", False):
+        with patch("app.core.auth.settings.AZURE_CLIENT_ID", "correct-id"):
+            with patch("jose.jwt.get_unverified_header", return_value={"kid": "key1"}):
+                with patch("app.core.auth.get_jwks", return_value=jwks):
+                    with patch("jose.jwt.decode", return_value=payload):
+                        user = await auth.get_current_user(token=token, userid_header=None)
+                        assert user["user"] == "jane.doe@example.com"
+                        assert user["token"] == token

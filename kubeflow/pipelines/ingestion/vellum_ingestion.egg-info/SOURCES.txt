@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+vellum_ingestion.egg-info/PKG-INFO
+vellum_ingestion.egg-info/SOURCES.txt
+vellum_ingestion.egg-info/dependency_links.txt
+vellum_ingestion.egg-info/requires.txt
+vellum_ingestion.egg-info/top_level.txt
