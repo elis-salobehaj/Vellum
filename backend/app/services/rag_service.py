@@ -29,25 +29,48 @@ class UniqueFilePostprocessor(BaseNodePostprocessor):
 
 class RAGService:
     def __init__(self):
-        self.client = qdrant_client.QdrantClient(
-            host=settings.QDRANT_HOST,
-            port=settings.QDRANT_PORT
-        )
-        self.aclient = qdrant_client.AsyncQdrantClient(
-            host=settings.QDRANT_HOST,
-            port=settings.QDRANT_PORT
-        )
-        self.vector_store = QdrantVectorStore(
-            client=self.client,
-            aclient=self.aclient,
-            collection_name=settings.QDRANT_COLLECTION
-        )
-        self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
+        self._client = None
+        self._aclient = None
+        self._vector_store = None
+        self._storage_context = None
 
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = qdrant_client.QdrantClient(
+                host=settings.QDRANT_HOST,
+                port=settings.QDRANT_PORT
+            )
+        return self._client
+
+    @property
+    def aclient(self):
+        if self._aclient is None:
+            self._aclient = qdrant_client.AsyncQdrantClient(
+                host=settings.QDRANT_HOST,
+                port=settings.QDRANT_PORT
+            )
+        return self._aclient
+
+    @property
+    def vector_store(self):
+        if self._vector_store is None:
+            self._vector_store = QdrantVectorStore(
+                client=self.client,
+                aclient=self.aclient,
+                collection_name=settings.QDRANT_COLLECTION
+            )
+        return self._vector_store
+
+    @property
+    def storage_context(self):
+        if self._storage_context is None:
+            self._storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
+        return self._storage_context
+
+    def _get_embed_model(self):
         # Configure Embedding Model (Remote TEI Service)
-        # We use OpenAIEmbedding client to talk to our self-hosted Text Embeddings Inference service
-        # This removes the need for 'torch' and 'transformers' in the backend.
-        Settings.embed_model = OpenAIEmbedding(
+        return OpenAIEmbedding(
             model_name=settings.EMBEDDING_MODEL_NAME,
             api_base=settings.EMBEDDINGS_SERVICE_URL,
             api_key="EMPTY",
@@ -60,10 +83,11 @@ class RAGService:
         """
         logger.info("rag_query_start", query=query_text, k=k)
         
+        embed_model = self._get_embed_model()
         index = VectorStoreIndex.from_vector_store(
             self.vector_store,
             storage_context=self.storage_context,
-            embed_model=Settings.embed_model
+            embed_model=embed_model
         )
 
         # 1. Configure retriever for Source Diversity using MMR
