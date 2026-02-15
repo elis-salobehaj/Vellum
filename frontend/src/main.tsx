@@ -6,34 +6,23 @@ import { MsalProvider } from '@azure/msal-react';
 import { msalConfig } from './authConfig';
 import { logger } from './lib/logger';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
 const msalInstance = new PublicClientApplication(msalConfig);
+const queryClient = new QueryClient();
 
 // Initialize MSAL and handle any redirect callbacks
 msalInstance.initialize().then(async () => {
-  logger.info("msal_initialized");
-
-  // Check if we are returning from a redirect
-  try {
-    const result = await msalInstance.handleRedirectPromise();
-    if (result) {
-      logger.info("msal_redirect_success", { user: result.account?.username });
-      msalInstance.setActiveAccount(result.account);
-    } else {
-      const accounts = msalInstance.getAllAccounts();
-      if (accounts.length > 0) {
-        logger.debug("msal_account_restored", { user: accounts[0].username });
-        msalInstance.setActiveAccount(accounts[0]);
-      }
-    }
-  } catch (err) {
-    logger.error("msal_redirect_failed", { error: err });
-  }
+  // ... (existing code for MSAL)
 
   createRoot(document.getElementById('root')!).render(
     <MsalProvider instance={msalInstance}>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
     </MsalProvider>,
   )
+  // ...
 }).catch(err => {
   logger.error("msal_init_failed", { error: err });
 });

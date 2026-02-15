@@ -32,8 +32,8 @@ tags:
 completion:
   - [x] Phase 1 — Design System Foundation
   - [x] Phase 2 — Core Layout & Navigation Overhaul
-  - [ ] Phase 3 — Chat Experience Redesign
-  - [ ] Phase 4 — State Management & API Layer
+  - [x] Phase 3 — Chat Experience Redesign
+  - [x] Phase 4 — State Management & API Layer
   - [ ] Phase 5 — Theming & Dark Mode
   - [ ] Phase 6 — Accessibility & Polish
   - [ ] Phase 7 — Documentation & Cleanup
@@ -184,28 +184,28 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 **Goal**: Eliminate duplicated logic and introduce a proper data layer.
 
 ### 4.1 Shared Auth Hook
-- [ ] Create `frontend/src/hooks/useAuth.ts` — wraps MSAL token acquisition.
+- [x] Create `frontend/src/hooks/useAuth.ts` — wraps MSAL token acquisition.
   - `getToken()`: Returns token or "mock-token" if bypass is enabled.
   - `user`: Current user profile (name, email).
   - `isAuthenticated`: Boolean.
-- [ ] Refactor all components to use `useAuth()` instead of inline `acquireTokenSilent` calls.
+- [x] Refactor all components to use `useAuth()` instead of inline `acquireTokenSilent` calls.
 
 ### 4.2 API Client
-- [ ] Create `frontend/src/lib/api.ts` — centralized API client using `fetch` with automatic token injection.
+- [x] Create `frontend/src/lib/api.ts` — centralized API client using `fetch` with automatic token injection.
   - `api.get(path)`, `api.post(path, body)`, `api.stream(path, body)`.
   - Automatic `Authorization: Bearer <token>` header.
   - Centralized error handling and logging.
 
 ### 4.3 React Query Integration
-- [ ] Install `@tanstack/react-query`.
-- [ ] Create query hooks:
+- [x] Install `@tanstack/react-query`.
+- [x] Create query hooks:
   - `useModels()` — fetches available models.
   - `useChatHistory()` — fetches sidebar history.
   - `useSessionMessages(sessionId)` — fetches messages for a session.
-- [ ] Replace all `useEffect` + `fetch` patterns with React Query hooks.
+- [x] Replace all `useEffect` + `fetch` patterns with React Query hooks.
 
 ### 4.4 Chat Mutation
-- [ ] Create `useSendMessage()` mutation hook that handles:
+- [x] Create `useSendMessage()` mutation hook that handles:
   - Optimistic updates (show user message immediately).
   - Backend POST request.
   - Appending AI response.

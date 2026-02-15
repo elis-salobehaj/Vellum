@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMsal } from "@azure/msal-react";
-import { loginRequest } from '../authConfig';
 
 import { Header } from '@/components/layout/Header';
 import { ChatInput } from '@/components/Chat/ChatInput';
@@ -11,152 +9,71 @@ import { AssistantMessage } from '@/components/Chat/AssistantMessage';
 import { ThinkingIndicator } from '@/components/Chat/ThinkingIndicator';
 import { EmptyState } from '@/components/Chat/EmptyState';
 
-import { config } from '@/config';
 import { logger } from '@/lib/logger';
 import type { Message } from '@/types';
 
-interface Model {
-  id: string;
-  is_active: boolean;
-  name?: string;
-}
+import { useAuth } from '@/hooks/useAuth';
+import { useModels } from '@/hooks/useModels';
+import { useSessionMessages } from '@/hooks/useSessionMessages';
+import { useSendMessage } from '@/hooks/useSendMessage';
 
 const ChatPage = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const { instance, accounts } = useMsal();
+  const { user } = useAuth();
 
-  // Initial state is empty to show EmptyState first
+  // Local state for messages (includes optimistic updates)
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // State for Models
-  const [models, setModels] = useState<Model[]>([]);
+  // Data Fetching
+  const { data: models = [] } = useModels();
+  const { data: historyMessages } = useSessionMessages(sessionId);
+  const sendMessageMutation = useSendMessage();
+
   const [selectedModel, setSelectedModel] = useState<string>('');
 
-  // Fetch Models
+  // Sync models to selectedModel
   useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const account = accounts[0];
-        let token = "mock-token";
-        if (account) {
-          const response = await instance.acquireTokenSilent({
-            ...loginRequest,
-            account: account
-          });
-          token = response.idToken;
-        }
+    if (models.length > 0 && !selectedModel) {
+      const active = models.find((m) => m.is_active);
+      if (active) setSelectedModel(active.id);
+      else setSelectedModel(models[0].id);
+    }
+  }, [models, selectedModel]);
 
-        const res = await fetch(`${config.apiUrl}/admin/models`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          logger.info("models_fetched", { count: data.length });
-          setModels(data);
-          // Default to active model or first
-          const active = data.find((m: Model) => m.is_active);
-          if (active) setSelectedModel(active.id);
-          else if (data.length > 0) setSelectedModel(data[0].id);
-        }
-      } catch (err) {
-        logger.error("models_fetch_failed", err);
-      }
-    };
-    fetchModels();
-  }, [instance, accounts]);
-
-  // Load History
+  // Sync history to messages when session changes or loads
   useEffect(() => {
-    const loadHistory = async () => {
-      if (sessionId) {
-        try {
-          const account = accounts[0];
-          let token = "mock-token";
-          if (account) {
-            const response = await instance.acquireTokenSilent({
-              ...loginRequest,
-              account: account
-            });
-            token = response.idToken;
-          }
-
-          // Fetch history for this session
-          const res = await fetch(`${config.apiUrl}/history/${sessionId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          const data = await res.json();
-
-          if (Array.isArray(data) && data.length > 0) {
-            // Map backend messages to frontend format
-            const mapped = data.map((msg: any, idx: number) => ({
-              id: `hist-${idx}`,
-              role: msg.role,
-              content: msg.content,
-              citations: msg.citations?.map((c: any, i: number) => ({
-                id: `hist-${idx}-${i}`,
-                source: c.source,
-                page: c.page,
-                text: c.text
-              })) || []
-            }));
-            setMessages(mapped);
-          }
-          logger.info("history_loaded", { sessionId, messageCount: data.length });
-        } catch (err) {
-          logger.error("history_load_failed", { sessionId, error: err });
-        }
-      } else {
-        setMessages([]);
-      }
-    };
-    loadHistory();
-  }, [sessionId, instance, accounts]);
+    if (historyMessages) {
+      setMessages(historyMessages);
+    } else if (!sessionId) {
+      // Clear messages if no session
+      setMessages([]);
+    }
+  }, [historyMessages, sessionId]);
 
   const handleSend = async (message: string) => {
     if (!message.trim()) return;
 
+    // 1. Optimistic Update: User Message
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: message };
     setMessages(prev => [...prev, userMsg]);
     setIsProcessing(true);
 
     try {
-      const account = accounts[0];
-      let token = "mock-token";
-      if (account) {
-        const response = await instance.acquireTokenSilent({
-          ...loginRequest,
-          account: account
-        });
-        token = response.idToken;
-      }
-
-      const res = await fetch(`${config.apiUrl}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          message: message,
-          model_id: selectedModel || null,
-          session_id: sessionId
-        })
+      // 2. Persist & Get Response
+      const data = await sendMessageMutation.mutateAsync({
+        message,
+        sessionId,
+        modelId: selectedModel || undefined
       });
 
-      if (!res.ok) throw new Error('Failed to fetch response');
-      const data = await res.json();
-
-      // If we started a new session, update URL
+      // 3. Update URL if new session
       if (data.session_id && !sessionId) {
         navigate(`/chat/${data.session_id}`, { replace: true });
       }
 
+      // 4. Append Assistant Response
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -208,7 +125,7 @@ const ChatPage = () => {
                 <UserMessage
                   key={m.id}
                   content={m.content}
-                  userName={accounts[0]?.name}
+                  userName={user?.name || "User"}
                 />
               ) : (
                 <AssistantMessage

@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   MessageSquare,
@@ -7,17 +6,11 @@ import {
   Plus,
   User as UserIcon,
   Search,
-  PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftClose
 } from 'lucide-react';
-import { useMsal } from "@azure/msal-react";
-import { loginRequest } from '@/authConfig';
-import { config } from '@/config';
-import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,10 +22,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface HistoryItem {
-  id: string;
-  title?: string;
-}
+import { useAuth } from '@/hooks/useAuth';
+import { useChatHistory } from '@/hooks/useChatHistory';
 
 interface AppSidebarProps {
   isCollapsed: boolean;
@@ -40,53 +31,14 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { instance, accounts } = useMsal();
-  const user = accounts[0];
+  const { user, logout } = useAuth();
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      const account = accounts[0];
-      let token = "mock-token";
-
-      if (account && !config.auth.bypassAuth) {
-        const response = await instance.acquireTokenSilent({
-          ...loginRequest,
-          account: account
-        });
-        token = response.idToken;
-      }
-
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/history/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) {
-        setHistory([]);
-        return;
-      }
-
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setHistory(data);
-      }
-    } catch (err) {
-      logger.error("sidebar_history_failed", { error: err });
-    }
-  }, [instance, accounts]);
-
-  useEffect(() => {
-    fetchHistory();
-  }, [location.pathname, fetchHistory]);
+  const { data: history = [] } = useChatHistory();
 
   const handleLogout = () => {
-    instance.logoutRedirect({
-      postLogoutRedirectUri: "/",
-    });
+    logout();
   };
 
   const getInitials = (name?: string) => {
@@ -98,24 +50,15 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
     <aside
       className={cn(
         "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 relative z-20",
-        isCollapsed ? "w-16" : "w-72"
+        isCollapsed ? "w-[70px]" : "w-[280px]"
       )}
     >
       {/* Header */}
-      <div className={cn("p-4 flex items-center shrink-0 min-h-[64px]", isCollapsed ? "flex-col gap-2 justify-start" : "justify-between")}>
-        {isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-muted-foreground h-8 w-8"
-          >
-            <PanelLeftOpen size={18} />
-          </Button>
-        )}
-
+      <div className={cn(
+        "h-16 flex items-center shrink-0 border-b border-border/50 bg-background/50 backdrop-blur-sm",
+        isCollapsed ? "justify-center px-0" : "justify-between px-4"
+      )}>
         <div
-          onClick={() => navigate('/')}
           className={cn(
             "flex items-center gap-3 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity",
             isCollapsed ? "justify-center" : "justify-start"
@@ -144,7 +87,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
         )}
       </div>
 
-      <div className="px-3 mb-4 shrink-0">
+      <div className="px-3 mb-4 shrink-0 mt-4">
         <Button
           onClick={() => navigate('/')}
           className={cn(
@@ -158,39 +101,35 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
       </div>
 
       {/* History List */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         {!isCollapsed && (
-          <div className="px-4 mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest leading-none">History</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground">
-              <Search size={12} />
-            </Button>
+          <div className="px-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Recent Chats</span>
+            <Search size={14} className="cursor-pointer hover:text-foreground transition-colors" />
           </div>
         )}
 
-        <ScrollArea className="flex-1 px-2">
-          <div className="space-y-1 py-2">
-            {history.length === 0 && !isCollapsed && (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm text-muted-foreground italic">No conversations yet</p>
-              </div>
-            )}
-
-            {history.map((item) => (
+        <ScrollArea className="flex-1 px-3">
+          <div className="space-y-1 pb-4">
+            {history.map((item: any) => (
               <TooltipProvider key={item.id} delayDuration={500}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant={location.pathname === `/chat/${item.id}` ? "secondary" : "ghost"}
-                      onClick={() => navigate(`/chat/${item.id}`)}
                       className={cn(
-                        "w-full justify-start gap-3 transition-all rounded-lg",
-                        isCollapsed ? "px-0 justify-center h-10 w-10 mx-auto" : "h-10 px-3",
-                        location.pathname === `/chat/${item.id}` ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                        "w-full justify-start gap-3 relative group rounded-xl transition-all",
+                        isCollapsed ? "h-10 w-10 p-0 justify-center" : "h-10 px-3",
+                        location.pathname === `/chat/${item.id}`
+                          ? "bg-accent text-accent-foreground font-medium shadow-sm"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       )}
+                      onClick={() => navigate(`/chat/${item.id}`)}
                     >
                       <MessageSquare size={18} className="shrink-0" />
-                      {!isCollapsed && <span className="truncate">{item.title || "Untitled Chat"}</span>}
+                      {!isCollapsed && (
+                        <span className="truncate text-sm">{item.title || "Untitled Chat"}</span>
+                      )}
                     </Button>
                   </TooltipTrigger>
                   {isCollapsed && (
