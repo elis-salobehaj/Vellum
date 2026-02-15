@@ -3,6 +3,7 @@ import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { useNavigate } from 'react-router-dom';
 import { loginRequest } from '../authConfig';
 import { config } from '../config';
+import { logger } from '../lib/logger';
 
 const LoginPage = () => {
   const { instance } = useMsal();
@@ -12,16 +13,18 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated || config.auth.bypassAuth) {
+      logger.info("login_redirect_to_home", { bypassed: config.auth.bypassAuth });
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
 
   const handleLogin = async () => {
+    logger.info("login_started");
     setIsLoading(true);
     try {
       await instance.loginRedirect(loginRequest);
     } catch (e) {
-      console.error(e);
+      logger.error("login_redirect_failed", { error: e });
       setIsLoading(false);
     }
   };

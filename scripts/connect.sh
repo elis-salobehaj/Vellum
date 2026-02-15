@@ -7,6 +7,12 @@ echo "🔌 Establishing Port Forwards..."
 # Kill any existing port-forwards
 pkill -f port-forward && sleep 2
 
+HYBRID=false
+if [[ "$1" == "--hybrid" ]]; then
+  HYBRID=true
+  echo "🚀 Hybrid Mode: Skipping Backend (8000) and Frontend (9090) port-forwards..."
+fi
+
 # 1. Istio Ingress (Central Dashboard)
 # Access at http://localhost:8080
 nohup kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80 > /dev/null 2>&1 &
@@ -33,19 +39,23 @@ echo "✅ Embeddings: http://localhost:8082"
 nohup kubectl port-forward -n kubeflow svc/minio-service 9000:9000 > /dev/null 2>&1 &
 echo "✅ MinIO: http://localhost:9000"
 
-# 6. Vellum Backend
-# Access at localhost:8000
-nohup kubectl port-forward -n kubeflow-vellum svc/backend 8000:8000 > /dev/null 2>&1 &
-echo "✅ Backend: http://localhost:8000"
+if [ "$HYBRID" = false ]; then
+  # 6. Vellum Backend
+  # Access at localhost:8000
+  nohup kubectl port-forward -n kubeflow-vellum svc/backend 8000:8000 > /dev/null 2>&1 &
+  echo "✅ Backend: http://localhost:8000"
+fi
 
 # 6. LLM Service (KServe)
 # Access at localhost:8081 (mapped from 80)
 nohup kubectl port-forward -n kubeflow-vellum svc/llm-service-predictor 8081:80 > /dev/null 2>&1 &
 echo "✅ LLM Service: http://localhost:8081"
 
-# 7. Frontend
-# Access at localhost:9090
-nohup kubectl port-forward -n kubeflow-vellum svc/frontend 9090:80 > /dev/null 2>&1 &
-echo "✅ Frontend: http://localhost:9090"
+if [ "$HYBRID" = false ]; then
+  # 7. Frontend
+  # Access at localhost:9090
+  nohup kubectl port-forward -n kubeflow-vellum svc/frontend 9090:80 > /dev/null 2>&1 &
+  echo "✅ Frontend: http://localhost:9090"
+fi
 
 echo "Running in background. Kill with 'pkill -f port-forward'."

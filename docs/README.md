@@ -22,11 +22,11 @@
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
 | 5 | **Production Ingestion & Serving** ([plan](plans/active/phase5-production-ingestion.md)) | 🚧 In Progress | Decoupled microservices: TEI embeddings, lightweight backend, KFP ingestion |
-| — | **Dev Tooling & Hybrid Mode** ([plan](plans/active/dev-tooling-hybrid-mode.md)) | 🚧 In Progress | nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization |
 
-**Last Status Update**: 2026-02-14
+**Last Status Update**: 2026-02-15
 
 **Recently Completed**:
+- ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite (16/16 passing)
 - ✅ **Phase 4: Experimentation & Tuning** — Katib hyperparameter optimization, Qdrant migration
 - ✅ **Phase 3: Platform Engineering** — Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard
 - ✅ **Phase 2: Modern Data Engineering** — KFP ingestion pipeline, ChromaDB → Qdrant
@@ -69,6 +69,7 @@
 
 | Plan | Completed | Summary |
 |------|-----------|---------|
+| **Dev Tooling & Hybrid Mode** | 2026-02-15 | Package manager standardization (nvm, pnpm, uv), hybrid development mode, deploy optimization, unified logging (structlog + LogLayer), backend test suite (16/16 passing) |
 | **Phase 4: Experimentation & Tuning** | 2026-01 | Katib grid search (chunk_size=256, overlap=50, accuracy=0.8046), ChromaDB → Qdrant migration |
 | **Phase 3: Platform Engineering** | 2026-01 | Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard, Qdrant namespace |
 | **Phase 2: Modern Data Engineering** | 2025-12 | KFP ingestion pipeline, semantic chunking, BGE-Large embeddings, retrieval API |

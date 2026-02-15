@@ -14,6 +14,7 @@ def test_read_main():
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
+    # The actual endpoint returns {"status": "healthy"}
     assert response.json() == {"status": "healthy"}
 
 @patch("app.api.endpoints.chat.rag_service.query", new_callable=AsyncMock)
@@ -40,6 +41,31 @@ def test_chat_endpoint(mock_get_msgs, mock_chat, mock_query):
     
     mock_chat.assert_called_once()
     mock_query.assert_called_with("Hello", k=3)
+
+@patch("app.api.endpoints.chat.rag_service.query", new_callable=AsyncMock)
+@patch("app.api.endpoints.chat.llm_service.chat", new_callable=AsyncMock)
+def test_chat_no_context(mock_chat, mock_query):
+    # Test chat when RAG returns no context
+    mock_query.return_value = []
+    mock_chat.return_value = "I don't know based on the context."
+
+    response = client.post("/api/v1/chat", json={"message": "What is life?"})
+    
+    assert response.status_code == 200
+    assert response.json()["response"] == "I don't know based on the context."
+    assert response.json()["citations"] == []
+
+@patch("app.api.endpoints.chat.rag_service.query", new_callable=AsyncMock)
+@patch("app.api.endpoints.chat.llm_service.chat", new_callable=AsyncMock)
+def test_chat_llm_error(mock_chat, mock_query):
+    # Test chat when LLM service fails
+    mock_query.return_value = []
+    mock_chat.side_effect = Exception("LLM connection failed")
+
+    with pytest.raises(Exception): # FastAPI will propagate or catch depending on config
+         response = client.post("/api/v1/chat", json={"message": "Hello"})
+         # If we don't have a middlewae catching this, it might be 500
+         assert response.status_code == 500
 
 def test_chat_validation_error():
     # Missing message is 422

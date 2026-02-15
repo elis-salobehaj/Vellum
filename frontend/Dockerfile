@@ -4,8 +4,9 @@ WORKDIR /app
 
 # Stage 2: Dependencies
 FROM base AS deps
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Stage 3: Builder
 FROM deps AS builder
@@ -24,17 +25,17 @@ ENV VITE_AZURE_TENANT_ID=$VITE_AZURE_TENANT_ID
 ENV VITE_AZURE_AUTHORITY=$VITE_AZURE_AUTHORITY
 ENV VITE_BYPASS_AUTH=$VITE_BYPASS_AUTH
 
-RUN npm run build
+RUN pnpm run build
 
 # Stage 4: Test / E2E Runner (Playwright)
 FROM mcr.microsoft.com/playwright:v1.57.0-jammy AS test
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
 ENV VITE_BYPASS_AUTH=$VITE_BYPASS_AUTH
-CMD ["npx", "playwright", "test"]
+CMD ["pnpm", "test"]
 
 # Stage 5: Production
 FROM nginx:alpine AS production

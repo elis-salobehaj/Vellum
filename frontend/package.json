@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "npx playwright test"
+    "test": "VITE_BYPASS_AUTH=true playwright test"
   },
   "dependencies": {
     "@azure/msal-browser": "^4.27.0",
@@ -17,6 +17,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
+    "loglayer": "^9.1.0",
     "lucide-react": "^0.561.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

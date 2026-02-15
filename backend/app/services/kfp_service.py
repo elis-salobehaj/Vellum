@@ -1,5 +1,6 @@
 import kfp
 from app.core.config import settings
+from app.core.logging import logger
 import os
 
 class KFPService:
@@ -14,20 +15,20 @@ class KFPService:
             return self.client
             
         try:
+            logger.debug("kfp_client_init", host=self.host)
             self.client = kfp.Client(host=self.host)
             # Inject auth headers for multi-user Kubeflow environments
-            # This ensures we have permission to trigger runs in the vellum namespace
             self._inject_auth_headers(self.client)
             return self.client
         except Exception as e:
-            # We use the system logger if available, otherwise fallback to print for visibility in logs
-            print(f"ERROR: KFP Connection failed at {self.host}: {e}")
+            logger.error("kfp_connection_failed", host=self.host, error=str(e))
             return None
 
     def _inject_auth_headers(self, client):
         """Helper to inject necessary identity headers into KFP internal API clients."""
         for attr_name, attr_value in client.__dict__.items():
             if hasattr(attr_value, 'api_client'):
+                logger.debug("kfp_injecting_headers", client_attr=attr_name)
                 # Both headers are used by various Kubeflow ingress/auth configurations
                 attr_value.api_client.default_headers['kubeflow-userid'] = 'vellum@example.com'
                 attr_value.api_client.default_headers['X-Goog-Authenticated-User-Email'] = 'vellum@example.com'
@@ -38,6 +39,7 @@ class KFPService:
             return {"status": "error", "message": "KFP connection failed"}
 
         bucket = bucket or settings.MINIO_BUCKET
+        logger.info("kfp_trigger_ingestion", bucket=bucket, prefix=prefix, cleanup=cleanup)
         
         # Parameters for the pipeline
         params = {
@@ -62,10 +64,10 @@ class KFPService:
             # Recompile to YAML so we can use it with the client
             from kfp import compiler
             yaml_path = "/tmp/ingestion_pipeline.yaml"
+            logger.debug("kfp_compiling_pipeline", path=yaml_path)
             compiler.Compiler().compile(pipeline_func=ingestion_pipeline, package_path=yaml_path)
 
-            # Some KFP versions allow passing the header via environment or session
-            # If the SDK call fails, we return a manual URL
+            logger.info("kfp_creating_run", experiment="Vellum_Ingestion", namespace="kubeflow-vellum")
             run_result = client.create_run_from_pipeline_package(
                 pipeline_file=yaml_path,
                 arguments=params,
@@ -73,12 +75,14 @@ class KFPService:
                 namespace="kubeflow-vellum"
             )
             
+            logger.info("kfp_trigger_success", run_id=run_result.run_id)
             return {
                 "status": "success", 
                 "run_id": run_result.run_id,
                 "message": f"Ingestion triggered. Run ID: {run_result.run_id}"
             }
         except Exception as e:
+            logger.warning("kfp_trigger_auth_required", error=str(e))
             # Fallback message with UI link
             return {
                 "status": "redirect",

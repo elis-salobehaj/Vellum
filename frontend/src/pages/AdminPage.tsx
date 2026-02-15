@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { config } from '../config';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from '../authConfig';
+import { logger } from '../lib/logger';
 
 interface ModelConfig {
   id: string;
@@ -33,7 +34,8 @@ const AdminPage = () => {
         account: account
       });
       return response.idToken;
-    } catch {
+    } catch (err) {
+      logger.debug("admin_token_acquire_silent_failed", { error: err });
       return "mock-token";
     }
   };
@@ -42,39 +44,35 @@ const AdminPage = () => {
     try {
       setLoading(true);
       const token = await getToken();
+      logger.info("admin_fetching_models");
       const res = await fetch(`${config.apiUrl}/admin/models`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Failed to fetch models");
       const data = await res.json();
+      logger.debug("admin_models_received", { count: data.length });
       setModels(data);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(String(err));
-      }
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("admin_fetch_models_failed", { error: msg });
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-
     fetchModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, accounts]);
 
   const handleModelChange = async (modelId: string) => {
     try {
+      logger.info("admin_switching_model", { modelId });
       const token = await getToken();
       const model = models.find(m => m.id === modelId);
       if (!model) return;
 
-      // Update backend
-      // We need to set this model to active. 
-      // The backend PUT /models/{id} accepts the full config object.
-      // We should construct it with is_active=True
       const updatedConfig = { ...model, is_active: true };
 
       const res = await fetch(`${config.apiUrl}/admin/models/${modelId}`, {
@@ -88,17 +86,15 @@ const AdminPage = () => {
 
       if (!res.ok) throw new Error("Failed to update model");
 
-      // Refresh list to see changes (other models becoming inactive)
       await fetchModels();
+      logger.info("admin_switch_model_success", { modelId });
       setSuccessMsg(`Switched to ${model.name}`);
       setTimeout(() => setSuccessMsg(null), 3000);
 
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(String(err));
-      }
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("admin_switch_model_failed", { modelId, error: msg });
+      setError(msg);
     }
   };
 
@@ -172,10 +168,10 @@ const AdminPage = () => {
             <div className="font-medium">Ingestion Control</div>
             <button
               onClick={async () => {
+                logger.info("admin_trigger_ingest_start");
                 setIngestionLogs(["Starting ingestion..."]);
                 try {
                   const token = await getToken();
-                  // Use fetch to get a readable stream
                   const response = await fetch(`${config.apiUrl}/admin/upload-and-ingest`, {
                     method: 'POST',
                     headers: {
@@ -184,6 +180,7 @@ const AdminPage = () => {
                   });
 
                   if (!response.body) {
+                    logger.error("admin_ingest_no_body");
                     setIngestionLogs(prev => [...prev, "❌ No response body received."]);
                     return;
                   }
@@ -195,11 +192,13 @@ const AdminPage = () => {
                     const { done, value } = await reader.read();
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
-                    // Split by newlines and filter empty strings
                     const lines = chunk.split('\n').filter(Boolean);
                     setIngestionLogs(prev => [...prev, ...lines]);
+                    logger.debug("admin_ingest_logs_chunk", { count: lines.length });
                   }
+                  logger.info("admin_ingest_stream_complete");
                 } catch (e) {
+                  logger.error("admin_ingest_failed", { error: e });
                   setIngestionLogs(prev => [...prev, `❌ Error: ${e}`]);
                 }
               }}

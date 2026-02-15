@@ -7,6 +7,7 @@ import { loginRequest } from '../authConfig';
 import MessageBubble from '../components/Chat/MessageBubble';
 import SourcePanel from '../components/Chat/SourcePanel';
 import ChatInput from '../components/Chat/ChatInput';
+import { logger } from '../lib/logger';
 
 import type { Citation, Message } from '../types';
 
@@ -82,6 +83,7 @@ const ChatPage = () => {
         });
         if (res.ok) {
           const data = await res.json();
+          logger.info("models_fetched", { count: data.length });
           setModels(data);
           // Default to active model or first
           const active = data.find((m: Model) => m.is_active);
@@ -89,7 +91,7 @@ const ChatPage = () => {
           else if (data.length > 0) setSelectedModel(data[0].id);
         }
       } catch (err) {
-        console.error("Failed to fetch models", err);
+        logger.error("models_fetch_failed", err);
       }
     };
     fetchModels();
@@ -136,8 +138,9 @@ const ChatPage = () => {
             // New or empty session
             setMessages([{ id: '1', role: 'assistant', content: 'Hello! I am Vellum. How can I help you analyze your documents today?' }]);
           }
+          logger.info("history_loaded", { sessionId, messageCount: data.length });
         } catch (err) {
-          console.error("Error fetching history", err);
+          logger.error("history_load_failed", { sessionId, error: err });
         }
       } else {
         // Reset to default if no session ID
@@ -199,9 +202,10 @@ const ChatPage = () => {
         }))
       };
       setMessages(prev => [...prev, aiMsg]);
+      logger.info("assistant_message_received", { citations: aiMsg.citations?.length });
 
     } catch (error) {
-      console.error(error);
+      logger.error("chat_request_failed", error);
       const errorMsg: Message = {
         id: Date.now().toString(),
         role: 'assistant',
