@@ -1,45 +1,26 @@
 # Vellum Backend API
 
-A lightweight FastAPI service acting as the central router for the Vellum chatbot.
-
-## Architecture Change (Phase 5)
-
-This backend has been **decoupled** from heavy ML operations:
--   **NO** `torch` or `transformers` dependencies embedded.
--   **Ingestion**: Offloaded to Kubeflow Pipelines (triggered via `POST /admin/ingest`).
--   **Embeddings**: Delegated to the remote TEI (`text-embeddings-inference`) service.
+Lightweight FastAPI service for the Vellum chatbot. No heavy ML dependencies — ingestion is handled by [Kubeflow Pipelines](../kubeflow/pipelines/ingestion/).
 
 ## Key Endpoints
 
-### Chat
--   `POST /api/v1/chat`: Main RAG endpoint.
-    -   Retrieves context from Qdrant (via TEI embeddings).
-    -   Generates response via LLM Service.
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/chat` | Main RAG endpoint (Qdrant retrieval + LLM response) |
+| `POST` | `/api/v1/admin/ingest` | Triggers KFP ingestion pipeline |
+| `GET`  | `/docs` | OpenAPI documentation |
 
-### Admin
--   `POST /api/v1/admin/ingest`: Triggers a new ingestion run on Kubeflow.
-    -   Payload: `{"bucket": "documents", "cleanup": true}`
+## Quick Start
 
-## Local Development (Kubernetes Proxy)
+```bash
+uv sync
+uv run uvicorn main:app --reload
+```
 
-Since dependencies are external, you need the platform running:
+> **Note**: External services (Qdrant, Embeddings, MinIO) must be accessible via port-forwards. Run `../scripts/connect.sh` first.
 
-1.  Start Platform:
-    ```bash
-    ../scripts/setup-platform.sh
-    ../scripts/connect.sh
-    ```
+## Full Documentation
 
-2.  Run Backend (if not using the K8s pod):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    
-    # Env vars must point to forwarded ports
-    export QDRANT_HOST=localhost
-    export QDRANT_PORT=6333
-    export EMBEDDINGS_SERVICE_URL=http://localhost:8082
-    
-    uvicorn main:app --reload
-    ```
+- [Getting Started](../docs/guides/GETTING_STARTED.md)
+- [Development Guide](../docs/guides/DEVELOPMENT.md)
+- [Architecture & Conventions](../docs/context/ARCHITECTURE.md)

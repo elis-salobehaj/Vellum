@@ -3,6 +3,8 @@
 ## Overview
 We have successfully implemented a **Kubeflow Pipeline** to ingest documents from MinIO into ChromaDB. This moves us from a local script-based approach to a scalable, distributed data engineering workflow.
 
+> **Note**: ChromaDB was later replaced by Qdrant in [Phase 4](phase4-migration-tuning.md).
+
 ## Architecture
 See [Ingestion Pipeline Architecture](ingestion-pipeline.md) for full details.
 
@@ -34,7 +36,7 @@ We verified the data in ChromaDB using `scripts/verify_chroma.py`:
 *   `pipelines/ingestion/pipeline.py`: The KFP definition.
 *   `pipelines/ingestion/scripts/run_ingestion.py`: The core logic.
 *   `pipelines/ingestion/Dockerfile`: The isolated environment.
-*   `docs/architecture/ingestion-pipeline.md`: Architecture documentation.
+*   `docs/designs/ingestion-pipeline.md`: Architecture documentation.
 
 ## Phase 2.5: Retrieval API Implementation
 

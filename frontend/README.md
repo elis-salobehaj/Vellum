@@ -1,35 +1,26 @@
 # Vellum Frontend
 
-Modern Chat Interface built with React 19, Vite, and Tailwind CSS v4.
+React 19 chat interface with Entra ID SSO, real-time streaming, and Tailwind CSS.
 
-## Features
+## Quick Start
 
--   **Streaming Chat**: Real-time token streaming.
--   **Citations**: Displays source documents (PDFs) with accuracy scores.
--   **Markdown Support**: Renders tables, code blocks, and lists.
--   **Dark/Light Mode**: System-aware theming.
+```bash
+pnpm install
+pnpm dev
+```
 
-## Development
-
-The frontend expects the backend to be available at `/api/v1`.
-
-1.  **Install**:
-    ```bash
-    npm install
-    ```
-
-2.  **Run (Local)**:
-    ```bash
-    npm run dev
-    # Runs on http://localhost:5173 (proxies to backend:8000)
-    ```
-
-3.  **Run (Production)**:
-    In Kubernetes, this is served via Nginx on port **9090**.
+> **Note**: The frontend expects the backend API at `/api/v1`. Run `../scripts/connect.sh` to establish port-forwards.
 
 ## Configuration
 
-| Variable | Description |
-| :--- | :--- |
-| `VITE_API_URL` | Backend API URL (default: `/api/v1`) |
-| `VITE_BYPASS_AUTH` | Disable login for dev |
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | Backend API URL | `/api/v1` |
+| `VITE_BYPASS_AUTH` | Disable login for local dev | `false` |
+
+## Full Documentation
+
+- [Getting Started](../docs/guides/GETTING_STARTED.md)
+- [Development Guide](../docs/guides/DEVELOPMENT.md)
+- [Architecture & Conventions](../docs/context/ARCHITECTURE.md)
+- [Authentication Guide](../docs/guides/AUTHENTICATION.md)

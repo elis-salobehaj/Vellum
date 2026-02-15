@@ -1,20 +1,26 @@
-# 🤖 Vellum App Agent Manual
+# Vellum: Agent Operating Manual
 
-## 🛠️ Core Tech Stack
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS (in `/webapp`).
-- **Backend:** Python 3.12, FastAPI, Pydantic v2 (in `/api`).
-- **AI Layer:** Vellum SDK (Python/TS), LangGraph for stateful loops.
+## 🎯 Mission
+Enterprise-grade RAG chatbot with Kubeflow-orchestrated ingestion pipelines, Qdrant vector storage, and multi-LLM support.
 
-## 📜 Dev Rules & Best Practices
-- **React:** Use functional components; avoid `useEffect` for data fetching (use React Query).
-- **Python:** Strict type hints required; use `BaseModel` for all API schemas.
-- **RAG Logic:** When touching retrieval code, always consider **MMR (Maximal Marginal Relevance)** to avoid redundant context.
+## ⚙️ Stack Essentials
+- **Package Managers**: `uv` (Backend), `pnpm` (Frontend)
+- **Infrastructure**: Kubernetes (Minikube), Kubeflow Pipelines, Istio, Qdrant
 
-## 🛠️ Critical Commands
-- **Backend Setup:** `uv sync && uv run dev`.
-- **Frontend Setup:** `pnpm install && pnpm dev`.
-- **Run Evals:** `pytest api/evals/` (DO NOT commit if evals fail).
+## 🚨 Critical Rules
+1. **Backend setup**: Run `cd backend && uv sync` to install all dependencies.
+2. **Frontend setup**: Run `cd frontend && pnpm install`.
+3. **Platform setup**: Run `./scripts/setup-platform.sh` to bootstrap the K8s cluster.
+4. **Never modify `.env` or AWS Secret keys directly**.
+5. **Always ask** before changing a Kubeflow workflow ID or prompt version.
+6. **Update Plans**: Check off tasks in `docs/plans/active/*.md` as you complete them.
+7. **Update Index**: Update `docs/README.md` when plans change status.
 
-## 🚫 Boundaries
-- NEVER modify `.env` or AWS Secret keys directly.
-- ALWAYS ask for confirmation before changing a Vellum workflow ID or prompt version.
+## 📖 Guides
+- **Getting Started**: [`docs/guides/GETTING_STARTED.md`](docs/guides/GETTING_STARTED.md) ← Setup for new developers
+- **Development**: [`docs/guides/DEVELOPMENT.md`](docs/guides/DEVELOPMENT.md) ← Running, debugging, commands
+- **Architecture**: [`docs/context/ARCHITECTURE.md`](docs/context/ARCHITECTURE.md) ← Stack, patterns, conventions
+- **Workflows**: [`docs/context/WORKFLOWS.md`](docs/context/WORKFLOWS.md) ← Documentation practices
+
+## 🗺️ Active Work
+Always check [`docs/README.md`](docs/README.md) for current plans and priorities.

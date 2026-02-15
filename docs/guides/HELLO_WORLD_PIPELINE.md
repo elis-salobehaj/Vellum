@@ -4,16 +4,13 @@ This guide will walk you through creating, compiling, and running a simple Kubef
 
 ## Prerequisites
 
-1.  **Python Environment**: You need Python 3.8+ installed locally.
-2.  **KFP SDK**: Install the Kubeflow Pipelines SDK.
+1.  **Python Environment**: You need Python 3.12+ installed locally.
+2.  **KFP SDK**: Installed via `uv sync` in the backend (kfp is a dependency in `pyproject.toml`).
+3.  **UI Access**: Ensure you have port-forwards active:
     ```bash
-    pip install kfp==2.2.0
+    ./scripts/connect.sh
     ```
-3.  **UI Access**: Ensure you have port-forwarded the KFP UI:
-    ```bash
-    kubectl port-forward -n kubeflow svc/ml-pipeline-ui 3000:80
-    ```
-    Access at: [http://localhost:3000](http://localhost:3000)
+    Access Dashboard at: [http://localhost:8080](http://localhost:8080)
 
 ## Step 1: Write the Pipeline Code
 
@@ -30,14 +27,14 @@ Run the script to generate the YAML definition:
 
 ```bash
 cd examples/kfp
-python3 hello_world.py
+uv run hello_world.py
 ```
 
 You should see a file named `hello_world_pipeline.yaml` generated in the directory.
 
 ## Step 3: Upload and Run via UI
 
-1.  Open the Dashboard at [http://localhost:3000](http://localhost:3000).
+1.  Open the Dashboard at [http://localhost:8080](http://localhost:8080).
 2.  Click **Pipelines** in the sidebar.
 3.  Click **+ Upload Pipeline**.
 4.  Select via **Upload a file** and choose `hello_world_pipeline.yaml`.

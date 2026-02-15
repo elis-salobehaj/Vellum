@@ -1,6 +1,6 @@
 # Ingestion Pipeline Architecture
 
-This document describes the architecture of the Vellum Document Ingestion Pipeline, implemented as part of **Phase 2: Modern Data Engineering**.
+This document describes the architecture of the Vellum Document Ingestion Pipeline, implemented as part of **Phase 2: Modern Data Engineering** and updated in **Phase 4** to use Qdrant as the production vector store.
 
 ## Overview
 The ingestion pipeline is responsible for processing raw documents (PDFs, TXT, MD) into vector embeddings suitable for Retrieval Augmented Generation (RAG). It is implemented as a **Kubeflow Pipeline (KFP)** running on the internal Kubernetes cluster.
@@ -16,7 +16,7 @@ graph LR
         
         Worker -->|3. Download| MinIO
         Worker -->|4. Chunk & Embed| WorkerCPU["Local CPU<br>(BGE-Large with PyTorch)"]
-        Worker -->|5. Upsert Vectors| Chroma[(ChromaDB)]
+        Worker -->|5. Upsert Vectors| Qdrant[(Qdrant)]
     end
 ```
 
@@ -39,12 +39,12 @@ graph LR
 2.  **Loading**: Uses `llama_index.SimpleDirectoryReader` to parse files.
 3.  **Chunking**: Uses `SemanticSplitterNodeParser` to intelligently split text based on semantic similarity.
 4.  **Embedding**: Uses `HuggingFaceEmbedding` (Model: `BAAI/bge-large-en-v1.5`) running locally on CPU.
-5.  **Indexing**: Pushes vectors to ChromaDB.
+5.  **Indexing**: Pushes vectors to Qdrant via `QdrantVectorStore`.
 
-### 4. Vector Store: ChromaDB
-*   **Service**: `chroma-service.kubeflow.svc` (Port 8000).
+### 4. Vector Store: Qdrant
+*   **Service**: `qdrant.qdrant.svc.cluster.local` (Port 6333).
 *   **Collection**: `kbase_docs`
-*   **Persistence**: Backed by a Persistent Volume in the cluster.
+*   **Persistence**: Backed by a Persistent Volume in the `qdrant` namespace.
 
 ## Operational Guide
 
@@ -59,7 +59,7 @@ uv run pipelines/ingestion/submit_run.py
 *   **Logs**: `kubectl logs -n kubeflow <pod-name> -f`
 
 ### Verification
-Run the verification script to check document counts in ChromaDB:
+Run the verification script to check retrieval quality:
 ```bash
-uv run scripts/verify_chroma.py
+uv run scripts/verify_retrieval.py
 ```
