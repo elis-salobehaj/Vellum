@@ -30,7 +30,7 @@ tags:
   - dark-mode
   - react19
 completion:
-  - [ ] Phase 1 — Design System Foundation
+  - [x] Phase 1 — Design System Foundation
   - [ ] Phase 2 — Core Layout & Navigation Overhaul
   - [ ] Phase 3 — Chat Experience Redesign
   - [ ] Phase 4 — State Management & API Layer
@@ -75,19 +75,19 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 **Goal**: Establish the OKLCH-based design token system and install shadcn/ui.
 
 ### 1.1 Install shadcn/ui
-- [ ] Install `shadcn` CLI and initialize with Tailwind CSS 4.
-- [ ] Configure `components.json` with project aliases (`@/components`, `@/lib`).
-- [ ] Install core primitives: `button`, `input`, `textarea`, `card`, `badge`, `avatar`, `tooltip`, `dropdown-menu`, `dialog`, `sheet`, `separator`, `scroll-area`, `skeleton`.
+- [x] Install `shadcn` CLI and initialize with Tailwind CSS 4.
+- [x] Configure `components.json` with project aliases (`@/components`, `@/lib`).
+- [x] Install core primitives: `button`, `input`, `textarea`, `card`, `badge`, `avatar`, `tooltip`, `dropdown-menu`, `dialog`, `sheet`, `separator`, `scroll-area`, `skeleton`.
 
 ### 1.2 OKLCH Design Tokens
-- [ ] Rewrite `frontend/src/index.css` with OKLCH-based CSS custom properties via Tailwind 4 `@theme`.
-- [ ] Define semantic color tokens: `--color-background`, `--color-foreground`, `--color-primary`, `--color-muted`, `--color-accent`, `--color-destructive`, `--color-border`, `--color-ring`.
-- [ ] Define chart palette: 6 accent colors for data visualization.
-- [ ] Define typography scale: `--font-sans` (Inter/Geist), `--font-mono` (JetBrains Mono/Geist Mono).
+- [x] Rewrite `frontend/src/index.css` with OKLCH-based CSS custom properties via Tailwind 4 `@theme`.
+- [x] Define semantic color tokens: `--color-background`, `--color-foreground`, `--color-primary`, `--color-muted`, `--color-accent`, `--color-destructive`, `--color-border`, `--color-ring`.
+- [x] Define chart palette: 6 accent colors for data visualization.
+- [x] Define typography scale: `--font-sans` (Inter/Geist), `--font-mono` (JetBrains Mono/Geist Mono).
 
 ### 1.3 Utility Setup
-- [ ] Create `frontend/src/lib/utils.ts` with `cn()` helper (clsx + tailwind-merge).
-- [ ] Configure path aliases in `tsconfig.json` and `vite.config.ts` for `@/` imports.
+- [x] Create `frontend/src/lib/utils.ts` with `cn()` helper (clsx + tailwind-merge).
+- [x] Configure path aliases in `tsconfig.json` and `vite.config.ts` for `@/` imports.
 
 **Files created/modified**:
 - `frontend/src/index.css` (rewritten)
