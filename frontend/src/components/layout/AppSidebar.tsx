@@ -207,7 +207,6 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
 
       {/* Footer */}
       <div className="p-2 shrink-0 space-y-1">
-        <Separator className="mb-2" />
 
         <TooltipProvider delayDuration={500}>
           <Tooltip>

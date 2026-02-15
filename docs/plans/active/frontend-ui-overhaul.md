@@ -140,32 +140,32 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 **Goal**: Build a premium chat interface inspired by ChatGPT / assistant-ui.
 
 ### 3.1 Message Components
-- [ ] Create `frontend/src/components/chat/MessageList.tsx` — virtualized/windowed message list with smart auto-scroll (scroll-to-bottom button appears when scrolled up).
-- [ ] Create `frontend/src/components/chat/UserMessage.tsx` — clean user bubble with avatar.
-- [ ] Create `frontend/src/components/chat/AssistantMessage.tsx` — AI response with:
+- [x] Create `frontend/src/components/chat/MessageList.tsx` — virtualized/windowed message list with smart auto-scroll (scroll-to-bottom button appears when scrolled up).
+- [x] Create `frontend/src/components/chat/UserMessage.tsx` — clean user bubble with avatar.
+- [x] Create `frontend/src/components/chat/AssistantMessage.tsx` — AI response with:
   - Markdown rendering (react-markdown + remark-gfm).
   - Code block syntax highlighting (rehype-highlight or shiki).
   - Copy-to-clipboard button on code blocks.
   - Message actions toolbar (copy full response, regenerate).
   - Inline citation badges (download links, no right panel).
-- [ ] Create `frontend/src/components/chat/ThinkingIndicator.tsx` — animated thinking/typing indicator (replace the plain "Thinking..." text).
+- [x] Create `frontend/src/components/chat/ThinkingIndicator.tsx` — animated thinking/typing indicator (replace the plain "Thinking..." text).
 
 ### 3.2 Input Redesign
-- [ ] Rebuild `ChatInput.tsx` using shadcn `Textarea` with auto-resize.
-- [ ] Add prompt suggestions / quick actions above the input for empty conversations.
-- [ ] Implement `Shift+Enter` for newline, `Enter` to send.
-- [ ] Add file attachment button (UI only initially, wired in a future phase).
-- [ ] Add stop/cancel button when a response is being generated.
+- [x] Rebuild `ChatInput.tsx` using shadcn `Textarea` with auto-resize.
+- [x] Add prompt suggestions / quick actions above the input for empty conversations.
+- [x] Implement `Shift+Enter` for newline, `Enter` to send.
+- [x] Add file attachment button (UI only initially, wired in a future phase).
+- [x] Add stop/cancel button when a response is being generated.
 
 ### 3.3 Empty State
-- [ ] Create `frontend/src/components/chat/EmptyState.tsx` — welcoming screen shown when no messages exist:
+- [x] Create `frontend/src/components/chat/EmptyState.tsx` — welcoming screen shown when no messages exist:
   - Vellum logo + tagline.
   - 3-4 prompt suggestion cards (e.g., "Summarize my documents", "Find information about...").
 
 ### 3.4 Model Selector
-- [ ] Move model selector into a shadcn `DropdownMenu` in the chat header (replace the plain `<select>`).
-- [ ] Show model provider icon + name.
-- [ ] Indicate active model with a checkmark.
+- [x] Move model selector into a shadcn `DropdownMenu` in the chat header (replace the plain `<select>`).
+- [x] Show model provider icon + name.
+- [x] Indicate active model with a checkmark.
 
 **Files created/modified**:
 - `frontend/src/components/chat/MessageList.tsx` (new)

@@ -202,7 +202,7 @@ const AdminPage = () => {
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="!bg-background">
                       {models.map(m => (
                         <SelectItem key={m.id} value={m.id}>
                           <div className="flex items-center gap-2">

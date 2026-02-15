@@ -2,7 +2,8 @@ import {
   Search,
   Bell,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,8 +41,13 @@ export const Header = ({ selectedModel, models, onModelChange }: HeaderProps) =>
                 onClick={() => onModelChange(model.id)}
                 className="rounded-lg py-2 cursor-pointer focus:bg-primary/5 focus:text-primary"
               >
-                <div className="flex flex-col">
-                  <span className="font-medium">{model.name}</span>
+                <div className="flex flex-col flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{model.name}</span>
+                    {selectedModel === model.id && (
+                      <Check size={14} className="text-primary ml-2" />
+                    )}
+                  </div>
                   <span className="text-[10px] text-muted-foreground">Provider: Enterprise</span>
                 </div>
               </DropdownMenuItem>
