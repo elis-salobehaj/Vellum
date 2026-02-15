@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.1.0...Vellum-v2.2.0) (2026-02-15)
+
+
+### Features
+
+* complete dev tooling, hybrid mode, and testing infrastructure ([#13](https://github.com/elis-salobehaj/Vellum/issues/13)) ([767c7fd](https://github.com/elis-salobehaj/Vellum/commit/767c7fdeafbd3d511f68595944cea141370bd317))
+
 ## [2.1.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.0.0...Vellum-v2.1.0) (2026-02-15)
 
 
