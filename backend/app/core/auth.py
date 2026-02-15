@@ -27,7 +27,8 @@ async def get_current_user(
         return {"token": "bypass-token", "user": "bypassed-user", "roles": ["admin"]}
 
     # 1. Check for Kubeflow header (internal gateway auth)
-    if userid_header:
+    # When called in tests directly, userid_header may be the Header() object.
+    if userid_header and isinstance(userid_header, str):
         print(f"DEBUG: Authenticated via Kubeflow header: {userid_header}")
         return {
             "token": None,

@@ -22,7 +22,7 @@ async def test_auth_validate_token_success():
     # Reload auth to ensure config overrides if needed, generally logic is straightforward
     
     with patch("app.core.config.settings.BYPASS_AUTH", False):
-        user = await auth.get_current_user("valid-token")
+        user = await auth.get_current_user(token=None, userid_header="test-user")
         assert user["user"] == "test-user"
 
 @pytest.mark.asyncio
@@ -32,7 +32,7 @@ async def test_auth_validate_token_missing():
     
     with patch("app.core.config.settings.BYPASS_AUTH", False):
         with pytest.raises(HTTPException):
-            await auth.get_current_user(None)
+            await auth.get_current_user(token=None, userid_header=None)
 
 # --- History Service Tests ---
 def test_history_service_logic():
