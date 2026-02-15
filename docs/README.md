@@ -21,6 +21,7 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
+| 7 | **[Frontend UI Overhaul](plans/active/frontend-ui-overhaul.md)** | 🔄 Active | shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign |
 | 6 | **Enterprise Auth Hardening** | ⏳ Backlog | RBAC, Service Account tokens, OIDC groups |
 
 **Last Status Update**: 2026-02-15
