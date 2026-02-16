@@ -6,7 +6,11 @@ import {
   Plus,
   User as UserIcon,
   Search,
-  PanelLeftClose
+  PanelLeftClose,
+  PanelLeft,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -18,12 +22,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { useAuth } from '@/hooks/useAuth';
 import { useChatHistory } from '@/hooks/useChatHistory';
+import { useTheme } from '@/components/theme/ThemeProvider';
 
 interface AppSidebarProps {
   isCollapsed: boolean;
@@ -34,6 +43,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const { data: history = [] } = useChatHistory();
 
@@ -55,36 +65,42 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
     >
       {/* Header */}
       <div className={cn(
-        "h-16 flex items-center shrink-0 border-b border-border/50 bg-background/50 backdrop-blur-sm",
-        isCollapsed ? "justify-center px-0" : "justify-between px-4"
+        "flex shrink-0 border-b border-border/50 bg-background/50 backdrop-blur-sm relative transition-all duration-300",
+        isCollapsed ? "h-32 flex-col items-center justify-center gap-4 px-0" : "h-16 flex-row items-center justify-between px-4"
       )}>
+        {/* Logo Container - Bottom when collapsed (order-2) */}
         <div
           className={cn(
-            "flex items-center gap-3 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity",
-            isCollapsed ? "justify-center" : "justify-start"
+            "flex items-center gap-3 overflow-hidden transition-all duration-300",
+            isCollapsed ? "order-2 justify-center" : "order-1"
           )}
         >
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm shrink-0 font-bold">
             V
           </div>
           {!isCollapsed && (
-            <>
+            <div className="flex items-center gap-2 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
               <span className="font-bold text-xl tracking-tight truncate">Vellum</span>
               <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono">v1.2</span>
-            </>
+            </div>
           )}
         </div>
 
-        {!isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-muted-foreground h-8 w-8"
-          >
-            <PanelLeftClose size={18} />
-          </Button>
-        )}
+        {/* Toggle Button - Top when collapsed (order-1) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={cn(
+            "text-muted-foreground transition-all duration-300 hover:bg-accent/40",
+            isCollapsed
+              ? "order-1 h-12 w-12 rounded-2xl bg-accent/10"
+              : "order-2 h-8 w-8"
+          )}
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={18} />}
+        </Button>
       </div>
 
       <div className="px-3 mb-4 shrink-0 mt-4">
@@ -194,12 +210,39 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
           <DropdownMenuContent className="w-56 mb-2 ml-2 p-1.5 rounded-2xl shadow-2xl border-border/50 backdrop-blur-xl bg-background/95" align="end" side={isCollapsed ? "right" : "top"}>
             <DropdownMenuLabel className="font-semibold text-xs text-muted-foreground px-2 py-1.5 uppercase tracking-wider">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator className="opacity-50" />
+
             <DropdownMenuItem className="rounded-xl py-2 cursor-pointer gap-2 focus:bg-primary/5 focus:text-primary">
               <UserIcon size={16} /> Profile
             </DropdownMenuItem>
-            <DropdownMenuItem className="rounded-xl py-2 cursor-pointer gap-2 focus:bg-primary/5 focus:text-primary">
-              <Settings size={16} /> Preferences
-            </DropdownMenuItem>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="rounded-xl py-2 cursor-pointer gap-2 focus:bg-primary/5 focus:text-primary">
+                <Settings size={16} /> Appearance
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="p-1.5 rounded-2xl shadow-2xl border-border/50 backdrop-blur-xl bg-background/95 min-w-[150px]">
+                  <DropdownMenuItem onClick={() => setTheme("light")} className="rounded-xl py-2 cursor-pointer gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sun size={14} /> Light
+                    </div>
+                    {theme === "light" && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">Active</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")} className="rounded-xl py-2 cursor-pointer gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                      <Moon size={14} /> Dark
+                    </div>
+                    {theme === "dark" && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">Active</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")} className="rounded-xl py-2 cursor-pointer gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                      <Laptop size={14} /> System
+                    </div>
+                    {theme === "system" && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">Active</span>}
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+
             <DropdownMenuSeparator className="opacity-50" />
             <DropdownMenuItem
               onClick={handleLogout}

@@ -6,7 +6,7 @@ estimated_hours: 40-60
 dependencies:
   - docs/plans/implemented/dependency-standardization.md
 created: 2026-02-15
-date_updated: 2026-02-15
+date_updated: 2026-02-16
 related_files:
   - frontend/src/index.css
   - frontend/src/App.tsx
@@ -34,7 +34,7 @@ completion:
   - [x] Phase 2 — Core Layout & Navigation Overhaul
   - [x] Phase 3 — Chat Experience Redesign
   - [x] Phase 4 — State Management & API Layer
-  - [ ] Phase 5 — Theming & Dark Mode
+  - [x] Phase 5 — Theming & Dark Mode ✅
   - [ ] Phase 6 — Accessibility & Polish
   - [ ] Phase 7 — Documentation & Cleanup
 ---
@@ -227,26 +227,27 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 **Goal**: Implement a complete dark mode and theme switching system.
 
 ### 5.1 Theme Provider
-- [ ] Create `frontend/src/components/theme/ThemeProvider.tsx` — manages `data-theme` attribute on `<html>`.
-- [ ] Support three modes: `light`, `dark`, `system` (follows OS preference).
-- [ ] Persist user preference in `localStorage`.
+- [x] Create `frontend/src/components/theme/ThemeProvider.tsx` — manages `data-theme` attribute on `<html>`.
+- [x] Support three modes: `light`, `dark`, `system` (follows OS preference).
+- [x] Persist user preference in `localStorage`.
 
-### 5.2 Theme Toggle
-- [ ] Create `frontend/src/components/theme/ThemeToggle.tsx` — sun/moon/system icon toggle using shadcn `DropdownMenu`.
-- [ ] Place in sidebar footer or header area.
+### 5.2 Theme Selection in User Menu
+- [x] Integrate theme selection as a `DropdownMenuSub` under "Appearance" in the user profile menu.
+- [x] Support three modes: `light`, `dark`, `system` (follows OS preference).
+- [x] Place in user profile dropdown for a cleaner, unified preferences experience.
 
 ### 5.3 Dark Mode Tokens
-- [ ] Define `[data-theme="dark"]` CSS custom properties in `index.css`.
-- [ ] Ensure all shadcn components respect the CSS variable system.
-- [ ] Audit all custom components for hardcoded colors (`bg-white`, `text-gray-800`, etc.) and replace with semantic tokens.
+- [x] Define `[data-theme="dark"]` CSS custom properties in `index.css`.
+- [x] Ensure all shadcn components respect the CSS variable system.
+- [x] Audit all custom components for hardcoded colors (`bg-white`, `text-gray-800`, etc.) and replace with semantic tokens.
 
 ### 5.4 Transition Polish
-- [ ] Add `transition-colors` to key elements for smooth theme switching.
-- [ ] Target: Theme switch INP < 50ms, CLS = 0.
+- [x] Add `transition-colors` to key elements for smooth theme switching.
+- [x] Target: Theme switch INP < 50ms, CLS = 0.
 
 **Files created/modified**:
 - `frontend/src/components/theme/ThemeProvider.tsx` (new)
-- `frontend/src/components/theme/ThemeToggle.tsx` (new)
+- `frontend/src/components/layout/AppSidebar.tsx` (Integrated collapse logic & appearance menu)
 - `frontend/src/index.css` (dark mode tokens added)
 
 ---

@@ -7,6 +7,7 @@ import { msalConfig } from './authConfig';
 import { logger } from './lib/logger';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 const msalInstance = new PublicClientApplication(msalConfig);
 const queryClient = new QueryClient();
@@ -36,7 +37,9 @@ msalInstance.initialize().then(async () => {
   createRoot(document.getElementById('root')!).render(
     <MsalProvider instance={msalInstance}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <ThemeProvider defaultTheme="system" storageKey="vellum-theme">
+          <App />
+        </ThemeProvider>
       </QueryClientProvider>
     </MsalProvider>,
   )
