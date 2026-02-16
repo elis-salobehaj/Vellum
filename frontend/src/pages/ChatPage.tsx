@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { Header } from '@/components/layout/Header';
 import { ChatInput } from '@/components/Chat/ChatInput';
@@ -120,23 +121,43 @@ const ChatPage = () => {
           <EmptyState onSuggestionClick={handleSuggestionClick} />
         ) : (
           <MessageList messages={messages} isProcessing={isProcessing}>
-            {messages.map((m) => (
-              m.role === 'user' ? (
-                <UserMessage
+            <AnimatePresence initial={false} mode="popLayout">
+              {messages.map((m) => (
+                <motion.div
                   key={m.id}
-                  content={m.content}
-                  userName={user?.name || "User"}
-                />
-              ) : (
-                <AssistantMessage
-                  key={m.id}
-                  content={m.content}
-                  citations={m.citations}
-                  onRegenerate={() => handleSend(messages[messages.length - 2]?.content || '')}
-                />
-              )
-            ))}
-            {isProcessing && <ThinkingIndicator />}
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: 0.05,
+                    ease: "easeOut"
+                  }}
+                  layout
+                >
+                  {m.role === 'user' ? (
+                    <UserMessage
+                      content={m.content}
+                      userName={user?.name || "User"}
+                    />
+                  ) : (
+                    <AssistantMessage
+                      content={m.content}
+                      citations={m.citations}
+                      onRegenerate={() => handleSend(messages[messages.length - 2]?.content || '')}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            {isProcessing && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <ThinkingIndicator />
+              </motion.div>
+            )}
           </MessageList>
         )}
       </div>

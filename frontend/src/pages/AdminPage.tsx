@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Database } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Database, FileText, Upload, X, FileWarning } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { useModels } from '@/hooks/useModels';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -27,6 +29,10 @@ const AdminPage = () => {
   const [ingestionLogs, setIngestionLogs] = useState<string[]>([]);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [isIngesting, setIsIngesting] = useState(false);
+
+  // Phase 6.4: Form Validation
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Derive active model from fetched models
   const activeModelId = models.find(m => m.is_active)?.id || '';
@@ -52,6 +58,30 @@ const AdminPage = () => {
 
   const handleModelChange = (modelId: string) => {
     updateModelMutation.mutate(modelId);
+  };
+
+  const validateFile = (file: File) => {
+    if (file.type !== 'application/pdf') {
+      return "Only PDF files are supported.";
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return "File size must be less than 10MB.";
+    }
+    return null;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const error = validateFile(file);
+      setFileError(error);
+      if (!error) {
+        setSelectedFile(file);
+        logger.info("file_selected", { name: file.name, size: file.size });
+      } else {
+        setSelectedFile(null);
+      }
+    }
   };
 
   const handleIngest = async () => {
@@ -137,9 +167,9 @@ const AdminPage = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <span>Loading models...</span>
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-4 w-2/3" />
               </div>
             ) : (
               <div className="flex items-center gap-4">
@@ -189,30 +219,87 @@ const AdminPage = () => {
               Knowledge Base Ingestion
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleIngest}
-                    disabled={isIngesting}
-                    className="w-full sm:w-auto min-w-[200px]"
-                  >
-                    {isIngesting ? (
-                      <>
-                        <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Ingest"
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Trigger document processing pipeline</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Upload Knowledge Base (PDF)</label>
+                <div className={cn(
+                  "border-2 border-dashed rounded-2xl p-8 transition-all flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary/50 hover:bg-primary/5",
+                  fileError ? "border-destructive/50 bg-destructive/5" : "border-border",
+                  selectedFile ? "border-primary/50 bg-primary/5" : ""
+                )} onClick={() => document.getElementById('file-upload')?.click()}>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                  />
+                  {selectedFile ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <FileText size={24} />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-semibold">{selectedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                        }}
+                      >
+                        <X size={14} className="mr-1" /> Remove
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                        <Upload size={24} />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                        <p className="text-xs text-muted-foreground">PDF only (max 10MB)</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {fileError && (
+                  <div className="flex items-center gap-2 text-xs text-destructive animate-in fade-in slide-in-from-top-1">
+                    <FileWarning size={14} />
+                    <span>{fileError}</span>
+                  </div>
+                )}
+              </div>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => handleIngest()}
+                      disabled={isIngesting}
+                      className="w-full sm:w-auto min-w-[200px] rounded-xl h-11"
+                    >
+                      {isIngesting ? (
+                        <>
+                          <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Start Ingestion"
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Trigger document processing pipeline</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
             {/* Logs Area */}
             <Collapsible

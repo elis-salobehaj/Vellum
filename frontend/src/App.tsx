@@ -1,11 +1,18 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import ChatPage from './pages/ChatPage';
-import LoginPage from './pages/LoginPage';
-import AdminPage from './pages/AdminPage';
 import { logger } from './lib/logger';
 import { RequireAuth } from './components/RequireAuth';
+
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+
+const PageLoader = () => (
+  <div className="h-screen w-full flex items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
 
 function App() {
   const basename = import.meta.env.BASE_URL ? import.meta.env.BASE_URL.replace(/\/$/, "") : "";
@@ -16,18 +23,20 @@ function App() {
 
   return (
     <Router basename={basename}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={
-          <RequireAuth>
-            <AppLayout />
-          </RequireAuth>
-        }>
-          <Route path="/" element={<ChatPage />} />
-          <Route path="/chat/:sessionId" element={<ChatPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={
+            <RequireAuth>
+              <AppLayout />
+            </RequireAuth>
+          }>
+            <Route path="/" element={<ChatPage />} />
+            <Route path="/chat/:sessionId" element={<ChatPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

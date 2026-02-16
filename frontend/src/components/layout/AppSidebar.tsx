@@ -5,7 +5,6 @@ import {
   LogOut,
   Plus,
   User as UserIcon,
-  Search,
   PanelLeftClose,
   PanelLeft,
   Sun,
@@ -33,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from '@/hooks/useAuth';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface AppSidebarProps {
   isCollapsed: boolean;
@@ -46,6 +46,11 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
   const { theme, setTheme } = useTheme();
 
   const { data: history = [] } = useChatHistory();
+
+  useKeyboardShortcuts({
+    'mod+i': () => navigate('/'),
+    'mod+[': () => setIsCollapsed(!isCollapsed),
+  });
 
   const handleLogout = () => {
     logout();
@@ -62,6 +67,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
         "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 relative z-20",
         isCollapsed ? "w-[70px]" : "w-[280px]"
       )}
+      aria-label="Sidebar Navigation"
     >
       {/* Header */}
       <div className={cn(
@@ -92,12 +98,13 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "text-muted-foreground transition-all duration-300 hover:bg-accent/40",
+            "text-muted-foreground transition-all duration-300 hover:bg-accent/40 hover:scale-105 active:scale-95",
             isCollapsed
               ? "order-1 h-12 w-12 rounded-2xl bg-accent/10"
               : "order-2 h-8 w-8"
           )}
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={isCollapsed ? "Expand sidebar (mod+[ )" : "Collapse sidebar (mod+[ )"}
         >
           {isCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={18} />}
         </Button>
@@ -107,9 +114,11 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
         <Button
           onClick={() => navigate('/')}
           className={cn(
-            "w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm transition-all flex items-center justify-center gap-2",
+            "w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]",
             isCollapsed ? "h-10 w-10 p-0" : "h-11 px-4"
           )}
+          aria-label="New Chat"
+          title="New Chat (mod+i)"
         >
           <Plus size={20} />
           {!isCollapsed && <span className="font-medium">New Chat</span>}
@@ -121,7 +130,6 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
         {!isCollapsed && (
           <div className="px-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
             <span>Recent Chats</span>
-            <Search size={14} className="cursor-pointer hover:text-foreground transition-colors" />
           </div>
         )}
 
@@ -170,9 +178,10 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start gap-3 rounded-lg text-muted-foreground hover:text-foreground",
+                    "w-full justify-start gap-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/40 active:scale-95 transition-all",
                     isCollapsed ? "px-0 justify-center h-10 w-10 mx-auto" : "h-10 px-3"
                   )}
+                  aria-label="Admin Settings"
                 >
                   <Settings size={18} className="shrink-0" />
                   {!isCollapsed && <span className="font-medium">Admin Settings</span>}
@@ -188,9 +197,10 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
             <Button
               variant="ghost"
               className={cn(
-                "w-full justify-start gap-3 rounded-xl hover:bg-accent/40 p-1.5 transition-colors group",
+                "w-full justify-start gap-3 rounded-xl hover:bg-accent/40 p-1.5 transition-all group active:scale-[0.98]",
                 isCollapsed ? "h-10 w-10 justify-center mx-auto" : "h-auto px-2"
               )}
+              aria-label="User Account Menu"
             >
               <Avatar className="h-8 w-8 border-2 border-primary/10 group-hover:border-primary/30 transition-all">
                 <AvatarImage src="" />

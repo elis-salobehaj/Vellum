@@ -1,6 +1,4 @@
 import {
-  Search,
-  Bell,
   ChevronDown,
   Sparkles,
   Check
@@ -61,13 +59,6 @@ export const Header = ({ selectedModel, models, onModelChange }: HeaderProps) =>
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg">
-          <Search size={18} />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg relative">
-          <Bell size={18} />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full" />
-        </Button>
       </div>
     </header>
   );
