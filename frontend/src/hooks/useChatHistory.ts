@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import { useAuth } from "./useAuth";
+import { api } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface ChatSession {
   id: string;

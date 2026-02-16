@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { AppSidebar } from './AppSidebar';
-import { cn } from '../../lib/utils';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { cn } from '@/lib/utils';
 
 export const AppLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -13,7 +13,7 @@ export const AppLayout = () => {
       <main className={cn(
         "flex-1 flex flex-col min-h-0 overflow-hidden transition-all duration-300 relative",
         // Gradient overlay for depth
-        "after:absolute after:inset-0 after:pointer-events-none after:bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] after:from-primary/5 after:via-transparent after:to-transparent"
+        "after:absolute after:inset-0 after:pointer-events-none after:bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] after:from-primary/5 after:via-transparent after:to-transparent"
       )}>
         <Outlet />
       </main>

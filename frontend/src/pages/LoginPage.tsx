@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { useNavigate } from 'react-router-dom';
-import { loginRequest } from '../authConfig';
-import { config } from '../config';
-import { logger } from '../lib/logger';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { loginRequest } from '@/authConfig';
+import { config } from '@/config';
+import { logger } from '@/lib/logger';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const LoginPage = () => {
   const { instance } = useMsal();
@@ -33,7 +33,7 @@ const LoginPage = () => {
 
   return (
     <div className="h-screen flex items-center justify-center bg-muted/50">
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
 
       <Card className="w-full max-w-md z-10 shadow-xl border-border/50">
         <CardHeader className="text-center space-y-4">

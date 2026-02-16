@@ -1,7 +1,7 @@
 import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "../authConfig";
-import { logger } from "../lib/logger";
-import { config } from "../config";
+import { loginRequest } from "@/authConfig";
+import { logger } from "@/lib/logger";
+import { config } from "@/config";
 
 interface UseAuthReturn {
   getToken: () => Promise<string>;

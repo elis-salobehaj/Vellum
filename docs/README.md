@@ -26,7 +26,7 @@
 **Last Status Update**: 2026-02-15
 
 **Recently Completed**:
-- ✅ **Frontend UI Overhaul** — shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign, premium animations, and performance optimizations.
+- ✅ **Frontend UI Overhaul** — shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign, premium animations, path aliases, and performance optimizations.
 - ✅ **Phase 5: Production Ingestion & Serving** — Decoupled microservices, TEI embeddings, lightweight backend, KFP ingestion
 - ✅ **Dependency Standardization & Upgrades** — pnpm, uv, pyproject.toml, React 19, Vite 7, Playwright 1.58, httpx migration
 - ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite. **Update: Fixed Entra ID loops and KFP local execution issues.**

@@ -1,12 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
-import AppLayout from './components/layout/AppLayout';
-import { logger } from './lib/logger';
-import { RequireAuth } from './components/RequireAuth';
+import AppLayout from '@/components/layout/AppLayout';
+import { logger } from '@/lib/logger';
+import { RequireAuth } from '@/components/RequireAuth';
 
-const ChatPage = lazy(() => import('./pages/ChatPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
+const ChatPage = lazy(() => import('@/pages/ChatPage'));
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
 
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">

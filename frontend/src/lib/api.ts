@@ -1,5 +1,5 @@
-import { config } from "../config";
-import { logger } from "./logger";
+import { config } from "@/config";
+import { logger } from "@/lib/logger";
 
 /**
  * API Error class for better error handling

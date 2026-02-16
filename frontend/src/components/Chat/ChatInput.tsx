@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { Send, Paperclip, Square } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Textarea } from '../ui/textarea';
-import { cn } from '../../lib/utils';
-import { logger } from '../../lib/logger';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -61,7 +61,7 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="max-w-3xl mx-auto p-4">
         <div className="relative flex items-end gap-2 bg-background border border-border rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent transition-all">
           {/* Attachment Button */}
@@ -84,7 +84,7 @@ export const ChatInput = ({
             placeholder={placeholder}
             disabled={disabled}
             className={cn(
-              "min-h-[52px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-3 px-0",
+              "min-h-13 max-h-50 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-3 px-0",
               "placeholder:text-muted-foreground"
             )}
             rows={1}

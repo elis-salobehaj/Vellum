@@ -87,7 +87,7 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 
 ### 1.3 Utility Setup
 - [x] Create `frontend/src/lib/utils.ts` with `cn()` helper (clsx + tailwind-merge).
-- [x] Configure path aliases in `tsconfig.json` and `vite.config.ts` for `@/` imports.
+- [x] Configure path aliases in `tsconfig.json` and `vite.config.ts` for `@/` imports and refactor all components to use them. ✅
 
 **Files created/modified**:
 - `frontend/src/index.css` (rewritten)
@@ -285,7 +285,7 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 ### 7.1 Code Cleanup
 - [x] Remove all deleted component files.
 - [x] Remove unused dependencies from `package.json`.
-- [x] Run `pnpm lint` and fix all warnings.
+- [x] Run `pnpm lint` and fix all warnings (including Tailwind 4 directive simplifications). ✅
 - [x] Run Playwright tests to verify nothing broke.
 
 ### 7.2 Documentation Updates

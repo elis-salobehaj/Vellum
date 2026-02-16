@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
-import { Button } from '../ui/button';
-import { cn } from '../../lib/utils';
-import type { Citation as ICitation } from '../../types';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { Citation as ICitation } from '@/types';
 
 interface Message {
   id: string;

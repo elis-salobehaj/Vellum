@@ -1,7 +1,7 @@
 import React from 'react';
 import { useIsAuthenticated } from "@azure/msal-react";
 import { Navigate, useLocation } from 'react-router-dom';
-import { config } from '../config';
+import { config } from '@/config';
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useIsAuthenticated();

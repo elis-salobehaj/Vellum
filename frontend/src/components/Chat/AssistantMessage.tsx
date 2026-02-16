@@ -5,10 +5,10 @@ import remarkBreaks from 'remark-breaks';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, RotateCw, Download } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { config } from '../../config';
-import type { Citation as ICitation } from '../../types';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { config } from '@/config';
+import type { Citation as ICitation } from '@/types';
 
 interface AssistantMessageProps {
   content: string;
