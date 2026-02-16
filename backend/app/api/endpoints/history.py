@@ -12,7 +12,7 @@ class ConversationSummary(BaseModel):
     title: str
     date: str
 
-@router.get("/", response_model=List[ConversationSummary])
+@router.get("", response_model=List[ConversationSummary])
 async def get_history(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("user", "default")
     logger.info("history_fetch_list", user=user_id)

@@ -5,7 +5,7 @@ import { logger } from './lib/logger';
 export const msalConfig: Configuration = {
   auth: {
     clientId: import.meta.env.VITE_AZURE_CLIENT_ID || "no-client-id-provided",
-    authority: `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID || "common"}/v2.0`,
+    authority: import.meta.env.VITE_AZURE_AUTHORITY || `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID || "common"}/v2.0`,
     redirectUri: window.location.origin + "/",
     postLogoutRedirectUri: window.location.origin + "/",
   },

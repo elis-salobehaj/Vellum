@@ -29,7 +29,7 @@
 **Recently Completed**:
 - ✅ **Phase 5: Production Ingestion & Serving** — Decoupled microservices, TEI embeddings, lightweight backend, KFP ingestion
 - ✅ **Dependency Standardization & Upgrades** — pnpm, uv, pyproject.toml, React 19, Vite 7, Playwright 1.58, httpx migration
-- ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite (16/16 passing)
+- ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite. **Update: Fixed Entra ID loops and KFP local execution issues.**
 - ✅ **Phase 4: Experimentation & Tuning** — Katib hyperparameter optimization, Qdrant migration
 - ✅ **Phase 3: Platform Engineering** — Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard
 - ✅ **Phase 2: Modern Data Engineering** — KFP ingestion pipeline, ChromaDB → Qdrant

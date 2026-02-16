@@ -1,6 +1,7 @@
 import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "@/authConfig";
-import { logger } from "@/lib/logger";
+import { loginRequest } from "../authConfig";
+import { logger } from "../lib/logger";
+import { config } from "../config";
 
 interface UseAuthReturn {
   getToken: () => Promise<string>;
@@ -23,10 +24,15 @@ export const useAuth = (): UseAuthReturn => {
   const isAuthenticated = !!account;
 
   const getToken = async (): Promise<string> => {
-    // If no account, return mock token (for development/bypass mode)
-    if (!account) {
-      logger.warn("auth_no_account", { message: "No account found, using mock token" });
+    // If bypass auth is enabled, return mock token
+    if (config.auth.bypassAuth) {
       return "mock-token";
+    }
+
+    // If no account, return empty string (unauthenticated)
+    if (!account) {
+      logger.warn("auth_no_account", { message: "No account found" });
+      return "";
     }
 
     try {
@@ -38,8 +44,8 @@ export const useAuth = (): UseAuthReturn => {
       return response.idToken;
     } catch (error) {
       logger.error("auth_token_acquisition_failed", error);
-      // Fallback to mock token on error
-      return "mock-token";
+      // Return empty string on error so API fails cleanly with 401
+      return "";
     }
   };
 
