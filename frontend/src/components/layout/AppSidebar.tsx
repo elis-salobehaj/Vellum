@@ -30,7 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 import { useAuth } from '../../hooks/useAuth';
-import { useChatHistory } from '../../hooks/useChatHistory';
+import { useChatHistory, type ChatSession } from '../../hooks/useChatHistory';
 import { useTheme } from '../theme/ThemeProvider';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
@@ -65,7 +65,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
     <aside
       className={cn(
         "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 relative z-20",
-        isCollapsed ? "w-[70px]" : "w-[280px]"
+        isCollapsed ? "w-17.5" : "w-70"
       )}
       aria-label="Sidebar Navigation"
     >
@@ -135,7 +135,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
 
         <ScrollArea className="flex-1 px-3">
           <div className="space-y-1 pb-4">
-            {history.map((item: any) => (
+            {history.map((item: ChatSession) => (
               <TooltipProvider key={item.id} delayDuration={500}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -230,7 +230,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
                 <Settings size={16} /> Appearance
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent className="p-1.5 rounded-2xl shadow-2xl border-border/50 backdrop-blur-xl bg-background/95 min-w-[150px]">
+                <DropdownMenuSubContent className="p-1.5 rounded-2xl shadow-2xl border-border/50 backdrop-blur-xl bg-background/95 min-w-37.5">
                   <DropdownMenuItem onClick={() => setTheme("light")} className="rounded-xl py-2 cursor-pointer gap-2 justify-between">
                     <div className="flex items-center gap-2">
                       <Sun size={14} /> Light

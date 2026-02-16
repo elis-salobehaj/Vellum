@@ -11,7 +11,7 @@ import { ThinkingIndicator } from '../components/Chat/ThinkingIndicator';
 import { EmptyState } from '../components/Chat/EmptyState';
 
 import { logger } from '../lib/logger';
-import type { Message } from '../types';
+import type { Message, Citation } from '../types';
 
 import { useAuth } from '../hooks/useAuth';
 import { useModels, type Model } from '../hooks/useModels';
@@ -79,7 +79,7 @@ const ChatPage = () => {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.response,
-        citations: data.citations?.map((c: any, i: number) => ({
+        citations: data.citations?.map((c: Citation, i: number) => ({
           id: `c${i}`,
           source: c.source,
           page: c.page,
@@ -89,8 +89,8 @@ const ChatPage = () => {
       setMessages(prev => [...prev, aiMsg]);
       logger.info("assistant_message_received", { citations: aiMsg.citations?.length });
 
-    } catch (error) {
-      logger.error("chat_request_failed", error);
+    } catch (error: unknown) {
+      logger.error("chat_request_failed", error as Error);
       const errorMsg: Message = {
         id: Date.now().toString(),
         role: 'assistant',

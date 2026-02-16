@@ -51,7 +51,7 @@ const AdminPage = () => {
       setSuccessMsg("Model updated successfully");
       setTimeout(() => setSuccessMsg(null), 3000);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       setError(err.message || "Failed to update model");
     }
   });
@@ -116,10 +116,11 @@ const AdminPage = () => {
           break;
         }
       }
-    } catch (err: any) {
-      logger.error("ingestion_failed", err);
-      setError(err.message || "Ingestion failed");
-      setIngestionLogs(prev => [...prev, `Error: ${err.message}`]);
+    } catch (err: unknown) {
+      const error = err as Error;
+      logger.error("ingestion_failed", error);
+      setError(error.message || "Ingestion failed");
+      setIngestionLogs(prev => [...prev, `Error: ${error.message}`]);
     } finally {
       setIsIngesting(false);
     }
@@ -191,7 +192,7 @@ const AdminPage = () => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <SelectContent className="!bg-background">
+                    <SelectContent className="bg-background!">
                       {(models as Model[]).map((m: Model) => (
                         <SelectItem key={m.id} value={m.id}>
                           <div className="flex items-center gap-2">
@@ -282,7 +283,7 @@ const AdminPage = () => {
                     <Button
                       onClick={() => handleIngest()}
                       disabled={isIngesting}
-                      className="w-full sm:w-auto min-w-[200px] rounded-xl h-11"
+                      className="w-full sm:w-auto min-w-50 rounded-xl h-11"
                     >
                       {isIngesting ? (
                         <>
@@ -321,7 +322,7 @@ const AdminPage = () => {
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent>
-                <ScrollArea className="h-[300px] w-full rounded-md border p-4 bg-muted/20 font-mono text-xs">
+                <ScrollArea className="h-75 w-full rounded-md border p-4 bg-muted/20 font-mono text-xs">
                   {ingestionLogs.length === 0 ? (
                     <div className="text-muted-foreground italic">No logs available. Start ingestion to see progress.</div>
                   ) : (

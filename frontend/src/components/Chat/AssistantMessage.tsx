@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -8,16 +8,11 @@ import { Copy, Check, RotateCw, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { config } from '../../config';
-
-interface Citation {
-  source: string;
-  page?: number;
-  score?: number;
-}
+import type { Citation as ICitation } from '../../types';
 
 interface AssistantMessageProps {
   content: string;
-  citations?: Citation[];
+  citations?: ICitation[];
   onRegenerate?: () => void;
 }
 
@@ -82,10 +77,10 @@ export const AssistantMessage = ({ content, citations, onRegenerate }: Assistant
                         </Button>
                       </div>
                       <SyntaxHighlighter
-                        style={oneDark as any}
+                        style={oneDark as { [key: string]: CSSProperties }}
                         language={language}
                         PreTag="div"
-                        className="!mt-0 !rounded-t-none !rounded-b-lg !my-0 border border-t-0 border-border"
+                        className="mt-0! rounded-t-none! rounded-b-lg! my-0! border border-t-0 border-border"
                       >
                         {codeString}
                       </SyntaxHighlighter>

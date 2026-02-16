@@ -88,11 +88,11 @@ class ApiClient {
   /**
    * POST request
    */
-  async post<T>(path: string, body?: any, customHeaders?: HeadersInit): Promise<T> {
+  async post<T>(path: string, body?: unknown, customHeaders?: HeadersInit): Promise<T> {
     logger.debug("api_post", { path, hasBody: !!body });
 
     const headers = await this.getHeaders(customHeaders);
-    if (body) { (headers as any)["Content-Type"] = "application/json"; }
+    if (body) { (headers as Record<string, string>)["Content-Type"] = "application/json"; }
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
@@ -106,11 +106,11 @@ class ApiClient {
   /**
    * PUT request
    */
-  async put<T>(path: string, body?: any, customHeaders?: HeadersInit): Promise<T> {
+  async put<T>(path: string, body?: unknown, customHeaders?: HeadersInit): Promise<T> {
     logger.debug("api_put", { path, hasBody: !!body });
 
     const headers = await this.getHeaders(customHeaders);
-    if (body) { (headers as any)["Content-Type"] = "application/json"; }
+    if (body) { (headers as Record<string, string>)["Content-Type"] = "application/json"; }
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "PUT",
@@ -140,11 +140,11 @@ class ApiClient {
    * Stream request for SSE/streaming responses
    * Returns the raw Response object for streaming consumption
    */
-  async stream(path: string, body?: any, customHeaders?: HeadersInit): Promise<Response> {
+  async stream(path: string, body?: unknown, customHeaders?: HeadersInit): Promise<Response> {
     logger.debug("api_stream", { path, hasBody: !!body });
 
     const headers = await this.getHeaders(customHeaders);
-    if (body) { (headers as any)["Content-Type"] = "application/json"; }
+    if (body) { (headers as Record<string, string>)["Content-Type"] = "application/json"; }
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",

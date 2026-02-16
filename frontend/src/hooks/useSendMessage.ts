@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useAuth } from "./useAuth";
+import type { Citation } from "../types";
 
 interface SendMessageVariables {
   sessionId?: string;
@@ -10,7 +11,7 @@ interface SendMessageVariables {
 
 interface SendMessageResponse {
   response: string;
-  citations?: any[];
+  citations?: Citation[];
   session_id?: string;
 }
 
