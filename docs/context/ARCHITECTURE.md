@@ -55,6 +55,9 @@ graph TD
 #### 1. Frontend (React 19)
 - **Runtime**: Node 24.13.0 (Krypton LTS)
 - **Build Tool**: Vite 7 + pnpm (Corepack enabled)
+- **UI Library**: shadcn/ui + Radix UI Primitives (Accessible components).
+- **Styling**: Tailwind CSS 4 with native OKLCH theme tokens.
+- **State Management**: React Query (Server state) + React Context (UI state).
 - **Auth**: MSAL (`@azure/msal-react`) integrated with Entra ID.
 - **Responsibility**: Provides the chat interface, session management, and admin controls for ingestion.
 

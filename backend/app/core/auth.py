@@ -11,9 +11,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 @lru_cache()
 def get_jwks():
-    """Fetch and cache Azure JWKS."""
-    # We use the tenant-specific endpoint for better security
-    jwks_uri = f"https://login.microsoftonline.com/{settings.AZURE_TENANT_ID}/discovery/v2.0/keys"
+    """Fetch and cache Azure JWKS (v2.0 common)."""
+    # We use 'common' as it covers both single and multi-tenant keys for most account types
+    jwks_uri = "https://login.microsoftonline.com/common/discovery/v2.0/keys"
     try:
         with httpx.Client(timeout=10.0) as client:
             response = client.get(jwks_uri)
@@ -21,7 +21,7 @@ def get_jwks():
             return response.json()
     except Exception as e:
         logger.error("auth_jwks_fetch_failed", error=str(e), uri=jwks_uri)
-        raise
+        raise HTTPException(status_code=500, detail="Could not fetch Azure JWKS")
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -104,6 +104,9 @@ async def get_current_user(
             "user": user_id,
             "payload": payload
         }
+    except HTTPException:
+        # Re-raise HTTP exceptions so we don't convert 401 to 500
+        raise
     except JWTError as e:
         logger.error("auth_jwt_error", error=str(e))
         try:

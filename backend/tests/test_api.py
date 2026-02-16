@@ -1,3 +1,6 @@
+import os
+os.environ["BYPASS_AUTH"] = "true"
+
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
@@ -37,7 +40,7 @@ def test_chat_endpoint(mock_get_msgs, mock_chat, mock_query):
     data = response.json()
     assert data["response"] == "Test response"
     assert len(data["citations"]) == 1
-    assert data["session_id"] is None # Should NOT generate a new one if not provided
+    assert data["session_id"] is not None # Endpoint should generate one if not provided
     
     mock_chat.assert_called_once()
     mock_query.assert_called_with("Hello", k=3)

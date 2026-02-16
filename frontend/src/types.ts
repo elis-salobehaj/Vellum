@@ -3,6 +3,7 @@ export interface Citation {
   source: string;
   page?: number;
   text: string;
+  score?: number;
 }
 
 export interface Message {

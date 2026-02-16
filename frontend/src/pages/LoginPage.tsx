@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { useNavigate } from 'react-router-dom';
-import { loginRequest } from '../authConfig';
-import { config } from '../config';
-import { logger } from '../lib/logger';
+import { loginRequest } from '@/authConfig';
+import { config } from '@/config';
+import { logger } from '@/lib/logger';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const LoginPage = () => {
   const { instance } = useMsal();
@@ -30,22 +32,35 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mx-auto mb-4 text-2xl font-bold">k</div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome to kbase-ai</h1>
-          <p className="text-gray-500 mt-2">Sign in with your enterprise account</p>
-        </div>
+    <div className="h-screen flex items-center justify-center bg-muted/50">
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
 
-        <button
-          onClick={handleLogin}
-          disabled={isLoading}
-          className="w-full bg-black text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {isLoading ? 'Signing in...' : 'Sign in with Entra ID'}
-        </button>
-      </div>
+      <Card className="w-full max-w-md z-10 shadow-xl border-border/50">
+        <CardHeader className="text-center space-y-4">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground mx-auto shadow-lg shadow-primary/20 text-3xl font-bold">
+            V
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold tracking-tight">Vellum</CardTitle>
+            <CardDescription className="text-base">
+              Sign in with your enterprise account to access AI-powered document analysis.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={handleLogin}
+            disabled={isLoading}
+            size="lg"
+            className="w-full h-12 text-base font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {isLoading ? 'Signing in...' : 'Sign in with Entra ID'}
+          </Button>
+          <p className="mt-6 text-center text-xs text-muted-foreground uppercase tracking-widest font-semibold">
+            Enterprise Secure
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };

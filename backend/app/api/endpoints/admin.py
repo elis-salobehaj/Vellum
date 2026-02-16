@@ -43,7 +43,7 @@ async def create_model(config: ModelConfig, _: dict = Depends(get_current_user))
     MODEL_CONFIGS.append(config)
     return config
 
-@router.put("/models/{model_id}", response_model=ModelConfig)
+@router.put("/models/{model_id:path}", response_model=ModelConfig)
 async def update_model(model_id: str, config: ModelConfig, _: dict = Depends(get_current_user)):
     # TODO: RBAC check
     # Current Implementation:

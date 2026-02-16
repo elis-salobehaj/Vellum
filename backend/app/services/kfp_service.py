@@ -16,7 +16,7 @@ class KFPService:
             
         try:
             logger.debug("kfp_client_init", host=self.host)
-            self.client = kfp.Client(host=self.host)
+            self.client = kfp.Client(host=self.host, namespace="kubeflow-vellum")
             # Inject auth headers for multi-user Kubeflow environments
             self._inject_auth_headers(self.client)
             return self.client
@@ -41,11 +41,21 @@ class KFPService:
         bucket = bucket or settings.MINIO_BUCKET
         logger.info("kfp_trigger_ingestion", bucket=bucket, prefix=prefix, cleanup=cleanup)
         
+        # Determine internal endpoints for pipeline (which runs inside cluster)
+        # If running locally (hybrid), settings point to localhost, but pipeline needs cluster DNS.
+        pipeline_minio = settings.MINIO_ENDPOINT
+        if "localhost" in pipeline_minio or "127.0.0.1" in pipeline_minio:
+             pipeline_minio = "minio-service.kubeflow.svc.cluster.local:9000"
+             
+        pipeline_embeddings = settings.EMBEDDINGS_SERVICE_URL
+        if "localhost" in pipeline_embeddings or "127.0.0.1" in pipeline_embeddings:
+             pipeline_embeddings = "http://embeddings-service.kubeflow-vellum.svc.cluster.local/v1"
+
         # Parameters for the pipeline
         params = {
             "bucket": bucket,
             "prefix": prefix,
-            "minio_endpoint": settings.MINIO_ENDPOINT,
+            "minio_endpoint": pipeline_minio,
             "qdrant_host": "qdrant.qdrant.svc.cluster.local",
             "qdrant_port": 6333,
             "chunk_size": 512,
@@ -53,7 +63,7 @@ class KFPService:
             "splitter_mode": "fixed",
             "max_docs": 1000,
             "model_name": "BAAI/bge-small-en-v1.5",
-            "embeddings_service_url": settings.EMBEDDINGS_SERVICE_URL,
+            "embeddings_service_url": pipeline_embeddings,
             "cleanup": cleanup
         }
 

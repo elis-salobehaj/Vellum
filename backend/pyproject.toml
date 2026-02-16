@@ -20,10 +20,11 @@ dependencies = [
     "httpx",
     "python-dotenv",
     "openai",
-    "kfp",
+    "kfp>=2.5.0",
     "minio",
     "structlog",
     "requests-toolbelt<1.0.0",
+    "urllib3<2.0.0",
 ]
 
 [build-system]

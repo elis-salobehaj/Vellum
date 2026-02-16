@@ -17,6 +17,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : [['html', { open: 'never' }], ['list']],
   testIgnore: process.env.SKIP_E2E ? '**/e2e.spec.ts' : undefined,
   use: {
+    // Force headless mode by default to avoid XServer issues in Linux/WSL
+    headless: true,
     // We use port 5174 for local tests to avoid clashing with dev.sh (port 5173)
     baseURL: process.env.BASE_URL || (process.env.CI ? 'http://frontend:80' : 'http://localhost:5174'),
     trace: 'on-first-retry',

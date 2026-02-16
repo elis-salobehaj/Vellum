@@ -4,7 +4,9 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from app.services.llm_service import llm_service
 from app.services.rag_service import rag_service
+from app.services.history_service import history_service
 from app.core.auth import get_current_user
+import uuid
 from app.core.config import settings
 
 router = APIRouter()
@@ -22,8 +24,11 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     2. Augment prompt.
     3. Generate response via LLM Service.
     """
-    # 0. Handle Session ID (pass-through from request)
-    session_id = request.session_id
+    # 0. Handle Session ID
+    session_id = request.session_id or str(uuid.uuid4())
+    
+    # Save User Message to History
+    history_service.add_message(session_id, "user", request.message)
 
     # 1. Retrieve Context
     context_nodes = await rag_service.query(request.message, k=request.context_window)
@@ -55,9 +60,15 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     ]
 
     # 3. Generate Response
-    # Note: We currently ignore request.model_id as the backend is configured centrally or via env.
-    # Future work: Pass model_id to llm_service if dynamic switching is needed.
     response_text = await llm_service.chat(messages)
+    
+    # 4. Save Assistant Response to History
+    history_service.add_message(
+        session_id, 
+        "assistant", 
+        response_text, 
+        citations=[c.model_dump() for c in citations]
+    )
     
     return ChatResponse(
         response=response_text, 

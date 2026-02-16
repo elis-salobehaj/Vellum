@@ -5,25 +5,36 @@
 ### ⚡ Hybrid Development (Recommended)
 Run backend and frontend locally against the Kubernetes cluster. This is the fastest iteration mode — no Docker rebuilds needed.
 
-**Option A: Single Command (Automatic)**
-```bash
-./scripts/dev.sh
-```
-This script handles `./scripts/connect.sh --hybrid`, `uvicorn --reload`, and `pnpm dev` in a single terminal.
+**Option A: Standard Hybrid Workflow (Recommended)**
+1. **Terminal 1: Backend + Infrastructure**
+   ```bash
+   ./scripts/dev.sh
+   ```
+   This script sets up `connect.sh --hybrid` and runs the backend (`uvicorn`) in the foreground with the necessary environment variables (`PYTHONPATH`, `KFP_NAMESPACE`) for local ingestion to work.
 
-**Option B: Manual Control (Multiple Terminals)**
+2. **Terminal 2: Frontend**
+   ```bash
+   cd frontend
+   pnpm dev
+   ```
+   This runs the frontend dev server independently.
 
+**Option B: Fully Manual (Granular Control)**
 1. **Terminal 1: Infrastructure**
    ```bash
    ./scripts/connect.sh --hybrid
    ```
 2. **Terminal 2: Backend**
    ```bash
-   cd backend && uv run uvicorn main:app --reload
+   cd backend
+   # Ensure PYTHONPATH includes root for 'kubeflow' module access
+   # Ensure KFP_NAMESPACE is set for local KFP client init
+   KFP_NAMESPACE=kubeflow-vellum PYTHONPATH=.. uv run uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8000
    ```
 3. **Terminal 3: Frontend**
    ```bash
-   cd frontend && pnpm dev
+   cd frontend
+   pnpm dev
    ```
 
 > **Tip**: Use Vite's dev server (port 5173) for hot-reload during development. The Kubernetes frontend pod (port 9090) is the production Nginx build.
@@ -217,3 +228,13 @@ See [Authentication Guide](AUTHENTICATION.md) for full details.
 ### Frontend proxy not reaching backend
 - Ensure backend is running on port 8000 (`uv run uvicorn main:app --reload`)
 - Check `vite.config.ts` for proxy configuration
+
+### 🔐 Authentication Issues (Entra ID)
+- **401 Unauthorized during Redirect**: Ensure the backend route doesn't have a trailing slash that causes a 307 redirect (which strips the Auth header). 
+- **"kid" not found**: Use the V2.0 **common** discovery endpoint: `https://login.microsoftonline.com/common/discovery/v2.0/keys`. Tenant-specific endpoints often miss global signing keys.
+- **Login Loop**: Ensure `main.tsx` initializes MSAL and calls `handleRedirectPromise()` to process the auth response.
+
+### 🔄 Ingestion Pipeline Issues
+- **FileNotFoundError for secrets**: Ensure `KFP_NAMESPACE=kubeflow-vellum` is set in your environment.
+- **ModuleNotFoundError: kubeflow**: Ensure `PYTHONPATH=..` is set when running the backend so it can find the pipeline definitions in the project root.
+- **Unexpected keyword 'base_image'**: This happens with old KFP versions. Ensure your backend virtual environment is synced with `kfp>=2.5.0`.

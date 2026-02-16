@@ -1,177 +1,132 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Plus, Maximize2, Minimize2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
-import { logger } from '../../lib/logger';
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import { Send, Paperclip, Square } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onStop?: () => void;
   disabled?: boolean;
+  isProcessing?: boolean;
+  placeholder?: string;
 }
 
-const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
+export const ChatInput = ({
+  onSend,
+  onStop,
+  disabled = false,
+  isProcessing = false,
+  placeholder = "Ask anything..."
+}: ChatInputProps) => {
   const [input, setInput] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'; // Reset height
-
-      // Dynamic Height Limits
-      const maxHeight = isMaximized ? window.innerHeight * 0.6 : 300;
-
+      textareaRef.current.style.height = 'auto';
+      const maxHeight = 200; // Max height in pixels
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, maxHeight)}px`;
     }
-  }, [input, isMaximized]);
+  }, [input]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter to send, Shift+Enter for newline
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-    if (e.key === 'Escape') {
-      if (isMaximized) {
-        setIsMaximized(false);
-      } else {
-        setIsFocused(false);
-        textareaRef.current?.blur();
-      }
-    }
   };
 
   const handleSend = () => {
-    if (!input.trim() || disabled) return;
+    if (!input.trim() || disabled || isProcessing) return;
+
     logger.info("chat_message_sent", { length: input.length });
-    onSend(input);
+    onSend(input.trim());
     setInput('');
-    setIsFocused(false);
-    setIsMaximized(false);
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
-  const toggleMaximize = () => {
-    setIsMaximized(!isMaximized);
-    if (!isFocused) setIsFocused(true);
-    textareaRef.current?.focus();
-  };
-
-  const handleBackdropClick = () => {
-    setIsMaximized(false);
+  const handleStop = () => {
+    if (onStop) {
+      logger.info("chat_generation_stopped");
+      onStop();
+    }
   };
 
   return (
-    <>
-      {/* Backdrop for click-outside */}
-      {isMaximized && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 transition-opacity duration-200"
-          onClick={handleBackdropClick}
-        />
-      )}
-
-      {/* Input Container */}
-      <motion.div
-        // Removed 'layout' prop to prevent layout thrashing/glitches
-        initial={{ y: 0 }}
-        animate={{
-          y: 0,
-          scale: 1,
-          // Width Logic: Always 100% of parent, MaxWidth toggles
-          maxWidth: isMaximized ? "100%" : "48rem", // 48rem = max-w-3xl
-          boxShadow: (isFocused || isMaximized)
-            ? "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
-            : "0 1px 2px 0 rgb(0 0 0 / 0.05)"
-        }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className={clsx(
-          "relative z-50 mx-auto bg-white border rounded-2xl transition-colors",
-          (isFocused || isMaximized) ? "border-blue-400 ring-2 ring-blue-50" : "bg-gray-50 border-gray-200 hover:border-gray-300",
-          // Fallback width class
-          "w-full"
-        )}
-      >
-        <div className="flex gap-2 p-3">
-
+    <div className="border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="max-w-3xl mx-auto p-4">
+        <div className="relative flex items-end gap-2 bg-background border border-border rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent transition-all">
           {/* Attachment Button */}
-          <div className="flex items-end self-end">
-            <button
-              className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors mb-0.5"
-              title="Add attachment"
-            >
-              <Plus size={20} />
-            </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 mb-2 ml-2 text-muted-foreground hover:text-foreground"
+            disabled={disabled || isProcessing}
+            title="Attach file (coming soon)"
+          >
+            <Paperclip size={20} />
+          </Button>
+
+          {/* Textarea */}
+          <Textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={cn(
+              "min-h-13 max-h-50 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-3 px-0",
+              "placeholder:text-muted-foreground"
+            )}
+            rows={1}
+          />
+
+          {/* Send/Stop Button */}
+          <div className="shrink-0 mb-2 mr-2">
+            {isProcessing ? (
+              <Button
+                onClick={handleStop}
+                size="icon"
+                variant="outline"
+                className="rounded-xl"
+                title="Stop generating"
+              >
+                <Square size={18} className="fill-current" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSend}
+                size="icon"
+                disabled={!input.trim() || disabled}
+                className={cn(
+                  "rounded-xl transition-all",
+                  input.trim() && !disabled
+                    ? "bg-primary hover:bg-primary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+                title="Send message (Enter)"
+              >
+                <Send size={18} />
+              </Button>
+            )}
           </div>
-
-          {/* Text Area */}
-          <div className="flex-1 py-1">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask anything..."
-              className={clsx(
-                "w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none text-base resize-none custom-scrollbar leading-relaxed",
-                // Min heights
-                isMaximized ? "min-h-[40vh]" : "min-h-[48px] max-h-[300px]"
-              )}
-              rows={1}
-              disabled={disabled}
-            />
-          </div>
-
-          {/* Right Column: Buttons */}
-          <div className="flex flex-col justify-between items-center min-h-[48px] h-auto">
-            {/* Maximize Button */}
-            <button
-              onClick={toggleMaximize}
-              className="text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-              title={isMaximized ? "Minimize" : "Deep drafting mode"}
-            >
-              {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </button>
-
-            {/* Send Button */}
-            <button
-              className={clsx(
-                "p-2 rounded-xl transition-all duration-200 shadow-sm mt-auto",
-                input.trim() && !disabled
-                  ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              )}
-              onClick={handleSend}
-              disabled={!input.trim() || disabled}
-              aria-label="Send message"
-            >
-              <Send size={18} />
-            </button>
-          </div>
-
         </div>
 
         {/* Helper Text */}
-        <AnimatePresence>
-          {isMaximized && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="px-4 pb-3 text-xs text-gray-400 flex justify-between border-t border-gray-100 pt-2 mx-2"
-            >
-              <span>Use Shift + Enter for new line</span>
-              <span>Drafting Canvas Active</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-      </motion.div>
-    </>
+        <div className="mt-2 text-xs text-muted-foreground text-center">
+          Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">Enter</kbd> to send,
+          <kbd className="ml-1 px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">Shift + Enter</kbd> for new line
+        </div>
+      </div>
+    </div>
   );
 };
-
-export default ChatInput;
