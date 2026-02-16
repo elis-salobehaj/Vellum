@@ -1,13 +1,13 @@
 import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import '@/index.css'
+import App from '@/App'
 import { PublicClientApplication, EventType, type AuthenticationResult } from '@azure/msal-browser';
 import { MsalProvider } from '@azure/msal-react';
-import { msalConfig } from './authConfig';
-import { logger } from './lib/logger';
+import { msalConfig } from '@/config/authConfig';
+import { logger } from '@/lib/logger';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from './components/theme/ThemeProvider';
+import { ThemeProvider } from '@/components/providers/theme/ThemeProvider';
 
 const msalInstance = new PublicClientApplication(msalConfig);
 const queryClient = new QueryClient();

@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Database, FileText, Upload, X, FileWarning } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/common/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/ui/card';
+import { Alert, AlertDescription } from '@/components/common/ui/alert';
+import { Badge } from '@/components/common/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/common/ui/select';
+import { ScrollArea } from '@/components/common/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/common/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/common/ui/tooltip';
+import { Skeleton } from '@/components/common/ui/skeleton';
 
 import { useModels, type Model } from '@/hooks/useModels';
 import { api } from '@/lib/api';
@@ -133,7 +133,7 @@ const AdminPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back to previous page">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>

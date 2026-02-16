@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { Send, Paperclip, Square } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/common/ui/button';
+import { Textarea } from '@/components/common/ui/textarea';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 

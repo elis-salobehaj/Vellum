@@ -5,15 +5,14 @@ import {
   LogOut,
   Plus,
   User as UserIcon,
-  PanelLeftClose,
   PanelLeft,
   Sun,
   Moon,
   Laptop,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/common/ui/button';
+import { ScrollArea } from '@/components/common/ui/scroll-area';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,13 +24,13 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+} from "@/components/common/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/common/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/common/ui/tooltip";
 
 import { useAuth } from '@/hooks/useAuth';
 import { useChatHistory, type ChatSession } from '@/hooks/useChatHistory';
-import { useTheme } from '@/components/theme/ThemeProvider';
+import { useTheme } from '@/components/providers/theme/ThemeProvider';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface AppSidebarProps {
@@ -81,13 +80,12 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
             isCollapsed ? "order-2 justify-center" : "order-1"
           )}
         >
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm shrink-0 font-bold">
+          <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm shrink-0 font-bold">
             V
           </div>
           {!isCollapsed && (
             <div className="flex items-center gap-2 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
               <span className="font-bold text-xl tracking-tight truncate">Vellum</span>
-              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono">v1.2</span>
             </div>
           )}
         </div>
@@ -98,15 +96,12 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "text-muted-foreground transition-all duration-300 hover:bg-accent/40 hover:scale-105 active:scale-95",
-            isCollapsed
-              ? "order-1 h-12 w-12 rounded-2xl bg-accent/10"
-              : "order-2 h-8 w-8"
+            "text-muted-foreground transition-all duration-300 hover:bg-accent/40 hover:scale-105 active:scale-95 order-1 h-12 w-12 rounded-2xl bg-accent/10",
           )}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={isCollapsed ? "Expand sidebar (mod+[ )" : "Collapse sidebar (mod+[ )"}
+          title={isCollapsed ? "Expand sidebar (ctrl+[ )" : "Collapse sidebar (ctrl+[ )"}
         >
-          {isCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={18} />}
+          <PanelLeft size={20} />
         </Button>
       </div>
 
@@ -118,7 +113,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
             isCollapsed ? "h-10 w-10 p-0" : "h-11 px-4"
           )}
           aria-label="New Chat"
-          title="New Chat (mod+i)"
+          title="New Chat (ctrl+i)"
         >
           <Plus size={20} />
           {!isCollapsed && <span className="font-medium">New Chat</span>}

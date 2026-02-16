@@ -28,9 +28,7 @@ build/
 backend/vellum_backend.egg-info/
 data/source_documents/
 ollama_data/
-
-# Documentation
-CONTRIBUTING.md
+test-results/
 
 # OS
 .DS_Store

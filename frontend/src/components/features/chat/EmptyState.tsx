@@ -1,5 +1,5 @@
 import { MessageSquare, FileSearch, Lightbulb, Sparkles } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/common/ui/card';
 
 interface EmptyStateProps {
   onSuggestionClick: (suggestion: string) => void;

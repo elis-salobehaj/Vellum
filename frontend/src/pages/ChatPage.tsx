@@ -3,12 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Header } from '@/components/layout/Header';
-import { ChatInput } from '@/components/Chat/ChatInput';
-import { MessageList } from '@/components/Chat/MessageList';
-import { UserMessage } from '@/components/Chat/UserMessage';
-import { AssistantMessage } from '@/components/Chat/AssistantMessage';
-import { ThinkingIndicator } from '@/components/Chat/ThinkingIndicator';
-import { EmptyState } from '@/components/Chat/EmptyState';
+import { ChatInput } from '@/components/features/chat/ChatInput';
+import { MessageList } from '@/components/features/chat/MessageList';
+import { UserMessage } from '@/components/features/chat/UserMessage';
+import { AssistantMessage } from '@/components/features/chat/AssistantMessage';
+import { ThinkingIndicator } from '@/components/features/chat/ThinkingIndicator';
+import { EmptyState } from '@/components/features/chat/EmptyState';
 
 import { logger } from '@/lib/logger';
 import type { Message, Citation } from '@/types';

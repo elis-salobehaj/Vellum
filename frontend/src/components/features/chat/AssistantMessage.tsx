@@ -5,9 +5,9 @@ import remarkBreaks from 'remark-breaks';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, RotateCw, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { config } from '@/config';
+import { Button } from '@/components/common/ui/button';
+import { Badge } from '@/components/common/ui/badge';
+import { config } from '@/config/index';
 import type { Citation as ICitation } from '@/types';
 
 interface AssistantMessageProps {

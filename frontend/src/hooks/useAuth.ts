@@ -1,7 +1,7 @@
 import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "@/authConfig";
+import { loginRequest } from "@/config/authConfig";
 import { logger } from "@/lib/logger";
-import { config } from "@/config";
+import { config } from "@/config/index";
 
 interface UseAuthReturn {
   getToken: () => Promise<string>;
@@ -21,7 +21,7 @@ interface UseAuthReturn {
 export const useAuth = (): UseAuthReturn => {
   const { instance, accounts } = useMsal();
   const account = accounts[0];
-  const isAuthenticated = !!account;
+
 
   const getToken = async (): Promise<string> => {
     // If bypass auth is enabled, return mock token
@@ -59,11 +59,17 @@ export const useAuth = (): UseAuthReturn => {
     }
   };
 
-  const user = account ? {
+  const user = config.auth.bypassAuth ? {
+    name: "Test User",
+    username: "test@example.com",
+    email: "test@example.com"
+  } : (account ? {
     name: account.name,
     username: account.username,
     email: account.username // MSAL typically uses username as email
-  } : null;
+  } : null);
+
+  const isAuthenticated = config.auth.bypassAuth || !!account;
 
   return {
     getToken,

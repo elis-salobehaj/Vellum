@@ -8,7 +8,7 @@ interface Shortcuts {
 
 /**
  * Hook to handle global keyboard shortcuts.
- * Pass an object where keys are string representations of combos (e.g., 'mod+k', 'mod+n')
+ * Pass an object where keys are string representations of combos (e.g., 'ctrl+k', 'ctrl+n')
  * and values are the actions to perform.
  * 'mod' automatically maps to Command on Mac and Ctrl on Windows/Linux.
  */

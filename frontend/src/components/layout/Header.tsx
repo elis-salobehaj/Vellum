@@ -3,14 +3,13 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/common/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Badge } from '../ui/badge';
+} from "@/components/common/ui/dropdown-menu";
 
 interface HeaderProps {
   selectedModel?: string;
@@ -22,7 +21,7 @@ export const Header = ({ selectedModel, models, onModelChange }: HeaderProps) =>
   const currentModel = models.find(m => m.id === selectedModel);
 
   return (
-    <header className="h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4 sticky top-0 z-10">
+    <header className="h-14 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 flex items-center justify-between px-4 sticky top-0 z-10">
       <div className="flex items-center gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -32,7 +31,7 @@ export const Header = ({ selectedModel, models, onModelChange }: HeaderProps) =>
               <ChevronDown size={14} className="text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" sideOffset={10} className="w-56 p-1.5 rounded-xl !bg-background shadow-lg border-border">
+          <DropdownMenuContent align="start" sideOffset={10} className="w-56 p-1.5 rounded-xl bg-background! shadow-lg border-border">
             {models.map((model) => (
               <DropdownMenuItem
                 key={model.id}
@@ -53,9 +52,6 @@ export const Header = ({ selectedModel, models, onModelChange }: HeaderProps) =>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-mono text-[10px] px-1.5 py-0 uppercase tracking-tighter">
-          Ready
-        </Badge>
       </div>
 
       <div className="flex items-center gap-2">
