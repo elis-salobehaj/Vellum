@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "../lib/api";
 import { useAuth } from "./useAuth";
-import type { Message } from "@/types";
 
 interface SendMessageVariables {
   sessionId?: string;

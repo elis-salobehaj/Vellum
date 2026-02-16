@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "../lib/api";
 import { useAuth } from "./useAuth";
-import type { Message } from "@/types";
+import type { Message } from "../types";
 
 interface BackendCitation {
   source: string;

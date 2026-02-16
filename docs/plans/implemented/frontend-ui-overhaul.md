@@ -1,6 +1,6 @@
 ---
 title: "Plan: Frontend UI Overhaul"
-status: active
+status: implemented
 priority: high
 estimated_hours: 40-60
 dependencies:
@@ -35,14 +35,14 @@ completion:
   - [x] Phase 3 — Chat Experience Redesign
   - [x] Phase 4 — State Management & API Layer
   - [x] Phase 5 — Theming & Dark Mode ✅
-  - [ ] Phase 6 — Accessibility & Polish
-  - [ ] Phase 7 — Documentation & Cleanup
+  - [x] Phase 6 — Accessibility & Polish ✅
+  - [x] Phase 7 — Documentation & Cleanup ✅
 ---
 
 # Plan: Frontend UI Overhaul
 
 **Date**: February 15, 2026
-**Status**: Active
+**Status**: Implemented
 **Goal**: Rebuild the Vellum frontend into a premium, production-grade enterprise chat UI using shadcn/ui components, OKLCH color theming, and modern React patterns.
 
 ## Motivation
@@ -283,21 +283,21 @@ Adopt **shadcn/ui** as the component foundation with **Tailwind CSS 4** and **OK
 **Goal**: Update all documentation and remove legacy files.
 
 ### 7.1 Code Cleanup
-- [ ] Remove all deleted component files.
-- [ ] Remove unused dependencies from `package.json`.
-- [ ] Run `pnpm lint` and fix all warnings.
-- [ ] Run Playwright tests to verify nothing broke.
+- [x] Remove all deleted component files.
+- [x] Remove unused dependencies from `package.json`.
+- [x] Run `pnpm lint` and fix all warnings.
+- [x] Run Playwright tests to verify nothing broke.
 
 ### 7.2 Documentation Updates
-- [ ] Update `docs/context/ARCHITECTURE.md` — Frontend section to reflect new component tree.
-- [ ] Update `docs/guides/DEVELOPMENT.md` — Frontend commands section.
-- [ ] Update `docs/README.md` — Active Plans table.
-- [ ] Update root `README.md` if needed.
+- [x] Update `docs/context/ARCHITECTURE.md` — Frontend section to reflect new component tree.
+- [x] Update `docs/guides/DEVELOPMENT.md` — Frontend commands section.
+- [x] Update `docs/README.md` — Active Plans table.
+- [x] Update root `README.md` if needed.
 
 ### 7.3 Commit & Ship
-- [ ] Commit with `feat: frontend ui overhaul with shadcn, oklch theming, and dark mode`.
-- [ ] Push and verify CI passes.
-- [ ] Move this plan to `docs/plans/implemented/`.
+- [x] Commit with `feat: frontend ui overhaul with shadcn, oklch theming, and dark mode`.
+- [x] Push and verify CI passes.
+- [x] Move this plan to `docs/plans/implemented/`.
 
 ---
 

@@ -21,12 +21,12 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 7 | **[Frontend UI Overhaul](plans/active/frontend-ui-overhaul.md)** | 🔄 Active | shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign |
-| 6 | **Enterprise Auth Hardening** | ⏳ Backlog | RBAC, Service Account tokens, OIDC groups |
+| 8 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 
 **Last Status Update**: 2026-02-15
 
 **Recently Completed**:
+- ✅ **Frontend UI Overhaul** — shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign, premium animations, and performance optimizations.
 - ✅ **Phase 5: Production Ingestion & Serving** — Decoupled microservices, TEI embeddings, lightweight backend, KFP ingestion
 - ✅ **Dependency Standardization & Upgrades** — pnpm, uv, pyproject.toml, React 19, Vite 7, Playwright 1.58, httpx migration
 - ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite. **Update: Fixed Entra ID loops and KFP local execution issues.**
@@ -72,6 +72,7 @@
 
 | Plan | Completed | Summary |
 |------|-----------|---------|
+| **Frontend UI Overhaul** | 2026-02-15 | Move to shadcn/ui, OKLCH theming, dark mode, React Query, premium animations, and accessibility polish. |
 | **Dev Tooling & Hybrid Mode** | 2026-02-15 | Package manager standardization (nvm, pnpm, uv), hybrid development mode, deploy optimization, unified logging (structlog + LogLayer), backend test suite (16/16 passing) |
 | **Phase 4: Experimentation & Tuning** | 2026-01 | Katib grid search (chunk_size=256, overlap=50, accuracy=0.8046), ChromaDB → Qdrant migration |
 | **Phase 3: Platform Engineering** | 2026-01 | Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard, Qdrant namespace |

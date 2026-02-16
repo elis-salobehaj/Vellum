@@ -2,21 +2,21 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { Header } from '@/components/layout/Header';
-import { ChatInput } from '@/components/Chat/ChatInput';
-import { MessageList } from '@/components/Chat/MessageList';
-import { UserMessage } from '@/components/Chat/UserMessage';
-import { AssistantMessage } from '@/components/Chat/AssistantMessage';
-import { ThinkingIndicator } from '@/components/Chat/ThinkingIndicator';
-import { EmptyState } from '@/components/Chat/EmptyState';
+import { Header } from '../components/layout/Header';
+import { ChatInput } from '../components/Chat/ChatInput';
+import { MessageList } from '../components/Chat/MessageList';
+import { UserMessage } from '../components/Chat/UserMessage';
+import { AssistantMessage } from '../components/Chat/AssistantMessage';
+import { ThinkingIndicator } from '../components/Chat/ThinkingIndicator';
+import { EmptyState } from '../components/Chat/EmptyState';
 
-import { logger } from '@/lib/logger';
-import type { Message } from '@/types';
+import { logger } from '../lib/logger';
+import type { Message } from '../types';
 
-import { useAuth } from '@/hooks/useAuth';
-import { useModels } from '@/hooks/useModels';
-import { useSessionMessages } from '@/hooks/useSessionMessages';
-import { useSendMessage } from '@/hooks/useSendMessage';
+import { useAuth } from '../hooks/useAuth';
+import { useModels, type Model } from '../hooks/useModels';
+import { useSessionMessages } from '../hooks/useSessionMessages';
+import { useSendMessage } from '../hooks/useSendMessage';
 
 const ChatPage = () => {
   const { sessionId } = useParams();
@@ -37,7 +37,7 @@ const ChatPage = () => {
   // Sync models to selectedModel
   useEffect(() => {
     if (models.length > 0 && !selectedModel) {
-      const active = models.find((m) => m.is_active);
+      const active = (models as Model[]).find((m) => m.is_active);
       if (active) setSelectedModel(active.id);
       else setSelectedModel(models[0].id);
     }

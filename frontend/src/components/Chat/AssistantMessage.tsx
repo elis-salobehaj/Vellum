@@ -5,9 +5,9 @@ import remarkBreaks from 'remark-breaks';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, RotateCw, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { config } from '@/config';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { config } from '../../config';
 
 interface Citation {
   source: string;
@@ -51,12 +51,13 @@ export const AssistantMessage = ({ content, citations, onRegenerate }: Assistant
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkBreaks]}
             components={{
-              code({ node, inline, className, children, ...props }) {
+              code({ className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || '');
                 const language = match ? match[1] : '';
                 const codeString = String(children).replace(/\n$/, '');
+                const isCodeBlock = !!match;
 
-                if (!inline && language) {
+                if (isCodeBlock) {
                   return (
                     <div className="relative group/code my-4">
                       <div className="flex items-center justify-between bg-muted/50 border border-border rounded-t-lg px-4 py-2">
@@ -81,11 +82,10 @@ export const AssistantMessage = ({ content, citations, onRegenerate }: Assistant
                         </Button>
                       </div>
                       <SyntaxHighlighter
-                        style={oneDark}
+                        style={oneDark as any}
                         language={language}
                         PreTag="div"
                         className="!mt-0 !rounded-t-none !rounded-b-lg !my-0 border border-t-0 border-border"
-                        {...props}
                       >
                         {codeString}
                       </SyntaxHighlighter>

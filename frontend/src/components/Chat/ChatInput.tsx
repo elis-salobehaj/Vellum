@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { Send, Paperclip, Square } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+import { cn } from '../../lib/utils';
+import { logger } from '../../lib/logger';
 
 interface ChatInputProps {
   onSend: (message: string) => void;

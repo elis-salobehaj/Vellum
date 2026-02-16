@@ -7,7 +7,7 @@ import { msalConfig } from './authConfig';
 import { logger } from './lib/logger';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { ThemeProvider } from './components/theme/ThemeProvider';
 
 const msalInstance = new PublicClientApplication(msalConfig);
 const queryClient = new QueryClient();

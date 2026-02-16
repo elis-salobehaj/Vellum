@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
+import AppLayout from './components/layout/AppLayout';
 import { logger } from './lib/logger';
 import { RequireAuth } from './components/RequireAuth';
 

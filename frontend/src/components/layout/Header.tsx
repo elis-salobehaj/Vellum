@@ -3,14 +3,14 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from '@/components/ui/badge';
+} from "../ui/dropdown-menu";
+import { Badge } from '../ui/badge';
 
 interface HeaderProps {
   selectedModel?: string;

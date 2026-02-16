@@ -1,16 +1,17 @@
-import { config } from "@/config";
-import { logger } from "@/lib/logger";
+import { config } from "../config";
+import { logger } from "./logger";
 
 /**
  * API Error class for better error handling
  */
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public statusText: string,
-    message: string
-  ) {
+  status: number;
+  statusText: string;
+
+  constructor(status: number, statusText: string, message: string) {
     super(message);
+    this.status = status;
+    this.statusText = statusText;
     this.name = "ApiError";
   }
 }

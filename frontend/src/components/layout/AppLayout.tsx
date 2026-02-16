@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 export const AppLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);

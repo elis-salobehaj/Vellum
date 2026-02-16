@@ -11,9 +11,9 @@ import {
   Moon,
   Laptop,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,14 +25,14 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+} from "../ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
-import { useAuth } from '@/hooks/useAuth';
-import { useChatHistory } from '@/hooks/useChatHistory';
-import { useTheme } from '@/components/theme/ThemeProvider';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useAuth } from '../../hooks/useAuth';
+import { useChatHistory } from '../../hooks/useChatHistory';
+import { useTheme } from '../theme/ThemeProvider';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 interface AppSidebarProps {
   isCollapsed: boolean;

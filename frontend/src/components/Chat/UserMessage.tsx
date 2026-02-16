@@ -1,5 +1,4 @@
-import { User } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 
 interface UserMessageProps {
   content: string;
