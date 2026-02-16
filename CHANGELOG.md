@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.2.0...Vellum-v2.3.0) (2026-02-16)
+
+
+### Features
+
+* Frontend UI Overhaul (shadcn/ui, OKLCH, Dark Mode, Path Aliases) ([#15](https://github.com/elis-salobehaj/Vellum/issues/15)) ([d6ee6ef](https://github.com/elis-salobehaj/Vellum/commit/d6ee6ef29aba239428cc4a72cb4c427618f46284))
+
 ## [2.2.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.1.0...Vellum-v2.2.0) (2026-02-15)
 
 
