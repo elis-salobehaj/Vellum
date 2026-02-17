@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.3.0...Vellum-v2.4.0) (2026-02-17)
+
+
+### Features
+
+* **ui:** comprehensive UI/UX overhaul and architecture restructuring ([#17](https://github.com/elis-salobehaj/Vellum/issues/17)) ([6ddee05](https://github.com/elis-salobehaj/Vellum/commit/6ddee0524e7f3582ae6363f36a69212072d725dc))
+
 ## [2.3.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.2.0...Vellum-v2.3.0) (2026-02-16)
 
 
