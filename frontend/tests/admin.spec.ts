@@ -39,29 +39,54 @@ test.describe('Admin Page', () => {
   });
 
   test('should load models and display active model', async ({ page }) => {
-    await expect(page.getByText('Admin Configuration')).toBeVisible();
+    // Check for Model Configuration heading
+    await expect(page.getByText('Model Configuration')).toBeVisible();
 
-    // Check if select has the correct value
-    // The select likely has the value of the active model ID
-    const select = page.getByRole('combobox');
-    await expect(select).toHaveValue('model-a');
+    // The component might be loading initially. Skeleton is displayed.
+    // Wait for the skeleton to disappear or real content to appear.
+    // The select trigger will be present when loaded.
+    const selectTrigger = page.locator('button[role="combobox"]');
 
-    // Check options text
-    await expect(page.locator('option').filter({ hasText: 'Model A' })).toBeAttached();
-    await expect(page.locator('option').filter({ hasText: 'Model B' })).toBeAttached();
+    // Explicitly wait for it to be visible
+    await expect(selectTrigger).toBeVisible({ timeout: 10000 });
+
+    // Check initial value
+    await expect(selectTrigger).toContainText('Model A');
+
+    // Open dropdown to check options
+    await selectTrigger.click();
+    await expect(page.getByRole('option', { name: 'Model A' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Model B' })).toBeVisible();
   });
 
   test('should switch model and show success message', async ({ page }) => {
-    // Switch to Model B
-    await page.getByRole('combobox').selectOption('model-b');
+    // Open dropdown
+    await expect(page.getByText('Model Configuration')).toBeVisible();
+    const selectTrigger = page.locator('button[role="combobox"]');
+    await selectTrigger.waitFor();
+    await selectTrigger.click();
+
+    // Select Model B
+    await page.getByRole('option', { name: 'Model B' }).click();
 
     // Check for success message
-    await expect(page.getByText('Switched to Model B')).toBeVisible();
+    await expect(page.getByText('Model updated successfully')).toBeVisible();
   });
 
   test('should navigate back to chat', async ({ page }) => {
-    await page.click('button:has-text("Back to Chat")');
+    // Navigate to root first to establish history
+    await page.goto('/');
+    await page.goto('/admin');
+
+    // Find the back button (first button in header with arrow icon or clean selector)
+    // We can use the locator for the button that navigates back.
+    // Assuming it's the first button on the page might be fragile but works for now as it's the header back button.
+    const backButton = page.getByRole('button', { name: /Back/i });
+    await backButton.click();
+
     await expect(page).toHaveURL('/');
   });
+
+
 
 });

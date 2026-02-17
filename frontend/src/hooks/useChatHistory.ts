@@ -1,14 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-
-export interface ChatSession {
-  id: string;
-  title?: string;
-  timestamp?: string;
-  created_at?: string;
-  model_id?: string;
-}
+import type { ChatSession } from "@/types/index";
 
 export const useChatHistory = () => {
   const { user, getToken } = useAuth();

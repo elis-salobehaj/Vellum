@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/common/ui/button';
 import { cn } from '@/lib/utils';
 import type { Citation as ICitation } from '@/types';
 
@@ -61,7 +61,7 @@ export const MessageList = ({ messages, isProcessing, children }: MessageListPro
         onScroll={handleScroll}
         className="h-full overflow-y-auto scroll-smooth"
       >
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
           {children}
         </div>
       </div>

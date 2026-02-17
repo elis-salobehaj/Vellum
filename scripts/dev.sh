@@ -32,12 +32,6 @@ cd backend
 # We set KFP_NAMESPACE to prevent kfp client from looking for k8s secrets locally
 KFP_NAMESPACE=kubeflow-vellum PYTHONPATH=.. uv run uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8000
 
-echo -e "${BLUE}------------------------------------------------------------${NC}"
-echo -e "${BLUE}Backend is running. Open a new terminal to start Frontend:${NC}"
-echo -e "  cd frontend && pnpm dev"
-echo -e "${BLUE}------------------------------------------------------------${NC}"
-echo -e "Press Ctrl+C to stop Backend and Infrastructure."
-
 # Handle shutdown
 cleanup() {
     echo -e "\n${BLUE}🛑 Stopping services...${NC}"

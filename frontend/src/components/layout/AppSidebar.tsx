@@ -1,19 +1,18 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-  MessageSquare,
   Settings,
+  SunMoon,
   LogOut,
   Plus,
   User as UserIcon,
-  PanelLeftClose,
   PanelLeft,
   Sun,
   Moon,
   Laptop,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/common/ui/button';
+import { ScrollArea } from '@/components/common/ui/scroll-area';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,13 +24,15 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+} from "@/components/common/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/common/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/common/ui/tooltip";
+import { SidebarItem } from '@/components/layout/SidebarItem';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useChatHistory, type ChatSession } from '@/hooks/useChatHistory';
-import { useTheme } from '@/components/theme/ThemeProvider';
+import { useChatHistory } from '@/hooks/useChatHistory';
+import type { ChatSession } from '@/types/index';
+import { useTheme } from '@/components/providers/theme/ThemeProvider';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface AppSidebarProps {
@@ -64,63 +65,54 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
   return (
     <aside
       className={cn(
-        "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 relative z-20",
-        isCollapsed ? "w-17.5" : "w-70"
+        "h-screen bg-background/95 backdrop-blur-sm flex flex-col shrink-0 transition-[width,transform] ease-in-out border-r border-border/10",
+        isCollapsed
+          ? "w-16 translate-x-0"
+          : "w-70 translate-x-0 origin-left"
       )}
       aria-label="Sidebar Navigation"
     >
       {/* Header */}
-      <div className={cn(
-        "flex shrink-0 border-b border-border/50 bg-background/50 backdrop-blur-sm relative transition-all duration-300",
-        isCollapsed ? "h-32 flex-col items-center justify-center gap-4 px-0" : "h-16 flex-row items-center justify-between px-4"
-      )}>
+      <div className="flex bg-background/50 backdrop-blur-sm relative transition-all h-16 flex-row items-center justify-between px-4">
         {/* Logo Container - Bottom when collapsed (order-2) */}
-        <div
-          className={cn(
-            "flex items-center gap-3 overflow-hidden transition-all duration-300",
-            isCollapsed ? "order-2 justify-center" : "order-1"
-          )}
-        >
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm shrink-0 font-bold">
-            V
-          </div>
-          {!isCollapsed && (
-            <div className="flex items-center gap-2 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
-              <span className="font-bold text-xl tracking-tight truncate">Vellum</span>
-              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono">v1.2</span>
+        {!isCollapsed && (
+          <div
+            className="flex items-center gap-3 overflow-hidden transition-all order-1"
+          >
+            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm shrink-0 font-bold">
+              V
             </div>
-          )}
-        </div>
+            <div className="flex items-center gap-2 overflow-hidden animate-in fade-in slide-in-from-left-2 ">
+              <span className="font-bold text-xl tracking-tight truncate">Vellum</span>
+            </div>
+          </div>
+        )}
 
         {/* Toggle Button - Top when collapsed (order-1) */}
         <Button
           variant="ghost"
-          size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "text-muted-foreground transition-all duration-300 hover:bg-accent/40 hover:scale-105 active:scale-95",
-            isCollapsed
-              ? "order-1 h-12 w-12 rounded-2xl bg-accent/10"
-              : "order-2 h-8 w-8"
+            "text-muted-foreground transition-all hover:bg-accent/40 hover:scale-105 active:scale-95 order-1 rounded-lg bg-accent/10",
+            isCollapsed ? "w-full" : "w-fit"
           )}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={isCollapsed ? "Expand sidebar (mod+[ )" : "Collapse sidebar (mod+[ )"}
+          title={isCollapsed ? "Expand sidebar (ctrl+[ )" : "Collapse sidebar (ctrl+[ )"}
         >
-          {isCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={18} />}
+          <PanelLeft />
         </Button>
       </div>
 
-      <div className="px-3 mb-4 shrink-0 mt-4">
+      <div className="px-4 mb-4">
         <Button
           onClick={() => navigate('/')}
           className={cn(
-            "w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]",
-            isCollapsed ? "h-10 w-10 p-0" : "h-11 px-4"
+            "w-full bg-primary transition-all text-primary-foreground rounded-lg hover:scale-105 active:scale-95",
           )}
           aria-label="New Chat"
-          title="New Chat (mod+i)"
+          title="New Chat (ctrl+i)"
         >
-          <Plus size={20} />
+          <Plus />
           {!isCollapsed && <span className="font-medium">New Chat</span>}
         </Button>
       </div>
@@ -133,60 +125,41 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
           </div>
         )}
 
-        <ScrollArea className="flex-1 px-3">
-          <div className="space-y-1 pb-4">
-            {history.map((item: ChatSession) => (
-              <TooltipProvider key={item.id} delayDuration={500}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={location.pathname === `/chat/${item.id}` ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-3 relative group rounded-xl transition-all",
-                        isCollapsed ? "h-10 w-10 p-0 justify-center" : "h-10 px-3",
-                        location.pathname === `/chat/${item.id}`
-                          ? "bg-accent text-accent-foreground font-medium shadow-sm"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                      )}
-                      onClick={() => navigate(`/chat/${item.id}`)}
-                    >
-                      <MessageSquare size={18} className="shrink-0" />
-                      {!isCollapsed && (
-                        <span className="truncate text-sm">{item.title || "Untitled Chat"}</span>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  {isCollapsed && (
-                    <TooltipContent side="right">
-                      {item.title || "Untitled Chat"}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            ))}
-          </div>
+        <ScrollArea className="px-1">
+          {!isCollapsed && (
+            <div className="px-2 pb-2 pt-2">
+              {history.map((item: ChatSession) => (
+                <SidebarItem
+                  key={item.id}
+                  item={item}
+                  isActive={location.pathname === `/chat/${item.id}`}
+                />
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </div>
 
       {/* Footer */}
       <div className="p-2 shrink-0 space-y-1">
 
-        <TooltipProvider delayDuration={500}>
+        <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link to="/admin">
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/40 active:scale-95 transition-all",
-                    isCollapsed ? "px-0 justify-center h-10 w-10 mx-auto" : "h-10 px-3"
-                  )}
-                  aria-label="Admin Settings"
-                >
-                  <Settings size={18} className="shrink-0" />
+              <Button
+                asChild
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start gap-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/40 active:scale-95 transition-all",
+                  isCollapsed ? "px-0 justify-center h-10 w-10 mx-auto" : "h-10 px-3"
+                )}
+                aria-label="Admin Settings"
+              >
+                <Link to="/admin">
+                  <Settings className="shrink-0" />
                   {!isCollapsed && <span className="font-medium">Admin Settings</span>}
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </TooltipTrigger>
             {isCollapsed && <TooltipContent side="right">Admin Settings</TooltipContent>}
           </Tooltip>
@@ -227,7 +200,7 @@ export const AppSidebar = ({ isCollapsed, setIsCollapsed }: AppSidebarProps) => 
 
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="rounded-xl py-2 cursor-pointer gap-2 focus:bg-primary/5 focus:text-primary">
-                <Settings size={16} /> Appearance
+                <SunMoon size={16} /> Appearance
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="p-1.5 rounded-2xl shadow-2xl border-border/50 backdrop-blur-xl bg-background/95 min-w-37.5">

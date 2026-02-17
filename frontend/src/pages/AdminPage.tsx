@@ -1,28 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Database, FileText, Upload, X, FileWarning } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, CheckCircle, AlertCircle, ChevronDown, ChevronUp, FileText, Upload, X, FileWarning } from 'lucide-react';
 import { logger } from '@/lib/logger';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/common/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/ui/card';
+import { Alert, AlertDescription } from '@/components/common/ui/alert';
+import { ScrollArea } from '@/components/common/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/common/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/common/ui/tooltip';
 
-import { useModels, type Model } from '@/hooks/useModels';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const AdminPage = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  // Data Fetching
-  const { data: models = [], isLoading: loading } = useModels();
 
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -33,32 +24,6 @@ const AdminPage = () => {
   // Phase 6.4: Form Validation
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-
-  // Derive active model from fetched models
-  const activeModelId = (models as Model[]).find(m => m.is_active)?.id || '';
-
-  // Mutation for updating model
-  const updateModelMutation = useMutation({
-    mutationFn: async (modelId: string) => {
-      const model = (models as Model[]).find(m => m.id === modelId);
-      if (!model) throw new Error("Model not found");
-
-      const updatedConfig = { ...model, is_active: true };
-      return api.put(`/admin/models/${modelId}`, updatedConfig);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["models"] });
-      setSuccessMsg("Model updated successfully");
-      setTimeout(() => setSuccessMsg(null), 3000);
-    },
-    onError: (err: Error) => {
-      setError(err.message || "Failed to update model");
-    }
-  });
-
-  const handleModelChange = (modelId: string) => {
-    updateModelMutation.mutate(modelId);
-  };
 
   const validateFile = (file: File) => {
     if (file.type !== 'application/pdf') {
@@ -133,7 +98,7 @@ const AdminPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back to previous page">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -157,61 +122,6 @@ const AdminPage = () => {
             <AlertDescription>{successMsg}</AlertDescription>
           </Alert>
         )}
-
-        {/* Model Configuration */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Database className="h-5 w-5 text-primary" />
-              Model Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full rounded-xl" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <Select
-                    value={activeModelId}
-                    onValueChange={handleModelChange}
-                    disabled={updateModelMutation.isPending}
-                  >
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a model" />
-                          </SelectTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Select the active LLM for chat generation</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <SelectContent className="bg-background!">
-                      {(models as Model[]).map((m: Model) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{m.name}</span>
-                            <span className="text-xs text-muted-foreground">({m.provider})</span>
-                            {m.is_active && <Badge variant="outline" className="ml-2 text-[10px] px-1">Active</Badge>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {updateModelMutation.isPending && (
-                  <span className="text-xs text-muted-foreground animate-pulse">Updating...</span>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Ingestion Control */}
         <Card>

@@ -12,3 +12,11 @@ export interface Message {
   content: string;
   citations?: Citation[];
 }
+
+export interface ChatSession {
+  id: string;
+  title?: string;
+  timestamp?: string;
+  created_at?: string;
+  model_id?: string;
+}

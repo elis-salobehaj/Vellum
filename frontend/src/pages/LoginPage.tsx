@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { useNavigate } from 'react-router-dom';
-import { loginRequest } from '@/authConfig';
+import { loginRequest } from '@/config/authConfig';
 import { config } from '@/config';
 import { logger } from '@/lib/logger';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/common/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/common/ui/card';
 
 const LoginPage = () => {
   const { instance } = useMsal();

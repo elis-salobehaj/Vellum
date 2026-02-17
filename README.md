@@ -2,6 +2,8 @@
 
 An enterprise-grade chatbot featuring Entra ID SSO, Multi-LLM support, and an advanced RAG pipeline orchestrated by **Kubeflow**.
 
+![Vellum Showcase](docs/showcase.png)
+
 ## 🚀 Quick Start (Kubernetes)
 
 This platform is designed to run on **Kubernetes** (Minikube for local dev).
@@ -80,7 +82,7 @@ Vellum is built on a **Decoupled Microservices Architecture** designed for high 
 
 ### 🌐 System Overview
 
-- **Frontend**: A modern React 19 application providing a seamless chat interface with built-in Entra ID SSO.
+- **Frontend**: A premium React 19 application inspired by Claude's design language. Features a perceptually uniform OKLCH color system, refined typography, and an adaptive "Relative Push" sidebar for a seamless desktop experience. Includes native Entra ID SSO.
 - **Backend (API Gatekeeper)**: A lightweight FastAPI service that manages user sessions, chat history, and retrieval-augmented generation (RAG) queries.
 - **Distributed Ingestion**: Orchestrated by **Kubeflow Pipelines (KFP)**, handling document parsing, semantic chunking, and vectorization in isolated ML-optimized environments.
 - **Vector Storage**: **Qdrant** provides high-performance vector search and metadata filtering.
@@ -104,6 +106,8 @@ For a deep dive into the system components and a detailed architecture diagram, 
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
 -   **Framework**: React 19 + Vite 7
+-   **Styling**: Tailwind CSS 4 (OKLCH Native)
+-   **Components**: Radix UI + Lucide React
 -   **Package Manager**: `pnpm`
 -   **Auth**: MSAL (`@azure/msal-react`)
 
