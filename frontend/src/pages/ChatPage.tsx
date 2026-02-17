@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import { Header } from '@/components/layout/Header';
 import { ChatInput } from '@/components/features/chat/ChatInput';
@@ -32,16 +32,11 @@ const ChatPage = () => {
   const { data: historyMessages } = useSessionMessages(sessionId);
   const sendMessageMutation = useSendMessage();
 
-  const [selectedModel, setSelectedModel] = useState<string>('');
-
-  // Sync models to selectedModel
-  useEffect(() => {
-    if (models.length > 0 && !selectedModel) {
-      const active = (models as Model[]).find((m) => m.is_active);
-      if (active) setSelectedModel(active.id);
-      else setSelectedModel(models[0].id);
-    }
-  }, [models, selectedModel]);
+  // Derive active model from fetched models
+  const activeModelId = useMemo(() =>
+    (models as Model[]).find(m => m.is_active)?.id || (models[0]?.id || ''),
+    [models]
+  );
 
   // Sync history to messages when session changes or loads
   useEffect(() => {
@@ -66,7 +61,7 @@ const ChatPage = () => {
       const data = await sendMessageMutation.mutateAsync({
         message,
         sessionId,
-        modelId: selectedModel || undefined
+        modelId: activeModelId || undefined
       });
 
       // 3. Update URL if new session
@@ -107,70 +102,67 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
       {/* Header */}
-      <Header
-        models={models}
-        selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
-      />
+      <Header />
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-hidden relative flex flex-col">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative min-h-0">
         {messages.length === 0 ? (
-          <EmptyState onSuggestionClick={handleSuggestionClick} />
+          <div className="flex-1 flex flex-col items-center justify-center p-4 animate-in fade-in duration-700">
+            <EmptyState onSuggestionClick={handleSuggestionClick} />
+            <ChatInput
+              onSend={handleSend}
+              disabled={isProcessing}
+              isProcessing={isProcessing}
+              onStop={() => setIsProcessing(false)}
+              className="max-w-4xl w-full"
+            />
+          </div>
         ) : (
-          <MessageList messages={messages} isProcessing={isProcessing}>
-            <AnimatePresence initial={false} mode="popLayout">
-              {messages.map((m) => (
-                <motion.div
-                  key={m.id}
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.3,
-                    delay: 0.05,
-                    ease: "easeOut"
-                  }}
-                  layout
-                >
-                  {m.role === 'user' ? (
-                    <UserMessage
-                      content={m.content}
-                      userName={user?.name || "User"}
-                    />
-                  ) : (
-                    <AssistantMessage
-                      content={m.content}
-                      citations={m.citations}
-                      onRegenerate={() => handleSend(messages[messages.length - 2]?.content || '')}
-                    />
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {isProcessing && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <ThinkingIndicator />
-              </motion.div>
-            )}
-          </MessageList>
+          <>
+            <div className="flex-1 overflow-hidden relative flex flex-col">
+              <MessageList messages={messages} isProcessing={isProcessing}>
+                {messages.map((m) => (
+                  <div>
+                    {m.role === 'user' ? (
+                      <UserMessage
+                        content={m.content}
+                        userName={user?.name || "User"}
+                      />
+                    ) : (
+                      <AssistantMessage
+                        content={m.content}
+                        citations={m.citations}
+                        onRegenerate={() => handleSend(messages[messages.length - 2]?.content || '')}
+                      />
+                    )}
+                  </div>
+                ))}
+                {isProcessing && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <ThinkingIndicator />
+                  </motion.div>
+                )}
+              </MessageList>
+            </div>
+
+            <ChatInput
+              onSend={handleSend}
+              disabled={isProcessing}
+              isProcessing={isProcessing}
+              onStop={() => setIsProcessing(false)}
+            />
+          </>
         )}
       </div>
-
-      {/* Input Area */}
-      <ChatInput
-        onSend={handleSend}
-        disabled={isProcessing}
-        isProcessing={isProcessing}
-        onStop={() => setIsProcessing(false)} // Placeholder for actual stop logic
-      />
     </div>
   );
 };
+
 
 export default ChatPage;

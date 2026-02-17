@@ -42,7 +42,7 @@ export const AssistantMessage = ({ content, citations, onRegenerate }: Assistant
       {/* Message Content */}
       <div className="flex-1 min-w-0 space-y-3">
         {/* Markdown Content */}
-        <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-p:text-foreground prose-p:leading-relaxed prose-a:text-primary hover:prose-a:underline prose-strong:text-foreground prose-code:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-1">
+        <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h1:text-xl prose-headings:text-foreground prose-h2:text-lg prose-h3:text-base prose-p:text-foreground prose-p:leading-relaxed prose-a:text-primary hover:prose-a:underline prose-strong:text-foreground prose-code:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0 prose-ul:my-2 prose-ol:my-2 prose-li:text-foreground">
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkBreaks]}
             components={{

@@ -61,7 +61,7 @@ export const MessageList = ({ messages, isProcessing, children }: MessageListPro
         onScroll={handleScroll}
         className="h-full overflow-y-auto scroll-smooth"
       >
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
           {children}
         </div>
       </div>

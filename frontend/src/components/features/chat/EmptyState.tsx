@@ -30,8 +30,8 @@ const suggestions = [
 
 export const EmptyState = ({ onSuggestionClick }: EmptyStateProps) => {
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-3xl w-full space-y-8">
+    <div className="flex flex-col items-center justify-center p-8 w-full">
+      <div className="max-w-4xl w-full space-y-8">
         {/* Logo and Tagline */}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-lg">

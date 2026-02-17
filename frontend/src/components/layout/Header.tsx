@@ -1,61 +1,21 @@
-import {
-  ChevronDown,
-  Sparkles,
-  Check
-} from 'lucide-react';
-import { Button } from '@/components/common/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/common/ui/dropdown-menu";
+import { useParams } from 'react-router-dom';
+import { useChatHistory } from '@/hooks/useChatHistory';
 
-interface HeaderProps {
-  selectedModel?: string;
-  models: { id: string; name?: string }[];
-  onModelChange: (modelId: string) => void;
-}
+export const Header = () => {
+  const { data: history = [] } = useChatHistory();
+  const { sessionId } = useParams();
 
-export const Header = ({ selectedModel, models, onModelChange }: HeaderProps) => {
-  const currentModel = models.find(m => m.id === selectedModel);
+  const currentChat = history.find(item => item.id === sessionId);
+  const title = currentChat?.title || (sessionId ? "Untitled Chat" : "New Chat");
 
   return (
-    <header className="h-14 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 flex items-center justify-between px-4 sticky top-0 z-10">
-      <div className="flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 px-3 gap-2 font-semibold text-sm hover:bg-accent/50 transition-all rounded-lg">
-              <Sparkles size={16} className="text-primary" />
-              <span>{currentModel?.name || "Select Model"}</span>
-              <ChevronDown size={14} className="text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" sideOffset={10} className="w-56 p-1.5 rounded-xl bg-background! shadow-lg border-border">
-            {models.map((model) => (
-              <DropdownMenuItem
-                key={model.id}
-                onClick={() => onModelChange(model.id)}
-                className="rounded-lg py-2 cursor-pointer focus:bg-primary/5 focus:text-primary"
-              >
-                <div className="flex flex-col flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{model.name}</span>
-                    {selectedModel === model.id && (
-                      <Check size={14} className="text-primary ml-2" />
-                    )}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">Provider: Enterprise</span>
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-      </div>
-
-      <div className="flex items-center gap-2">
+    <header className="h-12 backdrop-blur supports-backdrop-filter:bg-background/60 flex flex-col items-center px-4 sticky top-0 z-10">
+      <div className="flex items-center p-4 overflow-hidden">
+        <h1 className="font-semibold text-sm truncate max-w-50 md:max-w-md">
+          {title}
+        </h1>
       </div>
     </header>
   );
 };
+

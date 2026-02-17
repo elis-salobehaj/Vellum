@@ -1,30 +1,41 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from typing import List, AsyncGenerator
-from app.models.schemas import ModelConfig, IngestRequest
+from app.models.schemas import ModelConfig
 from app.core.auth import get_current_user
 from app.core.config import settings
 from app.core.logging import logger
 import os
-import time
 from minio import Minio
 
 router = APIRouter()
 
 # In-memory store for MVP. In production, use DB.
 MODEL_CONFIGS: List[ModelConfig] = [
-    ModelConfig(id="gemini-1.5-flash", name="Gemini 1.5 Flash", provider="google", is_active=False),
+    ModelConfig(
+        id="gemini-1.5-flash",
+        name="Gemini 1.5 Flash",
+        provider="google",
+        is_active=False,
+    ),
     ModelConfig(id="gpt-4", name="GPT-4", provider="openai", is_active=False),
     ModelConfig(id="claude-3-sonnet", name="Claude 3.5 Sonnet", provider="anthropic"),
     # Production Model via KServe
-    ModelConfig(id="/mnt/models/Qwen2.5-1.5B-Instruct", name="Qwen 2.5 1.5B (KServe)", provider="kubeflow", is_active=True),
+    ModelConfig(
+        id="/mnt/models/Qwen2.5-1.5B-Instruct",
+        name="Qwen 2.5 1.5B",
+        provider="kubeflow",
+        is_active=True,
+    ),
 ]
+
 
 @router.get("/models", response_model=List[ModelConfig])
 async def get_models(_: dict = Depends(get_current_user)):
     # TODO: Implement RBAC check here (e.g., if _.role != 'admin': raise 403)
     logger.debug("admin_get_models", count=len(MODEL_CONFIGS))
     return MODEL_CONFIGS
+
 
 @router.post("/models", response_model=ModelConfig)
 async def create_model(config: ModelConfig, _: dict = Depends(get_current_user)):
@@ -34,17 +45,20 @@ async def create_model(config: ModelConfig, _: dict = Depends(get_current_user))
     if any(m.id == config.id for m in MODEL_CONFIGS):
         logger.warning("admin_create_model_duplicate", model_id=config.id)
         raise HTTPException(status_code=400, detail="Model ID already exists")
-    
+
     if config.is_active:
         logger.info("admin_model_activating", model_id=config.id)
         for m in MODEL_CONFIGS:
             m.is_active = False
-            
+
     MODEL_CONFIGS.append(config)
     return config
 
+
 @router.put("/models/{model_id:path}", response_model=ModelConfig)
-async def update_model(model_id: str, config: ModelConfig, _: dict = Depends(get_current_user)):
+async def update_model(
+    model_id: str, config: ModelConfig, _: dict = Depends(get_current_user)
+):
     # TODO: RBAC check
     # Current Implementation:
     # This is a placeholder. In a production environment using OIDC (like Keycloak/Dex),
@@ -68,23 +82,28 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
     Trigger the full Upload & Ingest process.
     Streams logs back to the client.
     """
+
     async def log_generator() -> AsyncGenerator[str, None]:
         user_id = current_user.get("user", "unknown")
         logger.info("admin_ingest_process_start", user=user_id)
         yield "🚀 Starting Upload & Ingest Process...\n"
-        
+
         # Configuration
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
+        base_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../../../../")
+        )
         source_dir = os.path.join(base_dir, "data", "source_documents")
-        
+
         # 1. Initialize Minio Client
         try:
-            endpoint = settings.MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
+            endpoint = settings.MINIO_ENDPOINT.replace("http://", "").replace(
+                "https://", ""
+            )
             client = Minio(
                 endpoint,
                 access_key=settings.MINIO_ACCESS_KEY,
                 secret_key=settings.MINIO_SECRET_KEY,
-                secure=False
+                secure=False,
             )
             logger.debug("admin_minio_connected")
             yield "✅ Connected to Minio.\n"
@@ -102,20 +121,26 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
             else:
                 yield f"ℹ️  Bucket '{settings.MINIO_BUCKET}' already exists.\n"
         except Exception as e:
-            logger.error("admin_bucket_check_failed", bucket=settings.MINIO_BUCKET, error=str(e))
+            logger.error(
+                "admin_bucket_check_failed", bucket=settings.MINIO_BUCKET, error=str(e)
+            )
             yield f"❌ Failed to ensure bucket exists: {e}\n"
             return
 
         # 3. Upload Files
         if not os.path.exists(source_dir):
-             logger.warning("admin_source_dir_missing", path=source_dir)
-             yield f"⚠️ Source directory not found: {source_dir}\n"
+            logger.warning("admin_source_dir_missing", path=source_dir)
+            yield f"⚠️ Source directory not found: {source_dir}\n"
         else:
-            files = [f for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f))]
+            files = [
+                f
+                for f in os.listdir(source_dir)
+                if os.path.isfile(os.path.join(source_dir, f))
+            ]
             if not files:
                 logger.warning("admin_no_files_found", path=source_dir)
                 yield "⚠️  No files found in source directory.\n"
-            
+
             for filename in files:
                 file_path = os.path.join(source_dir, filename)
                 try:
@@ -123,36 +148,37 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
                     logger.debug("admin_file_uploaded", filename=filename)
                     yield f"   ⬆️  Uploaded: {filename}\n"
                 except Exception as e:
-                    logger.error("admin_file_upload_failed", filename=filename, error=str(e))
+                    logger.error(
+                        "admin_file_upload_failed", filename=filename, error=str(e)
+                    )
                     yield f"   ❌ Failed to upload {filename}: {e}\n"
 
         # 4. Trigger Ingestion
         yield "🔄 Triggering Ingestion Pipeline...\n"
         from app.services.kfp_service import kfp_service
-        
+
         try:
             logger.info("admin_triggering_kfp")
             result = await kfp_service.trigger_ingestion(
-                bucket=settings.MINIO_BUCKET,
-                cleanup=True
+                bucket=settings.MINIO_BUCKET, cleanup=True
             )
-            
+
             if result.get("status") == "success":
                 logger.info("admin_kfp_trigger_success", run_id=result.get("run_id"))
                 yield f"✅ Ingestion Triggered Successfully: {result['message']}\n"
                 yield f"Run ID: {result.get('run_id')}\n"
             elif result.get("status") == "redirect":
-                 logger.warning("admin_kfp_trigger_redirect", message=result['message'])
-                 yield f"⚠️  {result['message']}\n"
-                 yield f"Details: {result.get('details')}\n"
+                logger.warning("admin_kfp_trigger_redirect", message=result["message"])
+                yield f"⚠️  {result['message']}\n"
+                yield f"Details: {result.get('details')}\n"
             else:
                 logger.error("admin_kfp_trigger_failed", result=result)
                 yield f"❌ Ingestion Failed: {result}\n"
-                
+
         except Exception as e:
-             logger.error("admin_kfp_trigger_exception", error=str(e))
-             yield f"❌ Failed to trigger ingestion: {e}\n"
-             
+            logger.error("admin_kfp_trigger_exception", error=str(e))
+            yield f"❌ Failed to trigger ingestion: {e}\n"
+
         logger.info("admin_ingest_process_complete")
         yield "🏁 Process Complete.\n"
 
