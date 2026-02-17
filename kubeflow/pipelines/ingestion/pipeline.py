@@ -1,10 +1,8 @@
 from kfp import dsl
 from kfp import compiler
 
-@dsl.component(
-    base_image='vellum-ingest:local',
-    packages_to_install=[]
-)
+
+@dsl.component(base_image="vellum-ingest:local", packages_to_install=[])
 def ingest_documents_op(
     bucket: str,
     prefix: str = "",
@@ -19,52 +17,71 @@ def ingest_documents_op(
     breakpoint_threshold: int = 95,
     max_docs: int = 15,
     top_k: int = 2,
-    model_name: str = "BAAI/bge-small-en-v1.5",
+    model_name: str = "text-embedding-3-small",
     embeddings_service_url: str = "http://embeddings-service.kubeflow-vellum/v1",
-    cleanup: bool = False
+    cleanup: bool = False,
+    openai_api_key: str = "",
 ):
     import subprocess
     import sys
-    
+
     print(f"Launching ingestion from MinIO {bucket}/{prefix}")
-    
+
     import os
+
     os.environ["EMBEDDINGS_SERVICE_URL"] = embeddings_service_url
-    
+    if openai_api_key:
+        os.environ["OPENAI_API_KEY"] = openai_api_key
+
     # Call the script that resides at /app/run_ingestion.py (from Dockerfile)
     cmd = [
-        "python", 
+        "python",
         "/app/run_ingestion.py",
-        "--bucket", bucket,
-        "--prefix", prefix,
-        "--minio_endpoint", minio_endpoint,
-        "--minio_access_key", minio_access_key,
-        "--minio_secret_key", minio_secret_key,
-        "--qdrant_host", qdrant_host,
-        "--qdrant_port", str(qdrant_port),
-        "--chunk_size", str(chunk_size),
-        "--chunk_overlap", str(chunk_overlap),
-        "--splitter_mode", splitter_mode,
-        "--breakpoint_threshold", str(breakpoint_threshold),
-        "--max_docs", str(max_docs),
-        "--top_k", str(top_k),
-        "--model_name", model_name
+        "--bucket",
+        bucket,
+        "--prefix",
+        prefix,
+        "--minio_endpoint",
+        minio_endpoint,
+        "--minio_access_key",
+        minio_access_key,
+        "--minio_secret_key",
+        minio_secret_key,
+        "--qdrant_host",
+        qdrant_host,
+        "--qdrant_port",
+        str(qdrant_port),
+        "--chunk_size",
+        str(chunk_size),
+        "--chunk_overlap",
+        str(chunk_overlap),
+        "--splitter_mode",
+        splitter_mode,
+        "--breakpoint_threshold",
+        str(breakpoint_threshold),
+        "--max_docs",
+        str(max_docs),
+        "--top_k",
+        str(top_k),
+        "--model_name",
+        model_name,
     ]
     if cleanup:
         cmd.append("--cleanup")
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     print(result.stdout)
     if result.stderr:
         print("STDERR:", result.stderr, file=sys.stderr)
-        
+
     if result.returncode != 0:
         raise RuntimeError(f"Ingestion failed with code {result.returncode}")
 
+
 @dsl.pipeline(
-    name='vellum-ingestion-pipeline',
-    description='Ingests documents from MinIO to Qdrant using LlamaIndex'
+    name="vellum-ingestion-pipeline",
+    description="Ingests documents from MinIO to Qdrant using LlamaIndex",
 )
 def ingestion_pipeline(
     bucket: str = "documents",
@@ -78,10 +95,11 @@ def ingestion_pipeline(
     breakpoint_threshold: int = 95,
     max_docs: int = 15,
     top_k: int = 2,
-    model_name: str = "BAAI/bge-small-en-v1.5",
+    model_name: str = "text-embedding-3-small",
     embeddings_service_url: str = "http://embeddings-service.kubeflow-vellum/v1",
     cleanup: bool = False,
-    enable_cache: bool = False
+    openai_api_key: str = "",
+    enable_cache: bool = False,
 ):
     # Create the task
     task = ingest_documents_op(
@@ -98,15 +116,16 @@ def ingestion_pipeline(
         top_k=top_k,
         model_name=model_name,
         embeddings_service_url=embeddings_service_url,
-        cleanup=cleanup
+        cleanup=cleanup,
+        openai_api_key=openai_api_key,
     )
     if not enable_cache:
         task.set_caching_options(False)
-    
+
     # Reliance on default IfNotPresent for non-latest tags
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     compiler.Compiler().compile(
-        pipeline_func=ingestion_pipeline,
-        package_path='/tmp/ingestion_pipeline.yaml'
+        pipeline_func=ingestion_pipeline, package_path="/tmp/ingestion_pipeline.yaml"
     )

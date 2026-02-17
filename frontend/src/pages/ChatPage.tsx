@@ -26,6 +26,7 @@ const ChatPage = () => {
   // Local state for messages (includes optimistic updates)
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [useGraph, setUseGraph] = useState(false);
 
   // Data Fetching
   const { data: models = [] } = useModels();
@@ -61,7 +62,8 @@ const ChatPage = () => {
       const data = await sendMessageMutation.mutateAsync({
         message,
         sessionId,
-        modelId: activeModelId || undefined
+        modelId: activeModelId || undefined,
+        use_graph: useGraph
       });
 
       // 3. Update URL if new session
@@ -117,6 +119,8 @@ const ChatPage = () => {
               isProcessing={isProcessing}
               onStop={() => setIsProcessing(false)}
               className="max-w-4xl w-full"
+              useGraph={useGraph}
+              onToggleGraph={() => setUseGraph(!useGraph)}
             />
           </div>
         ) : (
@@ -156,6 +160,8 @@ const ChatPage = () => {
               disabled={isProcessing}
               isProcessing={isProcessing}
               onStop={() => setIsProcessing(false)}
+              useGraph={useGraph}
+              onToggleGraph={() => setUseGraph(!useGraph)}
             />
           </>
         )}

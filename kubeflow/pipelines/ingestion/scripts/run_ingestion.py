@@ -8,8 +8,9 @@ from llama_index.readers.s3 import S3Reader
 from llama_index.core.node_parser import SentenceSplitter, SemanticSplitterNodeParser
 from llama_index.core.ingestion import IngestionPipeline
 
+
 def ingest(
-    qdrant_host: str, 
+    qdrant_host: str,
     qdrant_port: int,
     minio_endpoint: str,
     minio_access_key: str,
@@ -23,36 +24,44 @@ def ingest(
     max_docs: int = 15,
     top_k: int = 3,
     model_name: str = "BAAI/bge-small-en-v1.5",
-    cleanup: bool = False
+    cleanup: bool = False,
 ):
     print(f"🚀 Starting STREAMING ingestion logic (Max Docs: {max_docs})...")
-    
+
     # 1. Connect to Qdrant
     print(f"🔌 Connecting to Qdrant at {qdrant_host}:{qdrant_port}")
     client = qdrant_client.QdrantClient(host=qdrant_host, port=qdrant_port)
     collection_name = "vellum"
-    
+
     if cleanup:
         print(f"🧹 Cleaning up collection '{collection_name}'...")
         if client.collection_exists(collection_name):
             client.delete_collection(collection_name)
-        
+
         # We need to recreate it with correct parameters
         from qdrant_client.http.models import VectorParams, Distance
+
         client.create_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=384, distance=Distance.COSINE),
         )
 
     vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
-    
-    # 2. Configure Embeddings (Remote TEI Service)
-    print(f"⚙️ Connecting to Remote Embedding Service ({model_name})...")
+
+    # 2. Configure Embeddings (OpenAI API)
+    print(f"⚙️ Connecting to Embedding Service ({model_name})...")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print(
+            "⚠️ OPENAI_API_KEY not found in env, using 'EMPTY' (assuming local TEI/mock)"
+        )
+        api_key = "EMPTY"
+
     Settings.embed_model = OpenAIEmbedding(
         model_name=model_name,
-        api_base=os.getenv("EMBEDDINGS_SERVICE_URL", "http://embeddings-service.kubeflow-vellum/v1"),
-        api_key="EMPTY",
-        embed_batch_size=30
+        # api_base=os.getenv("EMBEDDINGS_SERVICE_URL", "http://embeddings-service.kubeflow-vellum/v1"),
+        api_key=api_key,
+        embed_batch_size=30,
     )
 
     # 3. Configure Splitter
@@ -61,13 +70,14 @@ def ingest(
         text_splitter = SemanticSplitterNodeParser(
             buffer_size=1,
             breakpoint_percentile_threshold=breakpoint_threshold,
-            embed_model=Settings.embed_model
+            embed_model=Settings.embed_model,
         )
     else:
-        print(f"✂️ Configuring Fixed Splitter (Size: {chunk_size}, Overlap: {chunk_overlap})...")
+        print(
+            f"✂️ Configuring Fixed Splitter (Size: {chunk_size}, Overlap: {chunk_overlap})..."
+        )
         text_splitter = SentenceSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
 
     # 4. Setup Ingestion Pipeline (Pro Solution)
@@ -88,79 +98,86 @@ def ingest(
         bucket=bucket,
         aws_access_id=minio_access_key,
         aws_access_secret=minio_secret_key,
-        s3_endpoint_url=s3_url
+        s3_endpoint_url=s3_url,
     )
 
-    # 6. Iterative Processing (Streaming)
-    print("📂 Listing documents in MinIO...")
-    files = loader.list_resources(prefix=prefix)
+    # 6. Iterative Processing (Download & Local Load)
+    print(f"📂 Downloading documents from MinIO bucket '{bucket}'...")
+    from minio import Minio
+
+    m_client = Minio(
+        minio_endpoint.replace("http://", "").replace("https://", ""),
+        access_key=minio_access_key,
+        secret_key=minio_secret_key,
+        secure=False,
+    )
+
+    import shutil
+
+    temp_dir = "/tmp/vellum-ingest"
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir)
+
+    objects = m_client.list_objects(bucket, prefix=prefix, recursive=True)
+    files = [obj.object_name for obj in objects if not obj.is_dir]
     files.sort()
-    
+
     if max_docs > 0 and len(files) > max_docs:
-        print(f"📉 Limiting ingestion to first {max_docs} files (found {len(files)}).")
         files = files[:max_docs]
 
-    print(f"✅ Found {len(files)} files to process.")
-    
-    processed_count = 0
+    print(f"✅ Found {len(files)} files to download.")
+
     for file_key in files:
-        print(f"🔄 Processing [{processed_count+1}/{len(files)}]: {file_key}...")
-        try:
-            # Load documents (returns a list)
-            documents = loader.load_resource(file_key)
-            
-            # Run pipeline for these documents
-            pipeline.run(documents=documents)
-            
-            processed_count += 1
-            # In a real pro setup, we might clear doc from memory here
-            # del documents 
-        except Exception as e:
-            print(f"⚠️ Error processing {file_key}: {e}")
+        target_path = os.path.join(temp_dir, os.path.basename(file_key))
+        print(f"   📥 Downloading {file_key} -> {target_path}")
+        m_client.fget_object(bucket, file_key, target_path)
 
-    print(f"✅ Ingestion Complete! Processed {processed_count} files.")
+    print("📂 Loading documents from temp directory...")
+    from llama_index.core import SimpleDirectoryReader
 
-    # 7. Evaluation (Simple Hit Rate Proxy)
-    print("⚖️ Running Evaluation...")
-    eval_index = VectorStoreIndex.from_vector_store(
-        vector_store,
-        embed_model=Settings.embed_model
-    )
-    retriever = eval_index.as_retriever(similarity_top_k=top_k)
-    
-    query = "agentic ai"
-    results = retriever.retrieve(query)
-    
-    avg_score = 0.0
-    if results:
-        for r in results:
-            print(f"   found: {r.node.metadata.get('file_name')} (Score: {r.score})")
-            avg_score += (r.score if r.score else 0.0)
-        avg_score = avg_score / len(results)
-    
-    print(f"accuracy={avg_score:.4f}")
+    reader = SimpleDirectoryReader(input_dir=temp_dir)
+    documents = reader.load_data()
+
+    print(f"🔄 Running ingestion pipeline on {len(documents)} document chunks...")
+    pipeline.run(documents=documents)
+
+    print(f"✅ Ingestion Complete!")
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingest documents from MinIO to Qdrant via Streaming")
-    parser.add_argument("--minio_endpoint", type=str, default="minio-service.kubeflow.svc:9000")
+    parser = argparse.ArgumentParser(
+        description="Ingest documents from MinIO to Qdrant via Streaming"
+    )
+    parser.add_argument(
+        "--minio_endpoint", type=str, default="minio-service.kubeflow.svc:9000"
+    )
     parser.add_argument("--minio_access_key", type=str, default="minio")
     parser.add_argument("--minio_secret_key", type=str, default="minio123")
     parser.add_argument("--bucket", type=str, required=True)
     parser.add_argument("--prefix", type=str, default="")
-    parser.add_argument("--qdrant_host", type=str, default="qdrant.qdrant.svc.cluster.local")
+    parser.add_argument(
+        "--qdrant_host", type=str, default="qdrant.qdrant.svc.cluster.local"
+    )
     parser.add_argument("--qdrant_port", type=int, default=6333)
     parser.add_argument("--chunk_size", type=int, default=512)
     parser.add_argument("--chunk_overlap", type=int, default=20)
-    parser.add_argument("--splitter_mode", type=str, default="fixed", choices=["fixed", "semantic"])
+    parser.add_argument(
+        "--splitter_mode", type=str, default="fixed", choices=["fixed", "semantic"]
+    )
     parser.add_argument("--breakpoint_threshold", type=int, default=95)
     parser.add_argument("--max_docs", type=int, default=15)
     parser.add_argument("--top_k", type=int, default=3)
     parser.add_argument("--model_name", type=str, default="BAAI/bge-small-en-v1.5")
-    parser.add_argument("--cleanup", action="store_true", help="Delete and recreate collection before ingestion")
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Delete and recreate collection before ingestion",
+    )
 
     args = parser.parse_args()
     ingest(
-        args.qdrant_host, 
+        args.qdrant_host,
         args.qdrant_port,
         args.minio_endpoint,
         args.minio_access_key,
@@ -174,5 +191,5 @@ if __name__ == "__main__":
         args.max_docs,
         args.top_k,
         args.model_name,
-        args.cleanup
+        args.cleanup,
     )

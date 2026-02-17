@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
-import { Plus, Square, ArrowUp } from 'lucide-react';
+import { Plus, Square, ArrowUp, BrainCircuit } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/common/ui/button';
 import { Textarea } from '@/components/common/ui/textarea';
@@ -22,6 +22,8 @@ interface ChatInputProps {
   isProcessing?: boolean;
   placeholder?: string;
   className?: string;
+  useGraph?: boolean;
+  onToggleGraph?: () => void;
 }
 
 export const ChatInput = ({
@@ -30,7 +32,9 @@ export const ChatInput = ({
   disabled = false,
   isProcessing = false,
   placeholder = "How can I help you today?",
-  className
+  className,
+  useGraph = false,
+  onToggleGraph
 }: ChatInputProps) => {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -120,6 +124,22 @@ export const ChatInput = ({
                 title="Attach file (Coming soon)"
               >
                 <Plus size={20} />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleGraph}
+                className={cn(
+                  "h-9 w-9 rounded-full transition-colors",
+                  useGraph
+                    ? "text-primary bg-primary/10 hover:bg-primary/20"
+                    : "text-muted-foreground hover:bg-background/50"
+                )}
+                disabled={disabled || isProcessing}
+                title={useGraph ? "Deep Reasoning (Agentic RAG) On" : "Deep Reasoning Off"}
+              >
+                <BrainCircuit size={20} className={cn(useGraph && "animate-pulse")} />
               </Button>
             </div>
 
