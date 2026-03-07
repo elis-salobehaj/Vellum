@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.4.0...Vellum-v2.5.0) (2026-03-07)
+
+
+### Features
+
+* **backend:** LangGraph RAG and multi-provider support ([#19](https://github.com/elis-salobehaj/Vellum/issues/19)) ([9e62788](https://github.com/elis-salobehaj/Vellum/commit/9e62788de94a8a50b6b351b1246db40435c74158))
+
 ## [2.4.0](https://github.com/elis-salobehaj/Vellum/compare/Vellum-v2.3.0...Vellum-v2.4.0) (2026-02-17)
 
 
