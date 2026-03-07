@@ -18,14 +18,20 @@ MODEL_CONFIGS: List[ModelConfig] = [
         provider="google",
         is_active=False,
     ),
-    ModelConfig(id="gpt-4", name="GPT-4", provider="openai", is_active=False),
-    ModelConfig(id="claude-3-sonnet", name="Claude 3.5 Sonnet", provider="anthropic"),
+    ModelConfig(id="gpt-4o", name="GPT-4o", provider="openai", is_active=False),
+    ModelConfig(
+        id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        name="Claude Sonnet 4.5 (Bedrock)",
+        provider="aws_bedrock",
+        region="us-east-1",
+        is_active=True,
+    ),
     # Production Model via KServe
     ModelConfig(
         id="/mnt/models/Qwen2.5-1.5B-Instruct",
         name="Qwen 2.5 1.5B",
         provider="kubeflow",
-        is_active=True,
+        is_active=False,
     ),
 ]
 

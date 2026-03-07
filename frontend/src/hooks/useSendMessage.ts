@@ -7,6 +7,7 @@ interface SendMessageVariables {
   sessionId?: string;
   message: string;
   modelId?: string;
+  use_graph?: boolean;
 }
 
 interface SendMessageResponse {
@@ -22,11 +23,12 @@ export const useSendMessage = () => {
 
   return useMutation({
     mutationFn: (variables: SendMessageVariables) => {
-      const { sessionId, message, modelId } = variables;
+      const { sessionId, message, modelId, use_graph } = variables;
       return api.post<SendMessageResponse>("/chat", {
         message,
         session_id: sessionId,
-        model_id: modelId
+        model_id: modelId,
+        use_graph
       });
     },
     onSuccess: (data, variables) => {

@@ -1,28 +1,34 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
+
 class Citation(BaseModel):
     source: str
     page: int
     text: str
     score: Optional[float] = None
 
+
 class ModelConfig(BaseModel):
     id: str
     name: str
-    provider: str # openai, anthropic, azure, etc
+    provider: str  # openai, anthropic, azure, etc
     api_key: Optional[str] = None
     base_url: Optional[str] = None
-    deployment_name: Optional[str] = None # For Azure
+    deployment_name: Optional[str] = None  # For Azure
+    region: Optional[str] = None  # For AWS Bedrock
     is_active: bool = False
+
 
 class ChatRequest(BaseModel):
     message: str
-    model_id: Optional[str] = None # If null, use default active
+    model_id: Optional[str] = None  # If null, use default active
     # History passed from frontend (deprecated if using server-side session, but kept for compat)
     history: Optional[List[Dict[str, Any]]] = []
     session_id: Optional[str] = None
     context_window: int = 5
+    use_graph: bool = False
+
 
 class ChatResponse(BaseModel):
     response: str
@@ -30,6 +36,7 @@ class ChatResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     history: Optional[List[Dict[str, Any]]] = None
     session_id: Optional[str] = None
+
 
 class IngestRequest(BaseModel):
     bucket: Optional[str] = None
