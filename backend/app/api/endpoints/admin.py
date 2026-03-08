@@ -28,8 +28,8 @@ MODEL_CONFIGS: List[ModelConfig] = [
     ),
     # Production Model via KServe
     ModelConfig(
-        id="/mnt/models/Qwen2.5-1.5B-Instruct",
-        name="Qwen 2.5 1.5B",
+        id="/mnt/models/Qwen3.5-4B",
+        name="Qwen 3.5 4B",
         provider="kubeflow",
         is_active=False,
     ),

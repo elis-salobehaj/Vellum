@@ -12,11 +12,11 @@ echo "Listing Models..."
 kubectl exec -n $NAMESPACE $POD -- curl -s http://llm-service-predictor/v1/models
 
 echo ""
-echo "Testing Chat Completion (Qwen2.5)..."
+echo "Testing Chat Completion (Qwen3.5)..."
 kubectl exec -n $NAMESPACE $POD -- curl -s -X POST http://llm-service-predictor/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/mnt/models/Qwen2.5-1.5B-Instruct",
+    "model": "/mnt/models/Qwen3.5-4B",
     "messages": [{"role": "user", "content": "Hello, are you running on GPU?"}],
     "max_tokens": 50
   }'

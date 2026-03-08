@@ -9,12 +9,12 @@ spec:
   predictor:
     containers:
       - name: kserve-container
-        image: vllm/vllm-openai:latest
+        image: vllm/vllm-openai:latest-cu130
         imagePullPolicy: IfNotPresent
         command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
         args:
           - "--model"
-          - "/mnt/models/Qwen2.5-1.5B-Instruct"
+          - "/mnt/models/Qwen3.5-4B"
           - "--host"
           - "0.0.0.0"
           - "--port"

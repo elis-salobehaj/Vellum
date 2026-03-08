@@ -1,3 +1,23 @@
+graph TD
+    subgraph "Phase 1: Ingestion (The Knowledge)"
+        A[Raw Data: Video/Audio/Images] --> B[Dagster Pipeline]
+        B --> C[Ray Workers]
+        C --> D[Infinity / API Key]
+        D -- "Creates Unified Vectors" --> E[(Qdrant Vector DB)]
+    end
+
+    subgraph "Phase 2: Retrieval (The Search)"
+        User[User: 'Find me the sound of a red car'] --> F[Query Embedding]
+        F -- "Search" --> E
+        E -- "Top Matches" --> G[Context Context]
+    end
+
+    subgraph "Phase 3: Reasoning (The Brain)"
+        G --> H[SGLang / VLM]
+        User -- "Voice/Image Input" --> H
+        H -- "Generates Text/Audio/Video" --> Result[Final Response]
+    end
+
 # Vellum Documentation
 
 **For AI Agents & Developers**: This is your primary documentation reference.
@@ -21,9 +41,11 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 8 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
+| 7 | **Infrastructure Migration to k3d & Kind + Ray-Native Architecture** | 🚧 Active | Minikube → k3d/Kind, KServe → Ray Serve, KFP → Dagster, Istio → Ambient, MinIO → PVC/S3. 6 phases. |
+| 8 | **Multimodal RAG — Text + Image Search** | ⏳ Backlog | TEI → Infinity + SigLIP 2, dual-engine (vLLM + SGLang VLM), cross-modal Qdrant search. 6 phases. Depends on #7. |
+| 9 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 
-**Last Status Update**: 2026-02-16
+**Last Status Update**: 2026-03-07
 
 **Recently Completed**:
 - ✅ **Frontend UI Enhancements** — Premium design language (Claude-inspired), relative push sidebar, OKLCH colors, directory restructuring, and context menus.

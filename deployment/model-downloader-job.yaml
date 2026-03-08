@@ -8,17 +8,17 @@ spec:
     spec:
       containers:
         - name: downloader
-          image: vllm/vllm-openai:latest
+          image: vllm/vllm-openai:latest-cu130
           command: ["/bin/bash", "-c"]
           args:
             - |
               set -e
               echo "Cleaning target directory..."
-              rm -rf /mnt/models/Qwen2.5-1.5B-Instruct
-              mkdir -p /mnt/models/Qwen2.5-1.5B-Instruct
+              rm -rf /mnt/models/Qwen3.5-4B
+              mkdir -p /mnt/models/Qwen3.5-4B
               
-              echo "Downloading Model: Qwen2.5-1.5B-Instruct..."
-              huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct --local-dir /mnt/models/Qwen2.5-1.5B-Instruct --local-dir-use-symlinks False
+              echo "Downloading Model: Qwen3.5-4B..."
+              huggingface-cli download Qwen/Qwen3.5-4B --local-dir /mnt/models/Qwen3.5-4B --local-dir-use-symlinks False
               
               echo "Downloading Embedding Model: BAAI/bge-small-en-v1.5..."
               rm -rf /mnt/models/bge-small-en-v1.5

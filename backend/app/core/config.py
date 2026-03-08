@@ -25,7 +25,6 @@ class Settings(BaseSettings):
 
     # OpenAI
     OPENAI_API_KEY: str = ""
-    OPENAI_KEY: str = ""  # Legacy/User provided
     OPENAI_API_BASE: str = "https://api.openai.com/v1"
 
     # Kubeflow / KServe
@@ -38,9 +37,7 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "us-east-1"
-    AWS_BEARER_TOKEN_BEDROCK: str = ""  # Custom format
-    AWS_BEDROCK_API_KEY: str = "" # Alias for Bearer Token if used key-style
-
+    AWS_BEDROCK_API_KEY: str = ""  # Alias for Bearer Token if used key-style
 
     # Vector DB
     QDRANT_HOST: str = "qdrant.qdrant.svc.cluster.local"
@@ -67,15 +64,9 @@ class Settings(BaseSettings):
     @model_validator(mode="before")
     @classmethod
     def parse_env_vars(cls, data: Any) -> Any:
-        # 1. Map OPENAI_KEY -> OPENAI_API_KEY
-        if "OPENAI_KEY" in data and not data.get("OPENAI_API_KEY"):
-            data["OPENAI_API_KEY"] = data["OPENAI_KEY"]
-
-        # 2. Parse AWS Bearer Token if standard credentials are missing
+        # 1. Parse AWS Bedrock API Key if standard credentials are missing
         # Format: ABSK<Base64(ID:Secret)>
-        # 2. Parse AWS Bearer Token or API Key
-        # Format: ABSK<Base64(ID:Secret)>
-        bedrock_token = data.get("AWS_BEARER_TOKEN_BEDROCK") or data.get("AWS_BEDROCK_API_KEY")
+        bedrock_token = data.get("AWS_BEDROCK_API_KEY")
         if bedrock_token and not data.get("AWS_ACCESS_KEY_ID"):
             try:
                 import base64
@@ -109,10 +100,10 @@ class Settings(BaseSettings):
         if self.AWS_REGION:
             os.environ["AWS_REGION"] = self.AWS_REGION
             os.environ["AWS_DEFAULT_REGION"] = self.AWS_REGION
-        
+
         if self.AWS_ACCESS_KEY_ID:
             os.environ["AWS_ACCESS_KEY_ID"] = self.AWS_ACCESS_KEY_ID
-        
+
         if self.AWS_SECRET_ACCESS_KEY:
             os.environ["AWS_SECRET_ACCESS_KEY"] = self.AWS_SECRET_ACCESS_KEY
 
@@ -129,7 +120,7 @@ class Settings(BaseSettings):
         if self.use_google:
             return "google"
         if self.use_local_model:
-            return "kubeflow" # or local
+            return "kubeflow"  # or local
         return "openai"  # Default fallback
 
 
