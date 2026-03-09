@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export interface Model {
   id: string;
+  model_api_path: string;
   is_active: boolean;
   name?: string;
   provider?: string;

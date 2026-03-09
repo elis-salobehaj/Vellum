@@ -1,4 +1,8 @@
-from typing import List, Optional, Dict
+import os
+from contextlib import contextmanager
+from typing import Any, Dict, List, Optional
+
+from langchain_aws import ChatBedrockConverse
 from llama_index.llms.openai import OpenAI
 
 # from llama_index.llms.anthropic import Anthropic
@@ -8,6 +12,83 @@ from app.core.logging import logger
 from app.core.config import settings
 
 
+def build_model_api_path(model_id: str) -> str:
+    return model_id.strip().strip("/").replace("/", "-")
+
+
+def stringify_langchain_content(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = [
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text"
+        ]
+        if text_parts:
+            return "\n".join(part for part in text_parts if part)
+    return str(content)
+
+
+@contextmanager
+def temporary_bedrock_api_key_env():
+    api_key = settings.AWS_BEDROCK_API_KEY.strip()
+    if not api_key:
+        raise ValueError("Error: AWS_BEDROCK_API_KEY not configured.")
+
+    previous_bearer = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
+    previous_metadata = os.environ.get("AWS_EC2_METADATA_DISABLED")
+
+    os.environ["AWS_BEARER_TOKEN_BEDROCK"] = api_key
+    os.environ["AWS_EC2_METADATA_DISABLED"] = "true"
+
+    try:
+        yield
+    finally:
+        if previous_bearer is None:
+            os.environ.pop("AWS_BEARER_TOKEN_BEDROCK", None)
+        else:
+            os.environ["AWS_BEARER_TOKEN_BEDROCK"] = previous_bearer
+
+        if previous_metadata is None:
+            os.environ.pop("AWS_EC2_METADATA_DISABLED", None)
+        else:
+            os.environ["AWS_EC2_METADATA_DISABLED"] = previous_metadata
+
+
+class BedrockChatAdapter:
+    def __init__(self, chat_model: Any):
+        self._chat_model = chat_model
+
+    async def achat(self, messages: List[Any]):
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+        from llama_index.core.llms import MessageRole
+
+        langchain_messages = []
+        for message in messages:
+            content = message.content or ""
+            if message.role == MessageRole.SYSTEM:
+                langchain_messages.append(SystemMessage(content=content))
+            elif message.role == MessageRole.ASSISTANT:
+                langchain_messages.append(AIMessage(content=content))
+            elif message.role == MessageRole.TOOL:
+                langchain_messages.append(ToolMessage(content=content, tool_call_id="tool"))
+            else:
+                langchain_messages.append(HumanMessage(content=content))
+
+        response = await self._chat_model.ainvoke(langchain_messages)
+        return stringify_langchain_content(response.content)
+
+
+class BedrockLangChainProxy:
+    def __init__(self, chat_model: ChatBedrockConverse):
+        self._chat_model = chat_model
+
+    async def ainvoke(self, *args: Any, **kwargs: Any) -> Any:
+        with temporary_bedrock_api_key_env():
+            return await self._chat_model.ainvoke(*args, **kwargs)
+
+
 class LLMService:
     def __init__(self):
         # We can cache clients if needed
@@ -15,19 +96,16 @@ class LLMService:
 
     def _get_config(self, model_id: Optional[str]) -> ModelConfig:
         if not model_id:
-            # Find active based on settings.active_provider
-            active_provider = settings.active_provider
-            # Try to find a config matching the active provider
-            active = next(
-                (m for m in MODEL_CONFIGS if m.provider == active_provider), None
-            )
-            if active:
-                return active
-
-            # Fallback to any active model
             active = next((m for m in MODEL_CONFIGS if m.is_active), None)
             if active:
                 return active
+
+            active_provider = settings.active_provider
+            provider_match = next(
+                (m for m in MODEL_CONFIGS if m.provider == active_provider), None
+            )
+            if provider_match:
+                return provider_match
             return MODEL_CONFIGS[0]  # Default to first
 
         config = next((m for m in MODEL_CONFIGS if m.id == model_id), None)
@@ -35,7 +113,10 @@ class LLMService:
             # Fallback to creating a config on the fly if it's a valid model ID but not in static list
             # This allows flexible model usage
             return ModelConfig(
-                id=model_id, name=model_id, provider=settings.active_provider
+                id=model_id,
+                model_api_path=build_model_api_path(model_id),
+                name=model_id,
+                provider=settings.active_provider,
             )
         return config
 
@@ -76,19 +157,14 @@ class LLMService:
             if not api_key:
                 raise ValueError("Error: Google API Key not configured.")
 
-            # Use the model name as provided in config
-            return Gemini(model=config.id, api_key=api_key)
+            model_name = config.id
+            if not model_name.startswith("models/"):
+                model_name = f"models/{model_name}"
+
+            return Gemini(model=model_name, api_key=api_key)
 
         elif config.provider == "aws_bedrock":
-            from llama_index.llms.bedrock import Bedrock
-
-            return Bedrock(
-                model=config.id,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=config.region or settings.AWS_REGION,
-                context_size=8192,  # Default for Claude models generally
-            )
+            return BedrockChatAdapter(self._create_bedrock_chat_model(config))
 
         elif config.provider == "anthropic":
             raise NotImplementedError("Anthropic provider not yet fully implemented.")
@@ -101,8 +177,6 @@ class LLMService:
         Returns a LangChain BaseChatModel for the specified model ID.
         """
         from langchain_openai import ChatOpenAI
-        from langchain_aws import ChatBedrock
-        from app.core.config import settings
 
         config = self._get_config(model_id)
 
@@ -114,20 +188,7 @@ class LLMService:
             )
 
         elif config.provider == "aws_bedrock":
-            # Bedrock specific config
-            import boto3
-
-            bedrock_client = boto3.client(
-                service_name="bedrock-runtime",
-                region_name=config.region or settings.AWS_REGION,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            )
-            return ChatBedrock(
-                model_id=config.id,
-                client=bedrock_client,
-                model_kwargs={"temperature": 0},
-            )
+            return self._create_bedrock_chat_model(config)
 
         elif config.provider == "google":
             # Placeholder for Google via LangChain
@@ -139,6 +200,18 @@ class LLMService:
             )
 
         raise ValueError(f"LangChain provider {config.provider} not supported.")
+
+    def _create_bedrock_chat_model(self, config: ModelConfig) -> BedrockLangChainProxy:
+        if not settings.AWS_REGION:
+            raise ValueError("Error: AWS_REGION is required for Bedrock SDK clients.")
+
+        with temporary_bedrock_api_key_env():
+            chat_model = ChatBedrockConverse(
+                model=config.id,
+                region_name=settings.AWS_REGION,
+                temperature=0,
+            )
+        return BedrockLangChainProxy(chat_model)
 
     async def chat(
         self, messages: List[Dict[str, str]], model_id: Optional[str] = None

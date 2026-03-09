@@ -70,11 +70,11 @@ class RAGService:
         return self._storage_context
 
     def _get_embed_model(self):
-        # Configure Embedding Model (OpenAI API)
+        # The local TEI service exposes an OpenAI-compatible embeddings API.
         return OpenAIEmbedding(
             model_name=settings.EMBEDDING_MODEL_NAME,
-            # api_base=settings.EMBEDDINGS_SERVICE_URL, # Removed: using official OpenAI API
-            api_key=settings.OPENAI_API_KEY,
+            api_base=settings.EMBEDDINGS_SERVICE_URL,
+            api_key=settings.OPENAI_API_KEY or "EMPTY",
             embed_batch_size=30,
         )
 

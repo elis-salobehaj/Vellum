@@ -6,19 +6,19 @@ An enterprise-grade chatbot featuring Entra ID SSO, Multi-LLM support, and an ad
 
 ## 🚀 Quick Start (Kubernetes)
 
-This platform is designed to run on **Kubernetes** (Minikube for local dev).
+This platform is designed to run on **Kubernetes**, with **Kind** as the active local development runtime in the current migration phase.
 
 **Prerequisites**:
-- Docker & Minikube
+- Docker & Kind
 - `kubectl` & `helm`
 - **uv** (Python 3.12+ package manager)
 - **pnpm** (Node.js package manager)
 
 **Launch Platform**:
 ```bash
-./scripts/setup-platform.sh
+./scripts/setup-kind.sh
 ```
-*This script initializes Minikube, installs Kubeflow Pipelines, MinIO, Qdrant, and deploys the Vellum services.*
+*This script bootstraps the local `kind` cluster, applies the Phase 1 slim Kubeflow stack, and prepares the environment for app deployment.*
 
 **Access Services**:
 After setup, use the connect script to port-forward all services:
@@ -31,7 +31,7 @@ After setup, use the connect script to port-forward all services:
 | **Frontend** | [http://localhost:9090](http://localhost:9090) |
 | **Backend API** | [http://localhost:8000](http://localhost:8000/docs) |
 | **Kubeflow Dashboard** | [http://localhost:8080](http://localhost:8080) |
-| **MinIO Console** | [http://localhost:9001](http://localhost:9001) |
+| **MinIO API** | [http://localhost:9000](http://localhost:9000) |
 
 ---
 
@@ -41,7 +41,7 @@ Comprehensive documentation is located in the [**docs/**](./docs/README.md) dire
 
 | Guide | Description |
 | :--- | :--- |
-| 🚀 [**Getting Started**](./docs/guides/GETTING_STARTED.md) | First-time installation, prerequisites, and Minikube setup. |
+| 🚀 [**Getting Started**](./docs/guides/GETTING_STARTED.md) | First-time installation, prerequisites, and Kind setup. |
 | 💻 [**Development Guide**](./docs/guides/DEVELOPMENT.md) | Running locally, hybrid development mode, and critical commands. |
 | 🏰 [**Architecture**](./docs/context/ARCHITECTURE.md) | Deep dive into the stack, project structure, and code conventions. |
 | 🔐 [**Authentication**](./docs/guides/AUTHENTICATION.md) | Details on Entra ID SSO, Dex, and security configuration. |

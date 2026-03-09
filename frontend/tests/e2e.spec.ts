@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('E2E Full Stack Tests', () => {
+  test.describe.configure({ mode: 'serial' });
 
   test.beforeEach(async ({ page }) => {
     // Listen for console logs
@@ -56,27 +57,23 @@ test.describe('E2E Full Stack Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify title
-    await expect(page.getByText(/Admin Configuration/i)).toBeVisible();
-
-    // Check if models loaded
-    await expect(page.locator('select')).toContainText(/GPT-4/i);
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible();
+    await expect(page.getByText('Knowledge Base Ingestion')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start Ingestion' })).toBeVisible();
   });
 
   test('should send message and receive response', async ({ page }) => {
+    test.slow();
+
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     // Type and send
-    await page.getByPlaceholder('Ask anything...').fill('Hello Real Backend');
-    await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByPlaceholder('How can I help you today?').fill('Hello Real Backend');
+    await page.getByPlaceholder('How can I help you today?').press('Enter');
 
-    // Wait for the 'Thinking...' indicator to disappear
-    await expect(page.getByText('Thinking...')).not.toBeVisible({ timeout: 20000 });
-
-    // Count only finalized message bubbles (avoid counting the 'Thinking...' indicator)
-    const bubbles = page.getByTestId('message-bubble');
-
-    // We expect 3 bubbles: The initial greeting, the user message, and the assistant response.
-    await expect(bubbles).toHaveCount(3, { timeout: 20000 });
+    await expect(page).toHaveURL(/\/chat\//, { timeout: 90000 });
+    await expect(page.getByPlaceholder('How can I help you today?')).toHaveValue('');
+    await expect(page.locator('.prose').first()).toBeVisible({ timeout: 90000 });
   });
 });

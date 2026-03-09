@@ -4,7 +4,11 @@ metadata:
   name: model-downloader
   namespace: kubeflow-vellum
 spec:
+  backoffLimit: 2
   template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
     spec:
       containers:
         - name: downloader
@@ -14,11 +18,11 @@ spec:
             - |
               set -e
               echo "Cleaning target directory..."
-              rm -rf /mnt/models/Qwen3.5-4B
-              mkdir -p /mnt/models/Qwen3.5-4B
+              rm -rf /mnt/models/Qwen3.5-2B
+              mkdir -p /mnt/models/Qwen3.5-2B
               
-              echo "Downloading Model: Qwen3.5-4B..."
-              huggingface-cli download Qwen/Qwen3.5-4B --local-dir /mnt/models/Qwen3.5-4B --local-dir-use-symlinks False
+              echo "Downloading Model: Qwen3.5-2B..."
+              huggingface-cli download Qwen/Qwen3.5-2B --local-dir /mnt/models/Qwen3.5-2B --local-dir-use-symlinks False
               
               echo "Downloading Embedding Model: BAAI/bge-small-en-v1.5..."
               rm -rf /mnt/models/bge-small-en-v1.5

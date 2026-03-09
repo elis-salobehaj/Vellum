@@ -43,12 +43,12 @@ export const ChatInput = ({
 
   // Mutation for updating active model globally
   const updateModelMutation = useMutation({
-    mutationFn: async (modelId: string) => {
-      const model = (models as Model[]).find(m => m.id === modelId);
+    mutationFn: async (selectedModelId: string) => {
+      const model = (models as Model[]).find(m => m.id === selectedModelId);
       if (!model) throw new Error("Model not found");
 
       const updatedConfig = { ...model, is_active: true };
-      return api.put(`/admin/models/${modelId}`, updatedConfig);
+      return api.put(`/admin/models/${model.model_api_path}`, updatedConfig);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["models"] });

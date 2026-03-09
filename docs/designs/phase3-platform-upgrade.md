@@ -13,13 +13,15 @@ We deleted the `kubeflow` namespace and replaced standalone installs with the of
     -   **Dex**: OIDC Authentication (`vellum@example.com`).
     -   **KFP v2.2.0+**: Uses `ghcr.io` images (Fixed `gcr.io` deprecation issues).
 
-### 2. Tuned for Minikube
+### 2. Tuned for a Local Single-Node Cluster
 -   **Disabled**: KServe, Spark Operator (to save RAM).
 -   **Storage**: Tuned `seaweedfs` (S3) and `mysql` to 512Mi limits.
 -   **Vector DB**: **Qdrant** installed in `qdrant` namespace.
 -   **Fixes Applied**:
     -   **Certificate Refresh**: Performed global restart to fix `CERTIFICATE_VERIFY_FAILED` errors from sidecars holding old certs.
     -   **Auth Proxy**: Deployed `oauth2-proxy` to fix 401 errors in Dashboard sub-apps.
+
+At the time of writing this report the target runtime was Minikube. The current active migration plan keeps the same Kubeflow v1.11.0 stack but boots it on `Kind` with a slimmer default component set.
 
 ## Verification Results
 

@@ -1,6 +1,6 @@
 # Authentication Guide
 
-This guide explains how authentication is handled in the Vellum application and how it integrates with the Kubeflow cluster-wide security.
+This guide explains how authentication works in the current Phase 1 local stack, which runs on `Kind` but still keeps the Kubeflow-era Dex and Istio security model.
 
 ## 1. Vellum Application (Port 8080)
 The Vellum application is hosted at `http://localhost:8080/vellum/`.
@@ -27,6 +27,8 @@ The Kubeflow Central Dashboard and internal services are protected by **Dex** an
 ### Why Two Logins?
 Vellum maintains its own identity provider (Entra ID) separate from Kubeflow's internal authentication (Dex). This ensures Vellum's security remains consistent across different environments (Dev, Staging, Prod), even if Kubeflow's auth configuration changes.
 
+In Phase 1, moving from Minikube to `Kind` does **not** change this split yet. Dex remains part of the slim local platform until later migration phases remove Kubeflow-auth dependencies.
+
 ---
 
 ## 3. Developer Shortcuts
@@ -49,12 +51,12 @@ Istio Ingress Gateway (initial routing)
     ↓
 Request Authentication (JWT signature verification for /api/v1/*)
     ↓
-Authorization Policies (deny-by-default in kubeflow-vellum namespace)
+Authorization Policies (deny-by-default in `kubeflow-vellum` namespace)
     ↓
 FastAPI Backend (secondary signature check — defense-in-depth)
 ```
 
-- **Inbound Gateway**: Istio Ingress Gateway handles initial routing.
+- **Inbound Gateway**: Istio Ingress Gateway handles initial routing on the local `Kind` cluster.
 - **Request Authentication**: Istio verifies the JWT signature for all API calls to `/api/v1/*`.
 - **Authorization Policies**: Deny-by-default logic applied to `kubeflow-vellum` namespace, only allowing traffic from validated gateway principals.
 - **Backend Enforcement**: FastAPI performs secondary signature check for defense-in-depth.

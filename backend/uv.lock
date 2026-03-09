@@ -172,34 +172,6 @@ wheels = [
 ]
 
 [[package]]
-name = "anthropic"
-version = "0.79.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "docstring-parser" },
-    { name = "httpx" },
-    { name = "jiter" },
-    { name = "pydantic" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/15/b1/91aea3f8fd180d01d133d931a167a78a3737b3fd39ccef2ae8d6619c24fd/anthropic-0.79.0.tar.gz", hash = "sha256:8707aafb3b1176ed6c13e2b1c9fb3efddce90d17aee5d8b83a86c70dcdcca871", size = 509825, upload-time = "2026-02-07T18:06:18.388Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/b2/cc0b8e874a18d7da50b0fda8c99e4ac123f23bf47b471827c5f6f3e4a767/anthropic-0.79.0-py3-none-any.whl", hash = "sha256:04cbd473b6bbda4ca2e41dd670fe2f829a911530f01697d0a1e37321eb75f3cf", size = 405918, upload-time = "2026-02-07T18:06:20.246Z" },
-]
-
-[package.optional-dependencies]
-bedrock = [
-    { name = "boto3" },
-    { name = "botocore" },
-]
-vertex = [
-    { name = "google-auth", extra = ["requests"] },
-]
-
-[[package]]
 name = "anyio"
 version = "4.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -864,11 +836,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0c/41/242044323fbd746615884b1c16639749e73665b718209946ebad7ba8a813/google_auth-2.48.0.tar.gz", hash = "sha256:4f7e706b0cd3208a3d940a19a822c37a476ddba5450156c3e6624a71f7c841ce", size = 326522, upload-time = "2026-01-26T19:22:47.157Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/1d/d6466de3a5249d35e832a52834115ca9d1d0de6abc22065f049707516d47/google_auth-2.48.0-py3-none-any.whl", hash = "sha256:2e2a537873d449434252a9632c28bfc268b0adb1e53f9fb62afc5333a975903f", size = 236499, upload-time = "2026-01-26T19:22:45.099Z" },
-]
-
-[package.optional-dependencies]
-requests = [
-    { name = "requests" },
 ]
 
 [[package]]
@@ -1687,33 +1654,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/af/b9/a7a74de6d8aacf4be329329495983d78d96b1a6e69b6d9fcf4a233febd4b/llama_index_instrumentation-0.4.2.tar.gz", hash = "sha256:dc4957b64da0922060690e85a6be9698ac08e34e0f69e90b01364ddec4f3de7f", size = 46146, upload-time = "2025-10-13T20:44:48.85Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/54/df8063b0441242e250e03d1e31ebde5dffbe24e1af32b025cb1a4544150c/llama_index_instrumentation-0.4.2-py3-none-any.whl", hash = "sha256:b4989500e6454059ab3f3c4a193575d47ab1fadb730c2e8f2b962649ae88b70b", size = 15411, upload-time = "2025-10-13T20:44:47.685Z" },
-]
-
-[[package]]
-name = "llama-index-llms-anthropic"
-version = "0.8.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anthropic", extra = ["bedrock", "vertex"] },
-    { name = "llama-index-core" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/3b/21654a99c82be2b30bbc72a45de6bcd12477f931fad78de371f50ca94539/llama_index_llms_anthropic-0.8.6.tar.gz", hash = "sha256:1aafdb83629af6aff7f44f8c91a772de15269f878e5a14d0d056d6a9fe644c5c", size = 12729, upload-time = "2025-09-08T20:40:37.404Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/7b/2212365c6d672b62f567c0d23918c68290091358fa7daac30461c2aa564e/llama_index_llms_anthropic-0.8.6-py3-none-any.whl", hash = "sha256:7887bf6540af4b016505e04eab4a5426e1d8d367d170b424f0b3160596faa1ea", size = 12905, upload-time = "2025-09-08T20:40:36.552Z" },
-]
-
-[[package]]
-name = "llama-index-llms-bedrock"
-version = "0.4.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "boto3" },
-    { name = "llama-index-core" },
-    { name = "llama-index-llms-anthropic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/98/ff/cee3702da454f4739fb948783ed30e0b4a056c9d36ccb39095f1ccc35961/llama_index_llms_bedrock-0.4.2.tar.gz", hash = "sha256:cab41d50d4484f5cfb60cdcc3b1d5ea1e968a655c74be5f09d87a38dff0c8326", size = 10912, upload-time = "2025-09-08T20:29:09.021Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/45/06c620d104dbbb00f3ea326c38b33c6c184e297615420a2299a4c0d2d588/llama_index_llms_bedrock-0.4.2-py3-none-any.whl", hash = "sha256:5707cb0ba5f1d8131959dae783519fadd6a93d2953de40c54f2d7431989dd82c", size = 11514, upload-time = "2025-09-08T20:29:07.951Z" },
 ]
 
 [[package]]
@@ -3320,7 +3260,6 @@ dependencies = [
     { name = "langgraph" },
     { name = "llama-index-core" },
     { name = "llama-index-embeddings-openai" },
-    { name = "llama-index-llms-bedrock" },
     { name = "llama-index-llms-gemini" },
     { name = "llama-index-llms-openai-like" },
     { name = "llama-index-readers-file" },
@@ -3339,6 +3278,7 @@ dependencies = [
     { name = "structlog" },
     { name = "urllib3" },
     { name = "uvicorn" },
+    { name = "vellum-ingestion" },
 ]
 
 [package.dev-dependencies]
@@ -3364,7 +3304,6 @@ requires-dist = [
     { name = "langgraph" },
     { name = "llama-index-core" },
     { name = "llama-index-embeddings-openai" },
-    { name = "llama-index-llms-bedrock", specifier = ">=0.4.2" },
     { name = "llama-index-llms-gemini" },
     { name = "llama-index-llms-openai-like" },
     { name = "llama-index-readers-file" },
@@ -3383,6 +3322,7 @@ requires-dist = [
     { name = "structlog" },
     { name = "urllib3", specifier = "<2.0.0" },
     { name = "uvicorn" },
+    { name = "vellum-ingestion", directory = "../kubeflow/pipelines/ingestion" },
 ]
 
 [package.metadata.requires-dev]
@@ -3392,6 +3332,39 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
+]
+
+[[package]]
+name = "vellum-ingestion"
+version = "0.1.0"
+source = { directory = "../kubeflow/pipelines/ingestion" }
+dependencies = [
+    { name = "boto3" },
+    { name = "kfp" },
+    { name = "llama-index-core" },
+    { name = "llama-index-embeddings-openai" },
+    { name = "llama-index-readers-s3" },
+    { name = "llama-index-vector-stores-qdrant" },
+    { name = "minio" },
+    { name = "numpy" },
+    { name = "pydantic-settings" },
+    { name = "pypdf" },
+    { name = "qdrant-client" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "boto3" },
+    { name = "kfp" },
+    { name = "llama-index-core" },
+    { name = "llama-index-embeddings-openai" },
+    { name = "llama-index-readers-s3" },
+    { name = "llama-index-vector-stores-qdrant" },
+    { name = "minio" },
+    { name = "numpy", specifier = "<2.0.0" },
+    { name = "pydantic-settings" },
+    { name = "pypdf" },
+    { name = "qdrant-client" },
 ]
 
 [[package]]

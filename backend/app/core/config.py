@@ -1,6 +1,4 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import model_validator
-from typing import Any
 
 
 class Settings(BaseSettings):
@@ -32,12 +30,13 @@ class Settings(BaseSettings):
         "http://llm-service-predictor.kubeflow-vellum.svc.cluster.local:80/v1"
     )
     KFP_HOST: str = "http://ml-pipeline.kubeflow.svc.cluster.local:8888"
+    KFP_NAMESPACE: str = "kubeflow-vellum"
+    KFP_USER_ID: str = "vellum@example.com"
+    INGESTION_MODE: str = "kfp"
 
     # AWS Bedrock
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_BEDROCK_API_KEY: str = ""
     AWS_REGION: str = "us-east-1"
-    AWS_BEDROCK_API_KEY: str = ""  # Alias for Bearer Token if used key-style
 
     # Vector DB
     QDRANT_HOST: str = "qdrant.qdrant.svc.cluster.local"
@@ -61,53 +60,17 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    @model_validator(mode="before")
-    @classmethod
-    def parse_env_vars(cls, data: Any) -> Any:
-        # 1. Parse AWS Bedrock API Key if standard credentials are missing
-        # Format: ABSK<Base64(ID:Secret)>
-        bedrock_token = data.get("AWS_BEDROCK_API_KEY")
-        if bedrock_token and not data.get("AWS_ACCESS_KEY_ID"):
-            try:
-                import base64
-                # Remove prefix if present (assuming ABSK is a prefix based on user input,
-                # but if it's just base64, we try to decode the whole thing or after a prefix)
-                # The user showed: ABSKQmVk...
-                # "ABSK" might be "AWS Bedrock Shared Key" marker?
-                # Let's try to decode the payload after 'ABSK'
-
-                payload = bedrock_token
-                if payload.startswith("ABSK"):
-                    payload = payload[4:]
-
-                decoded = base64.b64decode(payload).decode("utf-8")
-                if ":" in decoded:
-                    key_id, secret = decoded.split(":", 1)
-                    data["AWS_ACCESS_KEY_ID"] = key_id
-                    data["AWS_SECRET_ACCESS_KEY"] = secret.strip()
-            except Exception:
-                pass  # Fallback to standard flow or fail later
-
-        return data
-
     def model_post_init(self, __context) -> None:
         """
-        Sync critical settings to os.environ for libraries that rely on them (boto3).
+        Sync critical settings to os.environ for libraries that rely on them.
         """
         import os
 
-        # AWS variables (boto3 checks os.environ)
         if self.AWS_REGION:
             os.environ["AWS_REGION"] = self.AWS_REGION
             os.environ["AWS_DEFAULT_REGION"] = self.AWS_REGION
 
-        if self.AWS_ACCESS_KEY_ID:
-            os.environ["AWS_ACCESS_KEY_ID"] = self.AWS_ACCESS_KEY_ID
-
-        if self.AWS_SECRET_ACCESS_KEY:
-            os.environ["AWS_SECRET_ACCESS_KEY"] = self.AWS_SECRET_ACCESS_KEY
-
-        # Critical: Disable IMDS for local development to prevent long timeouts
+        # Disable IMDS for local development to prevent long credential timeouts.
         os.environ["AWS_EC2_METADATA_DISABLED"] = "true"
 
     @property

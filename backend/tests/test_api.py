@@ -87,6 +87,7 @@ def test_admin_models_crud():
     # 2. POST
     new_model = {
         "id": "test-model-custom",
+        "model_api_path": "test-model-custom",
         "name": "Test Model",
         "provider": "ollama",
         "is_active": True
@@ -96,12 +97,26 @@ def test_admin_models_crud():
         response = client.post("/api/v1/admin/models", json=new_model)
         assert response.status_code == 200
         assert response.json()["id"] == "test-model-custom"
+        assert response.json()["model_api_path"] == "test-model-custom"
         
         # 3. Verify
         response = client.get("/api/v1/admin/models")
         assert len(response.json()) == original_len + 1
+
+        # 4. Update using the API path route contract
+        updated_model = {
+            **new_model,
+            "name": "Updated Test Model",
+            "is_active": False,
+        }
+        response = client.put(
+            "/api/v1/admin/models/test-model-custom",
+            json=updated_model,
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == "Updated Test Model"
         
-        # 4. Duplicate
+        # 5. Duplicate
         response = client.post("/api/v1/admin/models", json=new_model)
         assert response.status_code == 400
         

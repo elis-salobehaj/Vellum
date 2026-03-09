@@ -41,11 +41,11 @@ graph TD
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 7 | **Infrastructure Migration to k3d & Kind + Ray-Native Architecture** | 🚧 Active | Minikube → k3d/Kind, KServe → Ray Serve, KFP → Dagster, Istio → Ambient, MinIO → PVC/S3. 6 phases. |
+| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phase 1 has working Kind bootstrap, deploy, auth, ingestion fallback, and automated test coverage, but it is not complete yet. The remaining blockers are stable local GPU-backed Qwen on Kind and final browser-grade Entra validation, so the active plan remains open. |
 | 8 | **Multimodal RAG — Text + Image Search** | ⏳ Backlog | TEI → Infinity + SigLIP 2, dual-engine (vLLM + SGLang VLM), cross-modal Qdrant search. 6 phases. Depends on #7. |
 | 9 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 
-**Last Status Update**: 2026-03-07
+**Last Status Update**: 2026-03-09
 
 **Recently Completed**:
 - ✅ **Frontend UI Enhancements** — Premium design language (Claude-inspired), relative push sidebar, OKLCH colors, directory restructuring, and context menus.
@@ -63,7 +63,7 @@ graph TD
 ## 📚 Essential Guides
 
 ### Development Workflow
-- [Getting Started](guides/GETTING_STARTED.md) - First-time setup, prerequisites, Minikube
+- [Getting Started](guides/GETTING_STARTED.md) - First-time setup, prerequisites, Kind bootstrap
 - [Development Guide](guides/DEVELOPMENT.md) - Running locally, debugging, commands
 
 ### Architecture & Patterns
@@ -101,7 +101,7 @@ graph TD
 | **Phase 4: Experimentation & Tuning** | 2026-01 | Katib grid search (chunk_size=256, overlap=50, accuracy=0.8046), ChromaDB → Qdrant migration |
 | **Phase 3: Platform Engineering** | 2026-01 | Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard, Qdrant namespace |
 | **Phase 2: Modern Data Engineering** | 2025-12 | KFP ingestion pipeline, semantic chunking, BGE-Large embeddings, retrieval API |
-| **Phase 1: Foundation** | 2025-12 | Minikube cluster, Kubeflow Pipelines, Katib, MinIO, Istio operators |
+| **Phase 1: Foundation** | 2025-12 | Initial local platform on Minikube: Kubeflow Pipelines, Katib, MinIO, Istio operators |
 
 See all completed plans: [`plans/implemented/`](plans/implemented/)
 
@@ -121,7 +121,7 @@ docs/
 │   ├── INGESTION_VERIFICATION.md
 │   ├── HELLO_WORLD_PIPELINE.md
 │   ├── MINIO_MODEL_MANAGEMENT.md
-│   └── MINIKUBE_SETUP_LEGACY.md
+│   └── MINIKUBE_SETUP_LEGACY.md  ← Historical reference only
 ├── context/               ← Reference documentation
 │   ├── ARCHITECTURE.md    ← Stack, project structure, patterns
 │   └── WORKFLOWS.md       ← Documentation lifecycle

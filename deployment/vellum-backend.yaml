@@ -19,13 +19,23 @@ spec:
       containers:
       - name: backend
         image: vellum-backend:latest
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
         envFrom:
         - secretRef:
             name: vellum-env
         env:
+        - name: EMBEDDING_MODEL_NAME
+          value: "BAAI/bge-small-en-v1.5"
+        - name: EMBEDDINGS_SERVICE_URL
+          value: "http://embeddings-service.kubeflow-vellum.svc.cluster.local/v1"
+        - name: MINIO_ENDPOINT
+          value: "minio-service.kubeflow.svc:9000"
+        - name: KFP_HOST
+          value: "http://ml-pipeline.kubeflow.svc.cluster.local:8888"
+        - name: INGESTION_PIPELINE_IMAGE
+          value: "vellum-ingest:local"
         - name: QDRANT_HOST
           value: "qdrant.qdrant.svc.cluster.local"
         - name: LLM_SERVICE_URL

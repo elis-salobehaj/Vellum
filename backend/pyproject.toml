@@ -35,7 +35,7 @@ dependencies = [
     "llama-index-readers-file",
     "pypdf",
     "google-generativeai>=0.8.0",
-    "llama-index-llms-bedrock>=0.4.2",
+    "vellum-ingestion",
 ]
 
 [build-system]
@@ -44,6 +44,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["app"]
+
+[tool.uv.sources]
+vellum-ingestion = { path = "../kubeflow/pipelines/ingestion" }
 
 [dependency-groups]
 dev = [

@@ -1,61 +1,65 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Consolidated Port-Forward Script
 # Usage: ./scripts/connect.sh
 
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/cluster-common.sh"
+
+ensure_project_root
+load_env_file
+require_commands kubectl
+require_kubectl_access
+
 echo "🔌 Establishing Port Forwards..."
 
-# Kill any existing port-forwards
-pkill -f port-forward && sleep 2
+pkill -f "kubectl port-forward" >/dev/null 2>&1 || true
+sleep 2
 
 HYBRID=false
-if [[ "$1" == "--hybrid" ]]; then
+if [[ "${1:-}" == "--hybrid" ]]; then
   HYBRID=true
   echo "🚀 Hybrid Mode: Skipping Backend (8000) and Frontend (9090) port-forwards..."
 fi
 
-# 1. Istio Ingress (Central Dashboard)
-# Access at http://localhost:8080
-nohup kubectl port-forward -n istio-system svc/istio-ingressgateway 8080:80 > /dev/null 2>&1 &
-echo "✅ Dashboard: http://localhost:8080 (Ingress Gateway)"
+start_port_forward() {
+  local namespace="$1"
+  local resource="$2"
+  local ports="$3"
+  local label="$4"
+  local url="$5"
 
-# 2. Qdrant
-# Access gRPC at localhost:6334, HTTP at localhost:6333
-nohup kubectl port-forward -n qdrant svc/qdrant 6333:6333 > /dev/null 2>&1 &
-echo "✅ Qdrant: http://localhost:6333"
+  if ! kubectl get -n "$namespace" "$resource" >/dev/null 2>&1; then
+    echo "⚠️  Skipping ${label}: ${resource} not found in namespace ${namespace}."
+    return 0
+  fi
 
-# 3. Kubeflow Pipelines (API)
-# Useful for SDK access bypassing Istio Auth (port 8888)
-# Use 'ml-pipeline' in 'kubeflow' namespace
-nohup kubectl port-forward -n kubeflow svc/ml-pipeline 8888:8888 > /dev/null 2>&1 &
-echo "✅ KFP API: http://localhost:8888"
+  nohup kubectl port-forward -n "$namespace" "$resource" "$ports" > /dev/null 2>&1 &
+  echo "✅ ${label}: ${url}"
+}
 
-# 4. Embeddings Service
-# Access at localhost:8082
-nohup kubectl port-forward svc/embeddings-service -n kubeflow-vellum 8082:80 > /dev/null 2>&1 &
-echo "✅ Embeddings: http://localhost:8082"
+start_port_forward istio-system svc/istio-ingressgateway 8080:80 "Dashboard" "http://localhost:8080"
+start_port_forward qdrant svc/qdrant 6333:6333 "Qdrant" "http://localhost:6333"
+start_port_forward kubeflow svc/ml-pipeline 8888:8888 "KFP API" "http://localhost:8888"
+start_port_forward kubeflow-vellum svc/embeddings-service 8082:80 "Embeddings" "http://localhost:8082"
+start_port_forward kubeflow svc/minio-service 9000:9000 "MinIO" "http://localhost:9000"
 
-# 5. MinIO (S3)
-# Access at localhost:9000
-nohup kubectl port-forward -n kubeflow svc/minio-service 9000:9000 > /dev/null 2>&1 &
-echo "✅ MinIO: http://localhost:9000"
-
-if [ "$HYBRID" = false ]; then
-  # 6. Vellum Backend
-  # Access at localhost:8000
-  nohup kubectl port-forward -n kubeflow-vellum svc/backend 8000:8000 > /dev/null 2>&1 &
-  echo "✅ Backend: http://localhost:8000"
+if [[ "$HYBRID" == false ]]; then
+  start_port_forward kubeflow-vellum svc/backend 8000:8000 "Backend" "http://localhost:8000"
 fi
 
-# 6. LLM Service (KServe)
-# Access at localhost:8081 (mapped from 80)
-nohup kubectl port-forward -n kubeflow-vellum svc/llm-service-predictor 8081:80 > /dev/null 2>&1 &
-echo "✅ LLM Service: http://localhost:8081"
-
-if [ "$HYBRID" = false ]; then
-  # 7. Frontend
-  # Access at localhost:9090
-  nohup kubectl port-forward -n kubeflow-vellum svc/frontend 9090:80 > /dev/null 2>&1 &
-  echo "✅ Frontend: http://localhost:9090"
+if bool_is_true "$ENABLE_LOCAL_LLM"; then
+  if kubectl get deployment llm-service-predictor -n kubeflow-vellum -o jsonpath='{.spec.replicas}' 2>/dev/null | grep -qx '1'; then
+    start_port_forward kubeflow-vellum svc/llm-service-predictor 8081:80 "LLM Service" "http://localhost:8081"
+  else
+    echo "ℹ️  Local LLM deployment is scaled down; skipping LLM port-forward."
+  fi
+else
+  echo "ℹ️  ENABLE_LOCAL_LLM=${ENABLE_LOCAL_LLM}; skipping LLM port-forward."
 fi
 
-echo "Running in background. Kill with 'pkill -f port-forward'."
+if [[ "$HYBRID" == false ]]; then
+  start_port_forward kubeflow-vellum svc/frontend 9090:80 "Frontend" "http://localhost:9090"
+fi
+
+echo "Running in background. Kill with 'pkill -f \"kubectl port-forward\"'."

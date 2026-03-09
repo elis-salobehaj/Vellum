@@ -3,7 +3,7 @@
 Katib is Kubeflow's hyperparameter tuning engine. Vellum uses Katib to optimize RAG pipeline parameters (chunk size, chunk overlap) for retrieval quality.
 
 ## Prerequisites
-- Kubeflow platform running (`./scripts/setup-platform.sh`)
+- Kubeflow platform running (`./scripts/setup-kind.sh` or `./scripts/setup-platform.sh`)
 - Port-forwards active (`./scripts/connect.sh`)
 - Documents ingested into Qdrant
 
@@ -121,9 +121,9 @@ These are the current platform defaults in:
 | **bayesian** | Adaptive search, learns from previous trials |
 
 ### Resource Management
-Katib trials run as Kubernetes Jobs. On Minikube, limit `parallelTrialCount` to avoid resource exhaustion:
+Katib trials run as Kubernetes Jobs. On a single-node local cluster, keep `parallelTrialCount` conservative to avoid resource exhaustion:
 ```yaml
-parallelTrialCount: 2  # Safe for 12GB RAM Minikube
+parallelTrialCount: 2  # Safe starting point for the current local setup
 maxTrialCount: 12
 ```
 

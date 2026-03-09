@@ -26,6 +26,8 @@ build/
 
 # Project Data
 backend/vellum_backend.egg-info/
+kubeflow/pipelines/ingestion/build/
+kubeflow/pipelines/ingestion/*.egg-info/
 data/source_documents/
 ollama_data/
 test-results/

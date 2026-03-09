@@ -3,140 +3,235 @@
 ## Prerequisites
 
 ### Required Tools
-- **Docker Desktop** (or Docker Engine with WSL2 backend)
-- **Minikube**: [Installation Guide](https://minikube.sigs.k8s.io/docs/start/)
+- **Docker Desktop** or Docker Engine reachable from your shell
+- **Kind**: [Installation Guide](https://kind.sigs.k8s.io/)
 - **kubectl**: [Installation Guide](https://kubernetes.io/docs/tasks/tools/)
 - **Helm**: [Installation Guide](https://helm.sh/docs/intro/install/)
-- **Python 3.12+**: For backend and pipeline scripts (`uv` recommended)
-- **Node.js 24.13.0+**: For frontend development
-- **pnpm**: Enabled via `corepack enable` (Node.js 24+)
+- **Git** with submodule support
+- **Python 3.12+** for backend and pipeline scripts (`uv` recommended)
+- **Node.js 24.13.0+** for frontend development
+- **pnpm** via `corepack enable`
 
-### Resource Requirements
+### Resource Requirements (Phase 1 Slim Overlay)
 
 | Resource | Minimum | Recommended | Why? |
 | :--- | :--- | :--- | :--- |
-| **RAM** | **12 GB** | **24 GB+** | Istio (~4GB), Kubeflow (~4GB), ML workloads (~4GB) |
-| **CPUs** | **6 Cores** | **8+ vCPUs**| Service mesh sidecars and multiple controllers need CPU |
-| **Disk** | **40 GB** | **100 GB** | Docker images for Kubeflow are large |
+| **RAM** | **12 GB** | **16-24 GB** | Phase 1 still keeps Istio, Dex, KFP, KServe, MinIO, TEI, and Qdrant, but removes Katib, Jupyter, TensorBoard, PVC Viewer, Volumes UI, and Trainer from the default local boot. |
+| **CPUs** | **6 Cores** | **8+ vCPUs** | Kubeflow controllers, Istio ingress, and local model serving still compete for CPU. |
+| **Disk** | **40 GB** | **80-100 GB** | Kubeflow images plus the local registry and model downloads are large. |
+| **GPU** | Optional | 1 NVIDIA GPU | Required only when using the local KServe-hosted Qwen model. |
 
 ### WSL2 Configuration (Windows)
 
-#### Option A: Docker Desktop for Windows (WSL2 Backend)
-*Most common setup. You run `docker` in WSL, but it talks to Docker Desktop on Windows.*
-
-1. **Windows**: Install NVIDIA Drivers (if GPU needed).
-2. **Docker Desktop Settings**:
-   - Settings → General → "Use the WSL 2 based engine": **Checked**.
-   - Settings → Resources → WSL Integration → "Ubuntu-24.04": **Toggled ON**.
-3. **Verify GPU** (optional):
+#### Docker Desktop + WSL2 Backend
+1. Install current NVIDIA drivers on Windows if GPU passthrough is required.
+2. In Docker Desktop, enable `Use the WSL 2 based engine`.
+3. In Docker Desktop, enable WSL integration for your Linux distro.
+4. Optional GPU check:
     ```bash
     docker run --rm --gpus all ubuntu nvidia-smi
     ```
 
-#### WSL Memory Config (`.wslconfig`)
+#### WSL Runtime Note for Kind Node Containers
+Keep Docker's default runtime on `runc` for the Kind workflow on this machine.
+
+Required Docker daemon state:
+```json
+{
+    "default-runtime": "runc",
+    "runtimes": {
+        "nvidia": {
+            "path": "nvidia-container-runtime",
+            "runtimeArgs": []
+        }
+    }
+}
+```
+
+This keeps Kind node startup reliable while still preserving the NVIDIA runtime definition for explicit use later.
+
+Additional WSL host prerequisite observed on this machine:
+```bash
+sudo sysctl -w fs.inotify.max_user_instances=1024
+echo 'fs.inotify.max_user_instances = 1024' | sudo tee /etc/sysctl.d/99-vellum-kind.conf
+```
+
+If this value stays at `128`, Kind node containers can exit during boot with `Failed to create control group inotify object: Too many open files`.
+
+#### Recommended `.wslconfig`
 Create `%UserProfile%/.wslconfig`:
 ```ini
 [wsl2]
 memory=26GB
 processors=12
 ```
-*Run `wsl --shutdown` after creating/editing this file.*
 
----
+Run `wsl --shutdown` after changing it.
 
 ## First-Time Setup
 
-### 1. Clone & Initialize
+### 1. Clone the Repo
 ```bash
 git clone --recursive https://github.com/elis-salobehaj/Vellum.git
 cd Vellum
 ```
 
-> **Important**: The `--recursive` flag initializes the `deployment/manifests` submodule.
-
-### 2. Start Minikube
+If you already cloned without submodules:
 ```bash
-minikube start --cpus 6 --memory 12288 --disk-size=40g --driver=docker
+git submodule update --init --recursive deployment/manifests
 ```
 
-> **Note**: 6 CPUs and 12GB RAM are the recommended minimums for the full stack.
+### 2. Create Local Config
+```bash
+cp .env.example .env
+```
 
-### 3. Install Platform
-We provide a helper script to install all components in the correct order:
-- **Kubeflow Manifests (v1.11.0)**: Core MLOps components (KFP, Katib, Dashboard)
-- **Istio**: Service Mesh & Ingress
-- **Dex**: OIDC Authentication (`vellum@example.com`)
-- **Qdrant**: Vector Database for RAG
-- **OAuth2 Proxy**: Dashboard authentication fixes
+Important defaults for Phase 1:
+- `ENABLE_LOCAL_LLM=true` keeps the KServe predictor running.
+- `ENABLE_LOCAL_LLM=false` scales the local LLM deployment to zero after deploy, which is useful when you are using Bedrock, OpenAI, or Gemini instead.
+- If the cluster does not advertise `nvidia.com/gpu` capacity, the deploy scripts automatically scale the local LLM back to zero even when `ENABLE_LOCAL_LLM=true`.
+- `./scripts/setup-kind.sh` now treats GPU support as a bootstrap requirement when `ENABLE_LOCAL_LLM=true`: it applies the NVIDIA `RuntimeClass`, deploys the device plugin, and fails fast if the Kind node itself was not created with `/dev/nvidia*` devices.
+- `LLM_SERVICE_URL=http://localhost:8081/v1` is only valid when the local LLM is enabled and `./scripts/connect.sh` is forwarding it.
 
+### Local LLM GPU Prerequisites
+
+For local Qwen on Kind, all of the following must be true before the cluster can advertise `nvidia.com/gpu`:
+
+1. The host shell can see the GPU:
+    ```bash
+    nvidia-smi -L
+    ```
+2. Docker can launch GPU-enabled containers:
+    ```bash
+    docker run --rm --gpus all ubuntu nvidia-smi -L
+    ```
+3. The Kind node container itself must be created with NVIDIA device access so `/dev/nvidia*` exists inside the node.
+4. The cluster must have the `nvidia` `RuntimeClass` and NVIDIA device plugin installed.
+
+This repo now automates step 4 during `./scripts/setup-kind.sh`. It does **not** yet automate step 3, so if the existing Kind node lacks `/dev/nvidia*`, the bootstrap exits with a diagnostic and you must recreate the cluster after fixing how the node container is launched.
+
+### 3. Bootstrap the Kind Platform
+Primary entrypoint:
+```bash
+./scripts/setup-kind.sh
+```
+
+Compatibility wrapper:
 ```bash
 ./scripts/setup-platform.sh
 ```
 
-The script will apply the manifests and wait for the Central Dashboard to be ready.
+What the bootstrap does in Phase 1:
+- Validates Docker, `kubectl`, `helm`, and `kind`
+- Initializes the `deployment/manifests` submodule if needed
+- Creates a `Kind` cluster from `kind-config.yaml`
+- Applies the slim Kubeflow Phase 1 manifest set and installs Qdrant
+- Writes a dedicated kubeconfig to `~/.kube/kind-vellum.yaml`
 
-### 4. Connect to Services
-Once installation is complete, use the connection helper:
-
-```bash
-./scripts/connect.sh
-```
-
-| Service | Local URL | Credentials |
-| :--- | :--- | :--- |
-| **Kubeflow Dashboard** | http://localhost:8080 | `vellum@example.com` / `12341234` |
-| **Frontend** | http://localhost:9090 | — |
-| **Backend API** | http://localhost:8000/docs | — |
-| **MinIO Console** | http://localhost:9001 | — |
-
-### 5. Backend Setup
+### 4. Install App Dependencies
+Backend:
 ```bash
 cd backend
 uv sync
 ```
 
-### 6. Frontend Setup
+Frontend:
 ```bash
 cd frontend
 pnpm install
 ```
 
----
+### 5. Build, Push, and Deploy the App
+```bash
+./scripts/deploy-local.sh
+```
+
+This now:
+- builds backend, frontend, and ingestion images locally
+- loads them directly into the Kind cluster
+- syncs the `vellum-env` Kubernetes secret from `.env`
+- applies the Vellum app workload manifests on top of the already-bootstrapped platform
+- optionally scales the local LLM deployment based on `ENABLE_LOCAL_LLM`
+
+### 6. Connect to Services
+```bash
+./scripts/connect.sh
+```
+
+| Service | Local URL | Notes |
+| :--- | :--- | :--- |
+| **Kubeflow Dashboard** | http://localhost:8080 | Dex login: `vellum@example.com` / `12341234` |
+| **Frontend** | http://localhost:9090 | Skipped in hybrid mode |
+| **Backend API** | http://localhost:8000/docs | Skipped in hybrid mode |
+| **KFP API** | http://localhost:8888 | Direct SDK/API access |
+| **Qdrant** | http://localhost:6333 | Vector DB |
+| **Embeddings** | http://localhost:8082 | TEI service |
+| **MinIO** | http://localhost:9000 | Still used in Phase 1 |
+| **LLM Service** | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` |
 
 ## Verify Installation
 
 ```bash
-# Check all pods are running
-kubectl get pods -n kubeflow
+export KUBECONFIG=$HOME/.kube/kind-vellum.yaml
 
-# Check Qdrant is healthy
+kubectl get pods -n kubeflow
+kubectl get pods -n kubeflow-vellum
 kubectl get pods -n qdrant
 ```
 
----
+You should expect the slim Phase 1 stack to include:
+- Kubeflow Pipelines
+- Central Dashboard
+- Dex and oauth2-proxy
+- Istio ingress
+- KServe + Knative
+- MinIO
+- TEI, backend, frontend, and Qwen model download job
+
+You should not expect the default Phase 1 boot to include:
+- Katib
+- Jupyter web app or notebook controller
+- TensorBoard controller or web app
+- PVC Viewer
+- Volumes web app
+- Trainer
 
 ## Troubleshooting
 
-### "CrashLoopBackOff" on Initialization
-It is normal for some pods (like `ml-pipeline`) to crash/restart a few times during first boot while waiting for MySQL/MinIO to become ready. Kubernetes will auto-heal them.
+### `kind` Is Missing
+Install `kind` first. The Phase 1 bootstrap intentionally fails fast if the runtime is not installed.
 
-### "CERTIFICATE_VERIFY_FAILED"
-If you see TLS errors in the dashboard, force a restart of platform pods:
+### `deployment/manifests` Is Empty
+Run:
 ```bash
-kubectl rollout restart deployment -n kubeflow
+git submodule update --init --recursive deployment/manifests
+```
+
+The repo should be pinned to Kubeflow manifests `v1.11.0` for Phase 1.
+
+### Docker Is Installed but Unreachable
+Make sure `docker info` succeeds in the same shell where you run `./scripts/setup-kind.sh`.
+
+### Local LLM Is Consuming Too Much RAM or GPU
+Disable it before deploy:
+```bash
+ENABLE_LOCAL_LLM=false ./scripts/deploy-local.sh
+```
+
+Re-enable it later:
+```bash
+ENABLE_LOCAL_LLM=true ./scripts/deploy-local.sh
 ```
 
 ### Reset / Uninstall
-To completely remove the platform (**Destructive**):
+To destroy the local runtime:
 ```bash
-./scripts/nuke-kubeflow.sh
+./scripts/nuke-platform.sh
 ```
-
----
 
 ## Next Steps
 
-You're ready to develop! See:
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** for running and debugging
-- **[../context/ARCHITECTURE.md](../context/ARCHITECTURE.md)** for code conventions
-- **[HELLO_WORLD_PIPELINE.md](HELLO_WORLD_PIPELINE.md)** for your first KFP pipeline
+Continue with:
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** for the hybrid workflow and troubleshooting
+- **[../context/ARCHITECTURE.md](../context/ARCHITECTURE.md)** for Phase 1 architecture notes
+- **[HELLO_WORLD_PIPELINE.md](HELLO_WORLD_PIPELINE.md)** for the KFP programming model

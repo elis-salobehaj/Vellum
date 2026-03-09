@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional, Dict, Any
 
 
@@ -11,13 +11,21 @@ class Citation(BaseModel):
 
 class ModelConfig(BaseModel):
     id: str
+    model_api_path: str
     name: str
     provider: str  # openai, anthropic, azure, etc
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     deployment_name: Optional[str] = None  # For Azure
-    region: Optional[str] = None  # For AWS Bedrock
     is_active: bool = False
+
+    @field_validator("model_api_path")
+    @classmethod
+    def validate_model_api_path(cls, value: str) -> str:
+        cleaned = value.strip().strip("/")
+        if not cleaned:
+            raise ValueError("model_api_path must not be empty")
+        return cleaned
 
 
 class ChatRequest(BaseModel):

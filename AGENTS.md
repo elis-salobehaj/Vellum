@@ -5,12 +5,12 @@ Enterprise-grade RAG chatbot with Kubeflow-orchestrated ingestion pipelines, Qdr
 
 ## ⚙️ Stack Essentials
 - **Package Managers**: `uv` (Backend), `pnpm` (Frontend)
-- **Infrastructure**: Kubernetes (Minikube), Kubeflow Pipelines, Istio, Qdrant
+- **Infrastructure**: Kubernetes (`kind` local runtime), Kubeflow Pipelines, Istio, Qdrant
 
 ## 🚨 Critical Rules
 1. **Backend setup**: Run `cd backend && uv sync` to install all dependencies.
 2. **Frontend setup**: Run `cd frontend && pnpm install`.
-3. **Platform setup**: Run `./scripts/setup-platform.sh` to bootstrap the K8s cluster.
+3. **Platform setup**: Run `./scripts/setup-kind.sh` to bootstrap the active local K8s cluster. `./scripts/setup-platform.sh` is only a compatibility wrapper.
 4. **Never modify `.env` or AWS Secret keys directly**.
 5. **Always ask** before changing a Kubeflow workflow ID or prompt version.
 6. **Update Plans**: Check off tasks in `docs/plans/active/*.md` as you complete them.

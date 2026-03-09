@@ -16,7 +16,7 @@ echo "Testing Chat Completion (Qwen3.5)..."
 kubectl exec -n $NAMESPACE $POD -- curl -s -X POST http://llm-service-predictor/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/mnt/models/Qwen3.5-4B",
+    "model": "/mnt/models/Qwen3.5-2B",
     "messages": [{"role": "user", "content": "Hello, are you running on GPU?"}],
     "max_tokens": 50
   }'

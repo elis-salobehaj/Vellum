@@ -45,7 +45,7 @@ Select a "Production Grade" Vector Database for the Vellum Platform Upgrade (Pha
 ## Recommendation
 **Switch to Qdrant.**
 -   It aligns with the "SRE/Platform" goal (Rust, efficiency, stability).
--   It fits perfectly in our resource-constrained Minikube (very light on RAM compared to JVM implementations).
+-   It fits well in our resource-constrained local clusters (very light on RAM compared to JVM implementations).
 -   We can deploy it alongside Kubeflow.
 
 ### Impact on Code

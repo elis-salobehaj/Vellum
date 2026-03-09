@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+sortOptions:
+  order: legacy
+  legacySortOptions:
+    orderFirst:
+    - Namespace
+    - ResourceQuota
+    - StorageClass
+    - CustomResourceDefinition
+    - MutatingWebhookConfiguration
+    - ServiceAccount
+    - PodSecurityPolicy
+    - NetworkPolicy
+    - Role
+    - ClusterRole
+    - RoleBinding
+    - ClusterRoleBinding
+    - ConfigMap
+    - Secret
+    - Endpoints
+    - Service
+    - LimitRange
+    - PriorityClass
+    - PersistentVolume
+    - PersistentVolumeClaim
+    - Deployment
+    - StatefulSet
+    - CronJob
+    - PodDisruptionBudget
+    orderLast:
+    - ValidatingWebhookConfiguration
+
+resources:
+  - ../manifests/common/cert-manager/base
+  - ../manifests/common/cert-manager/kubeflow-issuer/base
+  - ../manifests/common/istio/istio-crds/base
+  - ../manifests/common/istio/istio-namespace/base
+  - ../manifests/common/istio/istio-install/overlays/oauth2-proxy
+  - ../manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind
+  - ../manifests/common/dex/overlays/oauth2-proxy
+  - ../manifests/common/istio/cluster-local-gateway/base
+  - ../manifests/common/kubeflow-namespace/base
+  - ../manifests/common/networkpolicies/base
+  - ../manifests/common/kubeflow-roles/base
+  - ../manifests/common/istio/kubeflow-istio-resources/base
+
+patches:
+  - path: dex-config-map-kind.yaml
+    target:
+      version: v1
+      kind: ConfigMap
+      name: dex
+      namespace: auth

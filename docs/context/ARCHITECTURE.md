@@ -1,6 +1,28 @@
 # Architecture & Conventions
 
-Vellum is built on a **Decoupled Microservices Architecture** optimized for enterprise RAG (Retrieval-Augmented Generation) workloads.
+Vellum is built on a **decoupled microservices architecture** optimized for enterprise RAG workloads.
+
+## Phase 1 Runtime Note
+
+The current active local platform is no longer Minikube-based. Phase 1 runs the existing Kubeflow-era stack on **Kind** with a **slim default manifest set**.
+
+What stays in Phase 1:
+- Istio ingress and mesh policy
+- Dex + oauth2-proxy
+- Kubeflow Pipelines
+- KServe + Knative for the local Qwen model
+- MinIO for document storage
+- TEI, Qdrant, backend, and frontend
+
+What is removed from the default local boot in Phase 1:
+- Katib
+- Jupyter web app and notebook controller
+- TensorBoard controller and web app
+- PVC Viewer
+- Volumes web app
+- Trainer
+
+The `deployment/manifests` submodule should track **Kubeflow manifests v1.11.0**. The local cluster bootstrap uses `kind-config.yaml`, `deployment/kustomization.yaml`, and `scripts/setup-kind.sh`.
 
 ## 🏗️ System Overview
 
@@ -19,7 +41,7 @@ graph TD
         Qdrant[(Qdrant Vector DB)]
     end
     
-    subgraph "ML Platform (Kubeflow)"
+    subgraph "ML Platform (Kubeflow on Kind)"
         KFP[Kubeflow Pipelines]
         MinIO[(MinIO S3)]
     end
@@ -83,6 +105,14 @@ graph TD
 - **Embeddings (TEI)**: Dedicated `text-embeddings-inference` service providing OpenAI-compatible endpoints for vectorization.
 - **Inference**: Pluggable support for OpenAI, Google Gemini, or self-hosted models via **KServe**.
 
+## Local Infrastructure Conventions
+
+- **Cluster Runtime**: `kind` is the default local runtime in the active plan.
+- **Image Flow**: locally built images are loaded directly into the Kind cluster with `kind load docker-image`.
+- **Kubeconfig**: the bootstrap writes `~/.kube/kind-vellum.yaml` and the scripts default to it when `KUBECONFIG` is unset.
+- **Deployment Default**: `deployment/kustomization.yaml` is the slim Phase 1 overlay. `deployment/kustomization-full.yaml` preserves the previous full-stack manifest selection for reference.
+- **Secrets**: app env vars are synchronized from `.env` into the `vellum-env` secret via `./scripts/sync-env-secret.sh` instead of Kustomize secret generation.
+
 ---
 
 ## 🛠️ Code Conventions
@@ -108,7 +138,8 @@ Vellum/
 ├── backend/            # FastAPI API & RAG Retrieval
 ├── frontend/           # React App
 ├── kubeflow/           # KFP Pipeline definitions & ML logic
-├── deployment/         # Kubernetes manifests (submodule)
+├── deployment/         # Kubernetes manifests + Kubeflow submodule
+│   └── manifests/      # Kubeflow manifests v1.11.0 submodule
 ├── docs/               # Technical documentation hub
 └── scripts/            # Infrastructure automation
 ```

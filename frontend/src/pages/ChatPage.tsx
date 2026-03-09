@@ -128,7 +128,7 @@ const ChatPage = () => {
             <div className="flex-1 overflow-hidden relative flex flex-col">
               <MessageList messages={messages} isProcessing={isProcessing}>
                 {messages.map((m) => (
-                  <div>
+                  <div key={m.id}>
                     {m.role === 'user' ? (
                       <UserMessage
                         content={m.content}

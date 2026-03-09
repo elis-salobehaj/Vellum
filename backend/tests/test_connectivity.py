@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import patch
+
 from app.core.config import settings
 
 
@@ -16,23 +18,23 @@ async def test_openai_connectivity():
 
 @pytest.mark.asyncio
 async def test_aws_bedrock_connectivity():
-    """Verify AWS Credentials are loaded."""
-    if not settings.AWS_ACCESS_KEY_ID:
-        pytest.skip("AWS_ACCESS_KEY_ID not set")
+    """Verify Bedrock API-key connectivity is configured and usable."""
+    if not settings.AWS_BEDROCK_API_KEY:
+        pytest.skip("AWS_BEDROCK_API_KEY not set")
 
-    assert settings.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY missing"
     assert settings.AWS_REGION, "AWS_REGION missing"
 
-    # Minimal check: Can we instantiate the client without error?
     try:
         import boto3
 
-        session = boto3.Session(
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_REGION,
-        )
-        # Check if bedrock service is available in region
-        assert "bedrock-runtime" in session.get_available_services()
+        with patch.dict(
+            "os.environ",
+            {"AWS_BEARER_TOKEN_BEDROCK": settings.AWS_BEDROCK_API_KEY},
+            clear=False,
+        ):
+            client = boto3.client("bedrock", region_name=settings.AWS_REGION)
+            response = client.list_foundation_models(byProvider="Anthropic")
+
+        assert response.get("modelSummaries"), "No Anthropic Bedrock models returned"
     except ImportError:
         pytest.fail("boto3 not installed")

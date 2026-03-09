@@ -6,6 +6,8 @@
 ## Context
 Vellum started as a "Franken-stack" (Airflow + BentoML + MLflow) on Minikube. To maximize learning of Kubernetes patterns and align with Enterprise MLOps standards, we evaluated pivoting to native Kubeflow components.
 
+This ADR remains historically accurate, but the active local runtime has since moved from Minikube to `Kind` while retaining the same Kubeflow-era control-plane direction during Phase 1 of the infrastructure migration.
+
 ## Decision
 We will adopt a "Kubeflow Native" architecture, prioritizing standard Operators over custom scripts.
 

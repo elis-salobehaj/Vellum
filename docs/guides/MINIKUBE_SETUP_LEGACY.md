@@ -1,5 +1,7 @@
 # Minikube Setup Guide (Kubeflow Native Stack)
 
+> Historical reference only. The active local workflow now uses `Kind`; see [GETTING_STARTED.md](GETTING_STARTED.md) for the current bootstrap path.
+
 This stack (Istio + Knative + KFP + KServe + Ollama) is resource-intensive.
 
 ## 1. Resource Requirements

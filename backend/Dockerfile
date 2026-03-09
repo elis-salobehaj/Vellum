@@ -1,8 +1,7 @@
 # Stage 1: Base with uv
 FROM python:3.12-slim AS base
 WORKDIR /app
-ENV PYTHONPATH=. \
-    PYTHONUNBUFFERED=1 \
+ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV="/app/.venv"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
@@ -24,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy project files for dependency resolution
 COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
+COPY kubeflow/pipelines/ingestion /kubeflow/pipelines/ingestion
 # Create empty app directory to satisfy setuptools/uv during sync
 RUN mkdir -p app && touch app/__init__.py
 
@@ -44,9 +44,7 @@ FROM base AS test
 COPY --from=builder /app/.venv /app/.venv
 
 COPY backend/ .
-COPY kubeflow/ kubeflow/
-# Using -m ensures we use the python interpreter in the venv and avoids shebang path issues
-CMD ["python", "-m", "pytest"]
+CMD ["pytest"]
 
 # Stage 4: Production
 FROM base AS production
@@ -54,7 +52,5 @@ FROM base AS production
 COPY --from=builder /app/.venv /app/.venv
 
 COPY backend/ .
-COPY kubeflow/ kubeflow/
 EXPOSE 8000
-# Using -m avoids shebang path issues with the uvicorn binary
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

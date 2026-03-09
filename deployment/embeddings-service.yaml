@@ -27,6 +27,8 @@ spec:
         args:
           - "--model-id"
           - "/mnt/models/bge-small-en-v1.5"
+          - "--huggingface-hub-cache"
+          - "/mnt/models/.cache/huggingface"
           - "--port"
           - "80"
           - "--cors-allow-origin"

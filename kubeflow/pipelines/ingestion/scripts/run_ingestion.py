@@ -1,10 +1,9 @@
 import os
 import argparse
 import qdrant_client
-from llama_index.core import VectorStoreIndex, StorageContext, Settings
+from llama_index.core import Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.readers.s3 import S3Reader
 from llama_index.core.node_parser import SentenceSplitter, SemanticSplitterNodeParser
 from llama_index.core.ingestion import IngestionPipeline
 
@@ -24,6 +23,8 @@ def ingest(
     max_docs: int = 15,
     top_k: int = 3,
     model_name: str = "BAAI/bge-small-en-v1.5",
+    embeddings_service_url: str = "http://embeddings-service.kubeflow-vellum/v1",
+    openai_api_key: str = "EMPTY",
     cleanup: bool = False,
 ):
     print(f"🚀 Starting STREAMING ingestion logic (Max Docs: {max_docs})...")
@@ -50,17 +51,10 @@ def ingest(
 
     # 2. Configure Embeddings (OpenAI API)
     print(f"⚙️ Connecting to Embedding Service ({model_name})...")
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print(
-            "⚠️ OPENAI_API_KEY not found in env, using 'EMPTY' (assuming local TEI/mock)"
-        )
-        api_key = "EMPTY"
-
     Settings.embed_model = OpenAIEmbedding(
         model_name=model_name,
-        # api_base=os.getenv("EMBEDDINGS_SERVICE_URL", "http://embeddings-service.kubeflow-vellum/v1"),
-        api_key=api_key,
+        api_base=embeddings_service_url,
+        api_key=openai_api_key,
         embed_batch_size=30,
     )
 
@@ -93,13 +87,7 @@ def ingest(
     if not s3_url.startswith("http"):
         s3_url = f"http://{s3_url}"
 
-    print(f"📡 Connecting to MinIO via S3Reader: {s3_url}/{bucket}")
-    loader = S3Reader(
-        bucket=bucket,
-        aws_access_id=minio_access_key,
-        aws_access_secret=minio_secret_key,
-        s3_endpoint_url=s3_url,
-    )
+    print(f"📡 Connecting to MinIO: {s3_url}/{bucket}")
 
     # 6. Iterative Processing (Download & Local Load)
     print(f"📂 Downloading documents from MinIO bucket '{bucket}'...")
@@ -142,7 +130,7 @@ def ingest(
     print(f"🔄 Running ingestion pipeline on {len(documents)} document chunks...")
     pipeline.run(documents=documents)
 
-    print(f"✅ Ingestion Complete!")
+    print("✅ Ingestion Complete!")
 
 
 if __name__ == "__main__":
@@ -170,6 +158,12 @@ if __name__ == "__main__":
     parser.add_argument("--top_k", type=int, default=3)
     parser.add_argument("--model_name", type=str, default="BAAI/bge-small-en-v1.5")
     parser.add_argument(
+        "--embeddings_service_url",
+        type=str,
+        default="http://embeddings-service.kubeflow-vellum/v1",
+    )
+    parser.add_argument("--openai_api_key", type=str, default="EMPTY")
+    parser.add_argument(
         "--cleanup",
         action="store_true",
         help="Delete and recreate collection before ingestion",
@@ -191,5 +185,7 @@ if __name__ == "__main__":
         args.max_docs,
         args.top_k,
         args.model_name,
+        args.embeddings_service_url,
+        args.openai_api_key,
         args.cleanup,
     )

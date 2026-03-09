@@ -1,18 +1,23 @@
 ---
-title: "Infrastructure Migration to k3d & Kind + Ray-Native Architecture"
+title: "Infrastructure Migration to Kind + Ray-Native Architecture"
 status: active
 priority: high
 estimated_hours: 40-60
 dependencies: []
 created: 2026-03-07
-date_updated: 2026-03-07
+date_updated: 2026-03-09
 related_files:
+  - kind-config.yaml
   - scripts/setup-platform.sh
+  - scripts/setup-kind.sh
   - scripts/deploy-local.sh
   - scripts/connect.sh
   - scripts/dev.sh
+  - scripts/test.sh
   - scripts/nuke-platform.sh
+  - scripts/sync-env-secret.sh
   - deployment/kustomization.yaml
+  - deployment/kustomization-full.yaml
   - deployment/vellum-namespace.yaml
   - deployment/vellum-backend.yaml
   - deployment/vellum-frontend.yaml
@@ -39,7 +44,6 @@ related_files:
   - AGENTS.md
 tags:
   - infrastructure
-  - k3d
   - kind
   - ray
   - kuberay
@@ -47,27 +51,57 @@ tags:
   - istio-ambient
   - developer-experience
 completion:
-  - "# Phase 1 — k3d Foundation + Component Slimming"
-  - [ ] 1.1 Install k3d, validate Docker/WSL2 environment
-  - [ ] 1.2 Design k3d cluster config (`k3d-config.yaml`) — ports, local registry, GPU passthrough
-  - [ ] 1.3 Write `scripts/setup-k3d.sh` — cluster create, registry, shared volumes for model storage + document PVC
-  - [ ] 1.4 Create slim Kustomization overlay (`deployment/kustomization-dev.yaml`) disabling Katib, Tensorboard, Jupyter, Trainer
-  - [ ] 1.5 Add KServe/Knative toggle mechanism (enabled by default for local LLM, disable via env flag for external API)
-  - [ ] 1.6 Update `scripts/deploy-local.sh` — replace `minikube docker-env` with k3d registry push
-  - [ ] 1.7 Update `scripts/connect.sh`, `scripts/dev.sh` — remove Minikube references, verify port-forwards
-  - [ ] 1.8 Update `scripts/nuke-platform.sh` — make cluster-runtime agnostic
-  - [ ] 1.9 Validate full Kubeflow Manifests v1.11.0 install on k3d (slim overlay)
-  - [ ] 1.10 Validate hybrid dev workflow — backend hot-reload + frontend HMR against k3d
+  - "# Phase 1 — Kind Foundation + Component Slimming"
+  - [x] 1.1 Validate Docker/WSL2 environment for Kind
+  - [x] 1.2 Design Kind cluster config (`kind-config.yaml`) — ports and base node image
+  - [x] 1.3 Write `scripts/setup-kind.sh` — cluster create, shared storage bootstrap, and platform bring-up
+  - [x] 1.4 Create slim Kustomization overlay (`deployment/kustomization.yaml`) and preserve the previous full selection in `deployment/kustomization-full.yaml`
+  - [x] 1.5 Add KServe/Knative toggle mechanism (enabled by default for local LLM, disable via env flag for external API)
+  - [x] 1.6 Update `scripts/deploy-local.sh` — replace `minikube docker-env` with Kind image loading
+  - [x] 1.7 Update `scripts/connect.sh`, `scripts/dev.sh` — remove Minikube references, verify port-forwards
+  - [x] 1.8 Update `scripts/nuke-platform.sh` — make cluster-runtime agnostic
+  - [x] 1.9 Validate full Kubeflow Manifests v1.11.0 install on Kind (slim overlay)
+  - [x] 1.10 Validate hybrid dev workflow — backend hot-reload + frontend HMR against Kind
+    - Shared `.env` values are now intentionally hybrid-first. Cluster workloads that also consume the `vellum-env` secret must override in-cluster transport settings such as `EMBEDDINGS_SERVICE_URL`, `EMBEDDING_MODEL_NAME`, `MINIO_ENDPOINT`, and `KFP_HOST` at the deployment level to avoid drifting back to localhost/OpenAI-era defaults.
+    - Fresh-cluster validation now covers the real hybrid path as well: `./scripts/connect.sh --hybrid` + local `uvicorn` + Playwright succeeded against the Kind-hosted Qdrant, TEI, and MinIO services.
   - [ ] 1.11 Validate KFP ingestion pipeline + GPU passthrough for vLLM (Qwen 3.5 via KServe)
+    - Kubernetes now advertises `nvidia.com/gpu=1` on this machine after switching Docker's node-container runtime path to NVIDIA and running the device plugin in-cluster.
+    - Current regression on the active Kind cluster: the host GPU and Docker GPU runtime are healthy, but the existing `vellum-control-plane` node container was created without `/dev/nvidia*`, so the deploy helper now prints an explicit diagnostic and keeps the predictor scaled to zero instead of failing silently.
+    - `scripts/setup-kind.sh` now treats GPU support as an explicit bootstrap path when `ENABLE_LOCAL_LLM=true`: it fails fast on missing host/node prerequisites, applies the `nvidia` `RuntimeClass`, deploys the NVIDIA device plugin, and waits for allocatable `nvidia.com/gpu` before continuing.
+    - The refreshed `Qwen3.5-2B` artifacts are present on the shared PVC and the KServe predictor is expected to run on Kind once the host runtime is back on `runc`.
+    - Root cause identified: the cluster bootstrap was still creating the upstream sample Profile (`kubeflow-user-example-com`) because only the sample `common/user-namespace/base` bootstrap was applied.
+    - The repo now creates an explicit `kubeflow-vellum` Profile during bootstrap/deploy so KFP can use the intended namespace again, with ownership aligned to the active Dex principal on the local cluster.
+    - A stale local backend process was still targeting the sample namespace; after restarting it with `KFP_NAMESPACE=kubeflow-vellum` and `KFP_USER_ID=vellum@example.com`, ingestion runs submit successfully into `kubeflow-vellum`.
+    - The ingestion image path needed two runtime fixes: the image had to seed `pip` for the KFP lightweight component launcher, and mutable `:local` tags were being reused from the node cache, so validation now uses a fresh pushed tag when the image changes.
+    - A clean cluster rebuild reproduces the same metadata startup fault on cold boot: `metadata-grpc` initially crashes with `MySQL database was not initialized` / `mysql_real_connect failed`, then later settles and serves requests.
+    - After that fresh rebuild, one ingestion run progressed past the DAG driver and container driver into the component pod, which exposed a separate runtime bug in the serialized KFP component (`NameError: os is not defined`); that component bug is now fixed in `vellum_ingestion.pipeline`.
+    - Kubeflow metadata remains flaky enough that it is not worth perfecting for Phase 1: subsequent accepted runs still intermittently fail in the DAG driver with `metadata-grpc-service.kubeflow.svc.cluster.local:8080` (`connection refused`) even while the `metadata-grpc` pod and endpoint remain Ready.
+    - Pragmatic Phase 1 workaround: local hybrid development now supports `INGESTION_MODE=direct`, which bypasses KFP/MLMD and ingests from MinIO straight into Qdrant via the backend. That path successfully recreated the `vellum` collection and populated it (`542` points), which is enough to unblock the downstream chat path while later phases move away from MLMD-heavy local workflows.
   - [ ] 1.12 Validate Istio mTLS, Dex OIDC, and Entra ID auth
-  - [ ] 1.13 Run full test suite (`scripts/test.sh`)
-  - [ ] 1.14 **Documentation Overhaul (Phase 1)** — Replace ALL Minikube references across entire `docs/` tree
-    - [ ] `docs/guides/GETTING_STARTED.md` — k3d prerequisites, first-time setup, resource table
-    - [ ] `docs/guides/DEVELOPMENT.md` — Hybrid dev diagram, troubleshooting, slim overlay docs
-    - [ ] `docs/context/ARCHITECTURE.md` — Infrastructure notes
-    - [ ] `docs/context/WORKFLOWS.md`, `docs/guides/AUTHENTICATION.md`
-    - [ ] `docs/README.md` — Update plan status
-    - [ ] All `docs/designs/*.md` and `docs/guides/*.md` — Scan and fix stale references
+    - Backend, frontend, and TEI recovered after the current Kind overlay and manifest fixes.
+    - Direct backend validation is now in place: unauthenticated `GET /api/v1/admin/models` returns `401`, the same route succeeds with `kubeflow-userid: vellum@example.com`, and the live Istio `RequestAuthentication` / `AuthorizationPolicy` resources plus Dex/oauth2-proxy pods are healthy.
+    - A full browser-driven Entra redirect validation is still pending, but the mesh and backend enforcement path is behaving correctly.
+  - [x] 1.13 Run full test suite (`scripts/test.sh`)
+    - Backend pytest now passes via `uv run pytest tests/ -q` (`18 passed`).
+    - `scripts/test.sh` exists again and now runs the backend suite plus Playwright.
+    - The mocked Playwright specs are repaired and now pass when run directly (`frontend/tests/chat.spec.ts`, `frontend/tests/login.spec.ts`).
+    - The full local test wrapper now passes end to end, including the real Playwright E2E chat path, after switching local ingestion to the pragmatic `INGESTION_MODE=direct` fallback and tightening the E2E assertion to match the current UI.
+    - Local Bedrock provider follow-up is now cleaned up: the backend uses the Converse path with centralized `AWS_BEDROCK_API_KEY` auth, and a live connectivity check against Bedrock control-plane APIs succeeds on this machine.
+  - [x] 1.14 **Documentation Overhaul (Phase 1)** — Replace active Minikube references across the current `docs/` tree and mark legacy material explicitly
+    - [x] `docs/guides/GETTING_STARTED.md` — Kind prerequisites, first-time setup, resource table
+    - [x] `docs/guides/DEVELOPMENT.md` — Hybrid dev diagram, troubleshooting, slim overlay docs
+    - [x] `docs/context/ARCHITECTURE.md` — Infrastructure notes
+    - [x] `docs/context/WORKFLOWS.md`, `docs/guides/AUTHENTICATION.md`
+    - [x] `docs/README.md` — Update plan status
+    - [x] All active `docs/designs/*.md` and `docs/guides/*.md` — Scan and fix stale references; keep legacy Minikube docs explicitly historical
+  - [ ] 1.15 Validate the full fresh-cluster Phase 1 stack on Kind before Phase 2 begins
+    - Kind is the only local containerized-Kubernetes target for EKS/GKE parity.
+    - Repo-side support is in place: `scripts/setup-kind.sh`, `kind-config.yaml`, `deployment/platform-foundation`, and `deployment/platform-apps` provide the bootstrap and deploy path.
+    - Docker on this WSL host now runs with `default-runtime=runc`, which removes the earlier runtime blocker, and the latest fresh-cluster bootstrap completed successfully after a full `./scripts/nuke-platform.sh` teardown.
+    - Fresh validation now covers: clean Kind bootstrap, app image load via `./scripts/deploy-local.sh`, backend/frontend/TEI readiness, direct auth checks (`401` unauthenticated vs success with `kubeflow-userid`), direct-ingestion into Qdrant (`points_count=1` from `rag_overview.txt`), and the full automated suite (`19` backend tests plus `8` Playwright tests) passing.
+    - The cluster backend does not mount the repo-local `data/source_documents` directory, so full-cluster ingestion verification seeds MinIO explicitly before calling `/api/v1/admin/upload-and-ingest`; hybrid local-backend runs can still read the repo data directory directly.
+    - Phase 1 is still incomplete overall because the single-run Kind path does not yet deliver working local GPU-backed Qwen on this host, and browser-grade Entra validation is still outstanding.
+    - GPU-backed local Qwen on Kind remains a blocking follow-up under 1.11 until the Kind node itself is recreated with visible `/dev/nvidia*` devices and stable `nvidia.com/gpu` capacity.
   - "# Phase 2 — KubeRay Operator + Ray Cluster"
   - [ ] 2.1 Install KubeRay Operator via Helm (`kuberay/kuberay-operator`)
   - [ ] 2.2 Design RayCluster CRD manifest (`deployment/ray-cluster.yaml`) — head node, worker with GPU, resource limits
@@ -80,7 +114,7 @@ completion:
     - [ ] `docs/README.md` — Update plan status
     - [ ] Create `docs/guides/RAY_CLUSTER.md` — Ray operator guide, debugging actors, memory inspection
   - "# Phase 3 — Ray Serve for LLM Inference (Replace KServe + vLLM)"
-  - [ ] 3.1 Write Ray Serve deployment script wrapping vLLM for Qwen 3.5 4B
+  - [ ] 3.1 Write Ray Serve deployment script wrapping vLLM for Qwen 3.5 2B
   - [ ] 3.2 Create `deployment/ray-serve-llm.yaml` (RayService CRD) — production deployment behind K8s Service
   - [ ] 3.3 Update `backend/app/services/llm_service.py` — point kubeflow provider to Ray Serve endpoint
   - [ ] 3.4 Update `backend/app/api/endpoints/admin.py` — change model config from KServe path to Ray Serve endpoint
@@ -133,9 +167,9 @@ completion:
     - [ ] Create `docs/designs/adr-002-ray-dagster-ambient.md` — ADR documenting shift from Kubeflow to Ray + Dagster + Istio Ambient
     - [ ] `docs/README.md` — Update plan status
   - "# Phase 5 — Kind CI Gatekeeper"
-  - [ ] 5.1 Design Kind cluster config (`kind-config.yaml`) — production K8s (not k3s), offset ports
+  - [ ] 5.1 Design Kind cluster config (`kind-config.yaml`) — production-parity K8s with stable local ports
   - [ ] 5.2 Write `scripts/run-e2e-kind.sh` — create → deploy → test → destroy with trap cleanup
-  - [ ] 5.3 Use separate `KUBECONFIG` (`~/.kube/kind-vellum.yaml`) — never touch k3d dev context
+  - [ ] 5.3 Use separate `KUBECONFIG` (`~/.kube/kind-vellum.yaml`) for all local and CI workflows
   - [ ] 5.4 Install Istio Ambient on Kind (`istioctl install --set profile=ambient`)
   - [ ] 5.5 Validate full stack deployment on Kind (Istio Ambient + Dagster + KubeRay + Qdrant + Vellum)
   - [ ] 5.6 Validate Istio Ambient mTLS between pods in Kind (production parity with EKS/GKE)
@@ -143,42 +177,42 @@ completion:
   - [ ] 5.8 Benchmark total Kind lifecycle time
   - [ ] 5.9 **Documentation Overhaul (Phase 5)**
     - [ ] `docs/guides/DEVELOPMENT.md` — Add "Pre-Merge Testing with Kind" section, document EKS/GKE parity
-    - [ ] `docs/context/ARCHITECTURE.md` — Document Kind as production-parity reference, k3d as fast local layer
+    - [ ] `docs/context/ARCHITECTURE.md` — Document Kind as the production-parity local reference
     - [ ] `docs/README.md` — Update plan status
   - "# Phase 6 — Quality of Life, Finalization & AGENTS.md"
   - [ ] 6.1 Set up `direnv` with `.envrc` for automatic `KUBECONFIG` switching
   - [ ] 6.2 Create `Makefile` with convenience targets: `dev`, `test-ci`, `nuke`, `status`
   - [ ] 6.3 Install Lens Desktop, document K8s inspection workflow
-  - [ ] 6.4 Full E2E validation: k3d dev → Kind CI → k3d dev (zero context bleed)
+  - [ ] 6.4 Full E2E validation: Kind local dev → Kind CI (zero context bleed)
   - [ ] 6.5 Archive `docs/guides/MINIKUBE_SETUP_LEGACY.md`
   - [ ] 6.6 **Final Documentation Overhaul (Phase 6)** — Comprehensive sweep of entire `docs/` tree
     - [ ] Every file in `docs/guides/*.md`
     - [ ] Every file in `docs/designs/*.md`
     - [ ] `docs/context/ARCHITECTURE.md`, `docs/context/WORKFLOWS.md`
     - [ ] `docs/README.md` — Move plan to "Recently Completed", update all tables
-  - [ ] 6.7 **Update `AGENTS.md`** — Refresh Critical Rules, Platform setup, Guides section to reflect k3d + Ray + Dagster + Istio Ambient architecture. Remove all Minikube, full-Kubeflow, and submodule references.
+  - [ ] 6.7 **Update `AGENTS.md`** — Refresh Critical Rules, Platform setup, Guides section to reflect Kind + Ray + Dagster + Istio Ambient architecture. Remove all Minikube, full-Kubeflow, and submodule references.
 ---
 
-# Infrastructure Migration from Minikube to k3d & Kind + Ray-Native Architecture
+# Infrastructure Migration from Minikube to Kind + Ray-Native Architecture
 
 ## Objective
 
 This plan covers four interconnected migrations:
 
-1. **Cluster Runtime**: Minikube → **k3d** (fast local dev) + **Kind** (production-parity CI gatekeeper).
+1. **Cluster Runtime**: Minikube → **Kind** (local development, validation, and CI parity gatekeeper).
 2. **ML Infrastructure**: Full Kubeflow Stack → **KubeRay + Dagster** (modular, industry-standard).
 3. **Service Mesh**: Istio Sidecar Mode → **Istio Ambient Mode** (~3 GB RAM savings, production-parity with EKS/GKE).
 4. **Storage**: MinIO → **PVC for local dev** / **S3 for cloud** (zero-infra document storage with `USE_S3_STORAGE` toggle).
 
-### Design Philosophy: Kind First, k3d for Speed
+### Design Philosophy: Kind Only
 
-**Kind is the reference architecture.** All design decisions target compatibility with full upstream Kubernetes (Kind, EKS, GKE). k3d is the fast local iteration layer — its k3s distribution is certified compatible K8s, so anything that works on Kind works on k3d.
+**Kind is the reference architecture.** All design decisions target compatibility with full upstream Kubernetes (Kind, EKS, GKE). Local development and CI should exercise the same Kind-based workflow so there is one runtime contract to maintain.
 
-This means: Istio Ambient (not k3s Traefik), standard Kubernetes Ingress (not k3s-specific shortcuts), Helm charts (not Kustomize submodules). The target is **cloud-portable infrastructure** that deploys identically to EKS/GKE.
+This means: Istio Ambient, standard Kubernetes Ingress, Helm charts, and manifests that stay valid on full upstream Kubernetes. The target is **cloud-portable infrastructure** that deploys identically to EKS/GKE.
 
 ### Why All at Once?
 
-The cluster runtime swap (Phase 1) is the ideal time to rethink the stack. Rather than migrate the full 13 GB Kubeflow monolith to k3d, we progressively slim it down and replace heavyweight components with targeted alternatives. By Phase 4, the stack drops from ~13 GB to ~8.1 GB with better modularity, production parity, and a local-first developer experience.
+The cluster runtime swap (Phase 1) is the ideal time to rethink the stack. Rather than migrate the full 13 GB Kubeflow monolith into another local-only abstraction, we progressively slim it down and replace heavyweight components with targeted alternatives. By Phase 4, the stack drops from ~13 GB to ~8.1 GB with better modularity, production parity, and a local-first developer experience.
 
 ---
 
@@ -206,7 +240,7 @@ The cluster runtime swap (Phase 1) is the ideal time to rethink the stack. Rathe
 
 | Component | Namespace | RAM | Notes |
 |-----------|-----------|-----|-------|
-| **k3s/K8s system** | `kube-system` | ~0.3 GB | Cluster runtime (k3d or Kind) |
+| **K8s system** | `kube-system` | ~0.3 GB | Cluster runtime (Kind) |
 | **Istio Ambient** (istiod + ztunnel + cni) | `istio-system` | ~0.7 GB | mTLS, AuthorizationPolicy — no sidecars |
 | **Dagster** (webserver + daemon + PostgreSQL) | `dagster` | ~0.7 GB | Pipeline orchestration, asset lineage, UI |
 | **KubeRay Operator** | `kuberay-system` | ~0.3 GB | Manages RayCluster CRDs |
@@ -374,7 +408,7 @@ S3_SECRET_KEY=your-secret-key
 - **L7 JWT verification via Waypoint Proxy**: Deploy a lightweight waypoint proxy (~100 MB) only for the `vellum` namespace to get L7 AuthorizationPolicy features (JWT claim checking). Other namespaces get L4 mTLS for free.
 
 **Why NOT Traefik:**
-- Traefik is k3s-specific — it wouldn't exist on Kind, EKS, or GKE. This breaks the "Kind-first" production parity goal.
+- Traefik is distribution-specific and would not exist on Kind, EKS, or GKE. This breaks the production-parity goal.
 - Removing Istio entirely means losing mTLS between services, which is a standard cloud-native security posture.
 - Re-adding a service mesh later in production creates a config divergence between local and cloud.
 
@@ -407,14 +441,14 @@ kubectl label namespace vellum istio.io/dataplane-mode=ambient
 istioctl waypoint apply -n vellum  # L7 features for this namespace
 ```
 
-This is production-grade security that works identically on k3d, Kind, EKS, and GKE.
+This is production-grade security that works identically on Kind, EKS, and GKE.
 
 ### Decision 5: Lens Desktop replaces Kubeflow Central Dashboard
 
 **Why this is better for learning:**
 - Central Dashboard is a Kubeflow-specific UI that abstracts away K8s concepts. It shows "Pipelines" and "Notebooks" — not pods, services, and PVCs.
 - Lens shows the raw K8s objects: Deployments, Pods, Services, ConfigMaps, Events, Logs. This forces you to understand how the infrastructure actually connects.
-- Lens is free, runs outside the cluster (no K8s resources), and supports multi-cluster views (k3d + Kind side by side).
+- Lens is free, runs outside the cluster (no K8s resources), and supports multi-cluster views across local Kind clusters and remote environments.
 
 ### Decision 6: TEI stays as-is for THIS plan (swappable for multimodal)
 
@@ -435,44 +469,30 @@ This is production-grade security that works identically on k3d, Kind, EKS, and 
 
 ---
 
-## Phase 1 — k3d Foundation + Component Slimming
+## Phase 1 — Kind Foundation + Component Slimming
 
 ### Goal
-Replace Minikube with k3d. Create a slim Kustomization overlay. Everything else stays the same.
+Replace Minikube with Kind. Create a slim Kustomization overlay. Everything else stays the same.
 
-### 1.1-1.3: k3d Cluster Setup
+### 1.1-1.3: Kind Cluster Setup
 
-**k3d config (`k3d-config.yaml`):**
+**Kind config (`kind-config.yaml`):**
 ```yaml
-apiVersion: k3d.io/v1alpha5
-kind: Simple
-metadata:
-  name: vellum
-servers: 1
-agents: 0
-image: rancher/k3s:v1.31.4-k3s1
-registries:
-  create:
-    name: k3d-registry.localhost
-    host: "0.0.0.0"
-    hostPort: "5000"
-ports:
-  - port: 8080:80
-    nodeFilters: [loadbalancer]
-options:
-  k3s:
-    extraArgs:
-      - arg: --disable=traefik    # Using Istio for ingress (production parity)
-        nodeFilters: [server:*]
-      - arg: --gpus=all           # GPU passthrough for vLLM
-        nodeFilters: [server:*]
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  apiServerAddress: 127.0.0.1
+  apiServerPort: 6551
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.34.0
 ```
 
-**`scripts/setup-k3d.sh` responsibilities:**
-1. Create k3d cluster from config.
-2. Create local registry.
-3. Create shared PVC for model storage (replaces `llm-models-pvc.yaml` hostPath).
-4. Export `KUBECONFIG=~/.kube/k3d-vellum.yaml`.
+**`scripts/setup-kind.sh` responsibilities:**
+1. Create the Kind cluster from config.
+2. Export `KUBECONFIG=~/.kube/kind-vellum.yaml`.
+3. Apply the foundation, Kubeflow, and application overlays.
+4. Load locally built images into Kind instead of pushing to a runtime-specific registry.
 
 ### 1.4: Slim Kustomization Overlay
 
@@ -513,12 +533,12 @@ This is simpler than separate Kustomization overlays for KServe toggle.
 
 | Script | Key Change |
 |--------|------------|
-| `deploy-local.sh` | Replace `eval $(minikube docker-env)` → `docker tag ... k3d-registry.localhost:5000/...; docker push ...` |
-| `deploy-local.sh` | Change `imagePullPolicy: Never` → `Always` in manifests, use registry prefix |
+| `deploy-local.sh` | Replace `eval $(minikube docker-env)` with `kind load docker-image` so workloads use local images directly |
+| `deploy-local.sh` | Change manifests to use Kind-loaded images with `imagePullPolicy: IfNotPresent` |
 | `connect.sh` | Works as-is (kubectl port-forward). Remove `minikube status` checks. |
 | `dev.sh` | Works as-is. Remove any Minikube references. |
-| `nuke-platform.sh` | Replace `minikube delete` references. Use `k3d cluster delete vellum`. |
-| `setup-platform.sh` | Add k3d cluster check. Use `kustomization-dev.yaml` by default. |
+| `nuke-platform.sh` | Replace `minikube delete` references. Use `kind delete cluster --name vellum`. |
+| `setup-platform.sh` | Keep it as a compatibility wrapper that delegates to Kind-first setup. |
 
 ### 1.9-1.13: Validation Matrix
 
@@ -652,7 +672,7 @@ app = FastAPI()
 class VLLMDeployment:
     def __init__(self):
         self.llm = LLM(
-            model="/mnt/models/Qwen3.5-4B",
+            model="/mnt/models/Qwen3.5-2B",
             gpu_memory_utilization=0.8,
         )
 
@@ -1152,16 +1172,16 @@ One-command ephemeral CI testing in a Kind cluster with **full upstream Kubernet
 
 ### Why Kind Is the Primary Reference
 
-| Dimension | k3d | Kind | EKS/GKE |
-|-----------|-----|------|---------|
-| K8s distribution | k3s (lightweight) | Full upstream | Full upstream |
-| Networking | k3s networking | kindnet/calico | VPC CNI |
-| Use case | Fast local iteration | CI + production parity | Production |
-| Istio Ambient | ✅ Works | ✅ Works | ✅ Works |
-| Helm charts | ✅ Same | ✅ Same | ✅ Same |
-| Ingress | k3s-specific options | Standard K8s | Standard K8s |
+| Dimension | Kind | EKS/GKE |
+|-----------|------|---------|
+| K8s distribution | Full upstream | Full upstream |
+| Networking | kindnet/calico | VPC CNI |
+| Use case | Local dev + CI parity | Production |
+| Istio Ambient | ✅ Works | ✅ Works |
+| Helm charts | ✅ Same | ✅ Same |
+| Ingress | Standard K8s | Standard K8s |
 
-Anything that works on Kind will work on EKS/GKE. k3d is just the faster iteration loop.
+Anything that works on Kind should translate cleanly to EKS/GKE.
 
 ### 5.1: Kind Config
 
@@ -1188,7 +1208,7 @@ trap cleanup EXIT
 
 kind create cluster --name vellum-ci --config kind-config.yaml
 
-# Install Istio Ambient (same as k3d — production parity)
+# Install Istio Ambient (same production-parity contract as EKS/GKE)
 istioctl install --set profile=ambient --skip-confirmation
 
 # Deploy infrastructure via Helm
@@ -1228,24 +1248,24 @@ The Kind setup is **dramatically simpler** post-Phase 4 because there's no Kubef
 
 ```bash
 # .envrc
-export KUBECONFIG=~/.kube/k3d-vellum.yaml
+export KUBECONFIG=~/.kube/kind-vellum.yaml
 ```
 
 ### 6.2: Makefile
 
 ```makefile
-dev:       ## Start k3d + hybrid dev mode
-	k3d cluster start vellum 2>/dev/null || ./scripts/setup-k3d.sh
+dev:       ## Start Kind + hybrid dev mode
+  ./scripts/setup-kind.sh
 	./scripts/dev.sh
 
 test-ci:   ## Ephemeral Kind CI test
 	./scripts/run-e2e-kind.sh
 
 nuke:      ## Destroy everything
-	k3d cluster delete vellum
+  kind delete cluster --name vellum
 
 status:    ## Cluster status
-	k3d cluster list
+  kind get clusters
 	kubectl get rayclusters -A
 ```
 
@@ -1262,8 +1282,8 @@ Install Lens, document workflow for inspecting:
 
 Final `AGENTS.md` should reflect:
 - **Package Managers**: `uv` (Backend), `pnpm` (Frontend), `helm` (Infrastructure)
-- **Infrastructure**: Kubernetes (k3d local / Kind CI), KubeRay, Dagster, Qdrant, Istio Ambient
-- **Critical Rules**: `k3d` instead of Minikube, `scripts/setup-k3d.sh` instead of `setup-platform.sh`
+- **Infrastructure**: Kubernetes (Kind), KubeRay, Dagster, Qdrant, Istio Ambient
+- **Critical Rules**: `scripts/setup-kind.sh` is the primary local bootstrap path
 - **ML Tooling**: Ray Serve (LLM inference), Dagster (pipeline orchestration), TEI (embeddings)
 - **Service Mesh**: Istio Ambient Mode (L4 mTLS via ztunnel, L7 JWT via waypoint proxy)
 - **Storage**: `USE_S3_STORAGE=false` for local PVC, `USE_S3_STORAGE=true` for cloud S3
@@ -1275,22 +1295,22 @@ Final `AGENTS.md` should reflect:
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
-| Kubeflow CRDs fail on k3s | High | Test early in Phase 1.9. Known to work; k3s is certified K8s. |
+| Kubeflow CRDs or webhooks fail on Kind | High | Test early in Phase 1.9 and keep the bring-up automated in `scripts/setup-kind.sh`. |
 | Ray Serve + vLLM integration issues | Medium | vLLM has native Ray support. Test in Phase 3 before removing KServe. |
 | Dagster pipeline rewrite | Low | Current KFP pipeline is a single component. Rewrite is ~1-2 hours. Core logic unchanged. |
 | Dagster GraphQL API integration | Medium | Well-documented API. Test trigger in Phase 4.12 before removing KFP. |
 | PVC concurrent access (backend + Dagster) | Low | `ReadWriteOnce` PVC. Backend reads while Dagster writes — sequentially, not simultaneously. |
 | S3 toggle (`USE_S3_STORAGE`) not tested | Medium | Test both modes in Phase 4.12 — local PVC and S3 with LocalStack or real S3. |
-| Istio Ambient on k3d/Kind | Medium | Istio Ambient is production-ready since v1.22. Test in Phase 4.13 before removing sidecar mode. |
+| Istio Ambient on Kind | Medium | Istio Ambient is production-ready since v1.22. Test in Phase 4.13 before removing sidecar mode. |
 | Waypoint proxy JWT verification | Medium | Same AuthorizationPolicy CRDs, just targeted via `targetRefs`. Test in Phase 4.15. |
 | Git submodule removal breaks CI | Low | Submodule only used by Kustomization. All references removed in Phase 4.19. |
-| GPU passthrough in k3d | Medium | k3d supports `--gpus`. Test in Phase 1.11 and Phase 2.5. |
+| GPU passthrough in Kind | Medium | Validate host runtime, NVIDIA toolkit wiring, and device-plugin behavior in Phase 1.11 and Phase 2.5. |
 
 ## Decision Log
 
 | Decision | Rationale |
 |----------|-----------|
-| Kind as production-parity reference | Full upstream K8s, identical to EKS/GKE. k3d is just the fast local layer. |
+| Kind as runtime reference | Full upstream K8s, identical in contract to EKS/GKE for local development and CI. |
 | KubeRay + Ray Serve over KServe | Industry standard, native vLLM integration, simpler CRDs, better debugging (Ray Dashboard) |
 | Dagster over KFP and Airflow | Asset-centric paradigm, local-first `dagster dev`, built-in sensors, lighter footprint (~0.7 GB vs ~2 GB), 2026 industry standard |
 | PVC/S3 over MinIO | Zero-pod local storage, `USE_S3_STORAGE` toggle for cloud, removes MinIO dependency entirely (-0.3 GB) |

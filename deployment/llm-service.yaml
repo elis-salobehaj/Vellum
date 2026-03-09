@@ -7,6 +7,7 @@ metadata:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
   predictor:
+    runtimeClassName: nvidia
     containers:
       - name: kserve-container
         image: vllm/vllm-openai:latest-cu130
@@ -14,13 +15,20 @@ spec:
         command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
         args:
           - "--model"
-          - "/mnt/models/Qwen3.5-4B"
+          - "/mnt/models/Qwen3.5-2B"
+          - "--served-model-name"
+          - "Qwen3.5-2B"
           - "--host"
           - "0.0.0.0"
           - "--port"
           - "8080"
+          - "--dtype"
+          - "half"
+          - "--enforce-eager"
+          - "--max-model-len"
+          - "4096"
           - "--gpu-memory-utilization"
-          - "0.8" # Adjusted for 8GB VRAM with system overhead (6.94GB free)
+          - "0.85"
         resources:
           limits:
             nvidia.com/gpu: 1
