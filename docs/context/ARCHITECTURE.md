@@ -4,7 +4,7 @@ Vellum is built on a **decoupled microservices architecture** optimized for ente
 
 ## Phase 1 Runtime Note
 
-The current active local platform is no longer Minikube-based. Phase 1 runs the existing Kubeflow-era stack on **Kind** with a **slim default manifest set**.
+The current active local platform is no longer Minikube-based. Phase 1 is now considered complete on **Kind**, using the existing Kubeflow-era stack with a **slim default manifest set** and **direct ingestion as the operational default**.
 
 What stays in Phase 1:
 - Istio ingress and mesh policy
@@ -13,6 +13,11 @@ What stays in Phase 1:
 - KServe + Knative for the local Qwen model
 - MinIO for document storage
 - TEI, Qdrant, backend, and frontend
+
+Operational default in completed Phase 1:
+- `INGESTION_MODE=direct` for day-to-day ingestion on Kind
+- persisted ingestion status in MinIO with resumable batches and clean-slate rebuilds
+- KFP retained as an optional debug path rather than the primary local contract
 
 What is removed from the default local boot in Phase 1:
 - Katib
@@ -39,6 +44,7 @@ graph TD
     subgraph "Core Services"
         Backend[FastAPI Backend]
         Qdrant[(Qdrant Vector DB)]
+        Direct[Direct Ingestion Service]
     end
     
     subgraph "ML Platform (Kubeflow on Kind)"
@@ -54,7 +60,12 @@ graph TD
     User <-->|HTTPS| Frontend
     Frontend <-->|REST API| Backend
     Backend -->|Query| Qdrant
-    Backend -->|Trigger| KFP
+    Backend -->|Default ingest| Direct
+    Backend -->|Optional KFP trigger| KFP
+
+    Direct -->|Read Docs| MinIO
+    Direct -->|Embed| TEI
+    Direct -->|Write Vectors| Qdrant
     
     KFP -->|Read Docs| MinIO
     KFP -->|Embed| TEI
@@ -89,13 +100,14 @@ graph TD
 - **Protocol**: `httpx` for async internal communication.
 - **Responsibility**: Validates OIDC tokens, manages chat history in memory/DB, and executes RAG retrieval queries against Qdrant.
 
-#### 3. Distributed Ingestion (Kubeflow Pipelines)
-- **Orchestration**: KFP v2 SDK.
-- **Environment**: Isolated Docker containers with full ML stack (`llama-index`, `pypdf`, `torch` if needed).
+#### 3. Distributed Ingestion
+- **Operational Default**: The backend's direct-ingestion service reads source objects from MinIO, embeds through TEI, writes to Qdrant, and persists progress/status in MinIO so batches can resume safely.
+- **Optional Kubeflow Path**: The KFP v2 pipeline remains available for explicit Kubeflow debugging and historical continuity during the broader migration plan.
 - **Process**:
     - **Streaming ETL**: Efficiently streams large documents from MinIO.
-    - **Semantic Chunking**: Intelligent splitting based on content similarity.
-    - **Remote Vectorization**: Calls the TEI service for high-throughput embedding generation.
+    - **Chunking**: Splits documents through the shared ingestion logic.
+    - **Remote Vectorization**: Calls the TEI service for embedding generation.
+    - **Deduping/Resume**: Skips unchanged files by signature, replaces changed files, and supports `cleanup=true` for a clean-slate rebuild.
 
 #### 4. Vector Store (Qdrant)
 - **Type**: Distributed Vector Database (Rust-based).
@@ -103,13 +115,13 @@ graph TD
 
 #### 5. AI Infrastructure
 - **Embeddings (TEI)**: Dedicated `text-embeddings-inference` service providing OpenAI-compatible endpoints for vectorization.
-- **Inference**: Pluggable support for OpenAI, Google Gemini, or self-hosted models via **KServe**.
+- **Inference**: Pluggable support for OpenAI, Google Gemini, AWS Bedrock, or self-hosted models via **KServe** in the retained Phase 1 stack.
 
 ## Local Infrastructure Conventions
 
 - **Cluster Runtime**: `kind` is the default local runtime in the active plan.
 - **Image Flow**: locally built images are loaded directly into the Kind cluster with `kind load docker-image`.
-- **Kubeconfig**: the bootstrap writes `~/.kube/kind-vellum.yaml` and the scripts default to it when `KUBECONFIG` is unset.
+- **Kubeconfig**: the bootstrap merges the cluster into `~/.kube/config`, normalizes the context name to `vellum`, and leaves the repo on the standard single-file kubectl workflow.
 - **Deployment Default**: `deployment/kustomization.yaml` is the slim Phase 1 overlay. `deployment/kustomization-full.yaml` preserves the previous full-stack manifest selection for reference.
 - **Secrets**: app env vars are synchronized from `.env` into the `vellum-env` secret via `./scripts/sync-env-secret.sh` instead of Kustomize secret generation.
 

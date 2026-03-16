@@ -1,17 +1,18 @@
 # Vellum Ingestion Pipeline
 
-Kubeflow Pipeline for document ingestion: MinIO → Chunking → Embedding → Qdrant.
+Kubeflow pipeline for document ingestion: MinIO → chunking → embedding → Qdrant. This path is retained in Phase 1 for explicit Kubeflow debugging; the normal local ingestion path now goes through the backend's direct-ingestion service.
 
 ## Quick Start
 
-### Via Backend API (Recommended)
+### Via Backend API (Recommended for Day-to-Day Phase 1 Work)
 ```bash
-curl -X POST http://localhost:8000/api/v1/admin/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"bucket": "documents", "cleanup": true}'
+curl -X POST "http://localhost:8006/api/v1/admin/upload-and-ingest?cleanup=true&reset_progress=true" \
+  -H "kubeflow-userid: vellum@example.com"
 ```
 
-### Via CLI (Manual)
+That route uses direct ingestion by default. Only set `INGESTION_MODE=kfp` when you specifically want to exercise the Kubeflow submission path.
+
+### Via CLI (Manual KFP Path)
 ```bash
 export EMBEDDINGS_SERVICE_URL="http://localhost:8082/v1"
 cd kubeflow/pipelines/ingestion

@@ -36,6 +36,10 @@ dependencies = [
     "pypdf",
     "google-generativeai>=0.8.0",
     "vellum-ingestion",
+    "openpyxl>=3.1.5",
+    "xlrd>=2.0.2",
+    "python-pptx>=1.0.2",
+    "docx2txt>=0.9",
 ]
 
 [build-system]

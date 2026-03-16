@@ -1,5 +1,7 @@
 # Getting Started
 
+This guide reflects the accepted completed Phase 1 baseline: Kind is the required local runtime, the slim Kubeflow overlay is the default platform boot, and direct ingestion is the normal operator path.
+
 ## Prerequisites
 
 ### Required Tools
@@ -108,12 +110,17 @@ For local Qwen on Kind, all of the following must be true before the cluster can
 3. The Kind node container itself must be created with NVIDIA device access so `/dev/nvidia*` exists inside the node.
 4. The cluster must have the `nvidia` `RuntimeClass` and NVIDIA device plugin installed.
 
-This repo now automates step 4 during `./scripts/setup-kind.sh`. It does **not** yet automate step 3, so if the existing Kind node lacks `/dev/nvidia*`, the bootstrap exits with a diagnostic and you must recreate the cluster after fixing how the node container is launched.
+This repo now automates step 4 during `./scripts/setup-kind.sh`, and it also provisions the Kind node with the NVIDIA runtime handler and host-side NVIDIA user-space files when they are available. If the cluster still cannot advertise stable `nvidia.com/gpu` capacity after that, the remaining problem is in the host/container runtime stack rather than the Vellum manifests.
 
 ### 3. Bootstrap the Kind Platform
 Primary entrypoint:
 ```bash
 ./scripts/setup-kind.sh
+```
+
+First-time machine setup from a clean host:
+```bash
+./scripts/setup-local.sh
 ```
 
 Compatibility wrapper:
@@ -126,7 +133,14 @@ What the bootstrap does in Phase 1:
 - Initializes the `deployment/manifests` submodule if needed
 - Creates a `Kind` cluster from `kind-config.yaml`
 - Applies the slim Kubeflow Phase 1 manifest set and installs Qdrant
-- Writes a dedicated kubeconfig to `~/.kube/kind-vellum.yaml`
+- Merges the cluster into `~/.kube/config`, normalizes the context to `vellum`, and auto-selects a free local API server port when `6551` is already in use
+
+What `./scripts/setup-local.sh` adds on top:
+- runs `./scripts/setup-kind.sh`
+- runs `cd backend && uv sync`
+- runs `cd frontend && pnpm install`
+- installs Playwright Chromium for fresh-machine test runs
+- runs `./scripts/deploy-local.sh`
 
 ### 4. Install App Dependencies
 Backend:
@@ -158,11 +172,13 @@ This now:
 ./scripts/connect.sh
 ```
 
+`./scripts/connect.sh` prefers the standard localhost ports shown below, but if any of them are already taken it automatically picks the next free port and records the live bindings in `.vellum-runtime.env`.
+
 | Service | Local URL | Notes |
 | :--- | :--- | :--- |
-| **Kubeflow Dashboard** | http://localhost:8080 | Dex login: `vellum@example.com` / `12341234` |
+| **Kubeflow Dashboard** | http://localhost:8086 | Dex login: `vellum@example.com` / `12341234` |
 | **Frontend** | http://localhost:9090 | Skipped in hybrid mode |
-| **Backend API** | http://localhost:8000/docs | Skipped in hybrid mode |
+| **Backend API** | http://localhost:8006/docs | Skipped in hybrid mode |
 | **KFP API** | http://localhost:8888 | Direct SDK/API access |
 | **Qdrant** | http://localhost:6333 | Vector DB |
 | **Embeddings** | http://localhost:8082 | TEI service |
@@ -172,7 +188,7 @@ This now:
 ## Verify Installation
 
 ```bash
-export KUBECONFIG=$HOME/.kube/kind-vellum.yaml
+kubectl config use-context vellum
 
 kubectl get pods -n kubeflow
 kubectl get pods -n kubeflow-vellum

@@ -12,6 +12,7 @@ spec:
       labels:
         app.kubernetes.io/name: nvidia-device-plugin
     spec:
+      runtimeClassName: nvidia
       priorityClassName: system-node-critical
       tolerations:
         - key: nvidia.com/gpu

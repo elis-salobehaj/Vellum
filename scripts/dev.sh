@@ -11,7 +11,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 Starting Vellum Hybrid Development Mode...${NC}"
+echo -e "${BLUE}🚀 Starting Vellum hybrid development mode (Kind + direct-ingestion default)...${NC}"
 
 ensure_project_root
 load_env_file
@@ -22,8 +22,13 @@ use_default_kubeconfig
 echo -e "${BLUE}🔌 Connecting to Kubernetes infrastructure on the active kubeconfig...${NC}"
 bash ./scripts/connect.sh --hybrid
 
+if [[ -f "$PROJECT_ROOT/.vellum-runtime.env" ]]; then
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.vellum-runtime.env"
+fi
+
 # 2. Start Backend (Foreground)
-echo -e "${GREEN}🐍 Starting Backend (uvicorn) on http://localhost:8000...${NC}"
+echo -e "${GREEN}🐍 Starting Backend (uvicorn) on http://localhost:8006...${NC}"
 # Ensure uv is in path for shells
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -33,8 +38,16 @@ cd backend
 # Use --reload-dir to optimize watching on WSL
 # We run this in foreground so logs are visible.
 # User must start frontend in a separate terminal.
-# KFP_NAMESPACE selects the Kubeflow profile namespace for pipeline runs.
-KFP_NAMESPACE=kubeflow-vellum uv run uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8000
+# KFP_NAMESPACE still selects the Kubeflow profile namespace when the optional
+# KFP path is being exercised, but normal local ingestion stays in direct mode.
+QDRANT_HOST=localhost \
+QDRANT_PORT="${VELLUM_QDRANT_PORT:-${QDRANT_PORT:-6333}}" \
+MINIO_ENDPOINT="${VELLUM_MINIO_ENDPOINT:-${MINIO_ENDPOINT:-localhost:9000}}" \
+EMBEDDINGS_SERVICE_URL="${VELLUM_EMBEDDINGS_URL:-${EMBEDDINGS_SERVICE_URL:-http://localhost:8082/v1}}" \
+KFP_HOST="${VELLUM_KFP_URL:-${KFP_HOST:-http://localhost:8888}}" \
+LLM_SERVICE_URL="${VELLUM_LLM_URL:-${LLM_SERVICE_URL:-http://localhost:8081/v1}}" \
+KFP_NAMESPACE=kubeflow-vellum \
+uv run uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8006
 
 # Handle shutdown
 cleanup() {

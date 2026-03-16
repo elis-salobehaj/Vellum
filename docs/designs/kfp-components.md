@@ -1,5 +1,7 @@
 # Kubeflow Pipelines (KFP) Components Architecture
 
+Historical/optional reference in completed Phase 1. The local operational ingestion path is now direct ingestion on Kind; use this document when you need to debug or reason about the retained KFP control plane itself.
+
 This document details the components of the Kubeflow Pipelines (KFP) system deployed in the Vellum platform, their roles, and how they interact.
 
 ## High-Level Architecture

@@ -1,5 +1,7 @@
 # Kubeflow Platform Upgrade Plan
 
+Historical planning document. It describes the earlier move from standalone Kubeflow-adjacent components to the integrated Kubeflow platform, not the current completed Phase 1 Kind baseline.
+
 ## Objective
 Transition from "Standalone" components (KFP, Katib) to a fully integrated **Kubeflow Platform** with:
 -   **Istio Service Mesh**: For traffic management and security.
@@ -57,7 +59,7 @@ graph TD
 2.  **Install**:
     -   Apply `kubeflow/manifests` (v1.9).
     -   Wait for all pods (Istio, CertManager, KFP, Katib, Auth).
-3.  **Access**: Port-forward the Istio Gateway (`localhost:8080`).
+3.  **Access**: Port-forward the Istio Gateway (`localhost:8086`).
 4.  **Verify**: Log in (default: `vellum@example.com`) and see the Central Dashboard.
 
 ## Decision

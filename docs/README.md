@@ -1,23 +1,3 @@
-graph TD
-    subgraph "Phase 1: Ingestion (The Knowledge)"
-        A[Raw Data: Video/Audio/Images] --> B[Dagster Pipeline]
-        B --> C[Ray Workers]
-        C --> D[Infinity / API Key]
-        D -- "Creates Unified Vectors" --> E[(Qdrant Vector DB)]
-    end
-
-    subgraph "Phase 2: Retrieval (The Search)"
-        User[User: 'Find me the sound of a red car'] --> F[Query Embedding]
-        F -- "Search" --> E
-        E -- "Top Matches" --> G[Context Context]
-    end
-
-    subgraph "Phase 3: Reasoning (The Brain)"
-        G --> H[SGLang / VLM]
-        User -- "Voice/Image Input" --> H
-        H -- "Generates Text/Audio/Video" --> Result[Final Response]
-    end
-
 # Vellum Documentation
 
 **For AI Agents & Developers**: This is your primary documentation reference.
@@ -41,13 +21,14 @@ graph TD
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phase 1 has working Kind bootstrap, deploy, auth, ingestion fallback, and automated test coverage, but it is not complete yet. The remaining blockers are stable local GPU-backed Qwen on Kind and final browser-grade Entra validation, so the active plan remains open. |
+| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phase 1 is complete on Kind: bootstrap, slim overlay, auth enforcement, GPU-backed local LLM validation, resumable direct ingestion, and test coverage are all in place. The active work now moves to Phase 2 KubeRay bring-up and the later Ray/Dagster/Istio Ambient migration steps. |
 | 8 | **Multimodal RAG — Text + Image Search** | ⏳ Backlog | TEI → Infinity + SigLIP 2, dual-engine (vLLM + SGLang VLM), cross-modal Qdrant search. 6 phases. Depends on #7. |
 | 9 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 
-**Last Status Update**: 2026-03-09
+**Last Status Update**: 2026-03-16
 
 **Recently Completed**:
+- ✅ **Infrastructure Migration Phase 1 Closeout** — Kind is now the accepted local baseline: slim Kubeflow overlay, direct-ingestion default, clean-slate and resumable ingestion controls, concurrent-run rejection, auth enforcement, GPU-backed local LLM validation, and end-to-end tests are all documented and verified.
 - ✅ **Frontend UI Enhancements** — Premium design language (Claude-inspired), relative push sidebar, OKLCH colors, directory restructuring, and context menus.
 - ✅ **Frontend UI Overhaul** — shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign, premium animations, and performance optimizations.
 - ✅ **Phase 5: Production Ingestion & Serving** — Decoupled microservices, TEI embeddings, lightweight backend, KFP ingestion
@@ -71,20 +52,20 @@ graph TD
 - [Workflows](context/WORKFLOWS.md) - Documentation practices, plan lifecycle
 
 ### Specialized Topics
-- [Authentication](guides/AUTHENTICATION.md) - Entra ID SSO, Dex, security architecture
-- [Katib Tuning](guides/KATIB_TUNING.md) - Hyperparameter optimization for RAG
-- [Ingestion Verification](guides/INGESTION_VERIFICATION.md) - Verifying pipeline runs
-- [Hello World Pipeline](guides/HELLO_WORLD_PIPELINE.md) - Your first KFP pipeline tutorial
-- [MinIO Model Management](guides/MINIO_MODEL_MANAGEMENT.md) - Managing LLM models in MinIO for KServe
+- [Authentication](guides/AUTHENTICATION.md) - Entra ID for Vellum, Dex for Kubeflow, and Phase 1 auth enforcement
+- [Katib Tuning](guides/KATIB_TUNING.md) - Phase 1 optional tuning workflow; not part of the slim default boot
+- [Ingestion Verification](guides/INGESTION_VERIFICATION.md) - Verifying the Phase 1 direct-ingestion path and optional KFP runs
+- [Hello World Pipeline](guides/HELLO_WORLD_PIPELINE.md) - Optional Kubeflow-era tutorial for debugging KFP itself
+- [MinIO Model Management](guides/MINIO_MODEL_MANAGEMENT.md) - Historical note for older MinIO-backed model distribution flows
 
 ### Design Documents
 - [ADR 001: Kubeflow Native Pivot](designs/001-kubeflow-native-pivot.md) - Why we adopted Kubeflow Native architecture
-- [KFP Components Architecture](designs/kfp-components.md) - Detailed KFP microservice breakdown
-- [Ingestion Pipeline](designs/ingestion-pipeline.md) - Document ingestion architecture (KFP → Qdrant)
+- [KFP Components Architecture](designs/kfp-components.md) - Kubeflow-era control-plane reference for the retained KFP path
+- [Ingestion Pipeline](designs/ingestion-pipeline.md) - Current Phase 1 ingestion architecture: direct by default, KFP optional
 - [Vector DB Tradeoffs](designs/vectordb-tradeoffs.md) - ChromaDB vs Qdrant analysis
 - [Language Choice Analysis](designs/language-choice-analysis.md) - Go vs Python for control plane
 - [Infrastructure Analysis](designs/infra-structure-analysis.md) - Monorepo vs Polyrepo
-- [Kubeflow Platform Plan](designs/kubeflow-platform-plan.md) - Platform upgrade strategy
+- [Kubeflow Platform Plan](designs/kubeflow-platform-plan.md) - Historical plan for the earlier Kubeflow-platform consolidation
 - [Phase 2 Walkthrough](designs/phase2-walkthrough.md) - Ingestion pipeline implementation report
 - [Phase 3 Platform Upgrade](designs/phase3-platform-upgrade.md) - Kubeflow v1.11.0 upgrade report
 - [Phase 4 Migration & Tuning](designs/phase4-migration-tuning.md) - Qdrant migration & Katib results
@@ -101,7 +82,7 @@ graph TD
 | **Phase 4: Experimentation & Tuning** | 2026-01 | Katib grid search (chunk_size=256, overlap=50, accuracy=0.8046), ChromaDB → Qdrant migration |
 | **Phase 3: Platform Engineering** | 2026-01 | Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard, Qdrant namespace |
 | **Phase 2: Modern Data Engineering** | 2025-12 | KFP ingestion pipeline, semantic chunking, BGE-Large embeddings, retrieval API |
-| **Phase 1: Foundation** | 2025-12 | Initial local platform on Minikube: Kubeflow Pipelines, Katib, MinIO, Istio operators |
+| **Phase 1: Foundation** | 2025-12 | Initial pre-migration local platform on Minikube: Kubeflow Pipelines, Katib, MinIO, and Istio operators |
 
 See all completed plans: [`plans/implemented/`](plans/implemented/)
 

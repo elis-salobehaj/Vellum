@@ -20,6 +20,7 @@ def _default_active_model_id() -> str:
         return "gemini-1.5-flash"
     return "Qwen3.5-2B"
 
+
 # In-memory store for MVP. In production, use DB.
 MODEL_CONFIGS: List[ModelConfig] = [
     ModelConfig(
@@ -119,7 +120,12 @@ async def update_model(
 
 
 @router.post("/upload-and-ingest")
-async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
+async def upload_and_ingest(
+    batch_size: int = 25,
+    reset_progress: bool = False,
+    cleanup: bool = False,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Trigger the full Upload & Ingest process.
     Streams logs back to the client.
@@ -134,7 +140,20 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
         base_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../../../../")
         )
-        source_dir = os.path.join(base_dir, "data", "source_documents")
+        source_dir_candidates = [
+            os.path.join(base_dir, "data", "source_documents"),
+            "/data/source_documents",
+        ]
+        source_dir = next(
+            (path for path in source_dir_candidates if os.path.exists(path)),
+            source_dir_candidates[0],
+        )
+
+        if cleanup:
+            logger.info("admin_ingest_clean_slate_requested", user=user_id)
+            yield "🧹 Clean-slate ingestion requested; existing collection contents will be replaced.\n"
+
+        yield f"ℹ️  Using source directory: {source_dir}\n"
 
         # 1. Initialize Minio Client
         try:
@@ -203,10 +222,26 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
             try:
                 direct_logs = direct_ingestion_service.run(
                     bucket=settings.MINIO_BUCKET,
-                    cleanup=True,
+                    cleanup=cleanup,
+                    batch_size=batch_size,
+                    reset_progress=reset_progress,
                 )
                 for line in direct_logs:
                     yield f"{line}\n"
+                status = direct_ingestion_service.get_status(
+                    bucket=settings.MINIO_BUCKET
+                )
+                yield (
+                    "📈 Status: "
+                    f"{status['indexed_source_doc_count']}/{status['bucket_object_count']} indexed, "
+                    f"pending {status['pending_source_object_count']}, status={status['status']}\n"
+                )
+                if status.get("recent_skipped_files"):
+                    yield (
+                        "⚠️ Recent skipped files: "
+                        + ", ".join(status["recent_skipped_files"])
+                        + "\n"
+                    )
             except Exception as e:
                 logger.error("admin_direct_ingest_exception", error=str(e))
                 yield f"❌ Direct ingestion failed: {e}\n"
@@ -219,16 +254,20 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
                 kfp_user_id = None if settings.BYPASS_AUTH else current_user.get("user")
                 result = await kfp_service.trigger_ingestion(
                     bucket=settings.MINIO_BUCKET,
-                    cleanup=True,
+                    cleanup=cleanup,
                     user_id=kfp_user_id,
                 )
 
                 if result.get("status") == "success":
-                    logger.info("admin_kfp_trigger_success", run_id=result.get("run_id"))
+                    logger.info(
+                        "admin_kfp_trigger_success", run_id=result.get("run_id")
+                    )
                     yield f"✅ Ingestion Triggered Successfully: {result['message']}\n"
                     yield f"Run ID: {result.get('run_id')}\n"
                 elif result.get("status") == "redirect":
-                    logger.warning("admin_kfp_trigger_redirect", message=result["message"])
+                    logger.warning(
+                        "admin_kfp_trigger_redirect", message=result["message"]
+                    )
                     yield f"⚠️  {result['message']}\n"
                     yield f"Details: {result.get('details')}\n"
                 else:
@@ -243,3 +282,16 @@ async def upload_and_ingest(current_user: dict = Depends(get_current_user)):
         yield "🏁 Process Complete.\n"
 
     return StreamingResponse(log_generator(), media_type="text/plain")
+
+
+@router.get("/ingestion-status")
+async def ingestion_status(current_user: dict = Depends(get_current_user)):
+    del current_user
+
+    from app.services.direct_ingestion_service import direct_ingestion_service
+
+    try:
+        return direct_ingestion_service.get_status(bucket=settings.MINIO_BUCKET)
+    except Exception as exc:
+        logger.error("admin_ingestion_status_failed", error=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

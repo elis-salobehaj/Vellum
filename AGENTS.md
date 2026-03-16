@@ -1,11 +1,11 @@
 # Vellum: Agent Operating Manual
 
 ## 🎯 Mission
-Enterprise-grade RAG chatbot with Kubeflow-orchestrated ingestion pipelines, Qdrant vector storage, and multi-LLM support.
+Enterprise-grade RAG chatbot with a Kind-hosted Phase 1 platform, Qdrant vector storage, direct ingestion as the local default, and multi-LLM support.
 
 ## ⚙️ Stack Essentials
 - **Package Managers**: `uv` (Backend), `pnpm` (Frontend)
-- **Infrastructure**: Kubernetes (`kind` local runtime), Kubeflow Pipelines, Istio, Qdrant
+- **Infrastructure**: Kubernetes (`kind` local runtime), slim Kubeflow Phase 1 stack, Istio, Qdrant, TEI, and optional KFP/KServe paths for targeted validation
 
 ## 🚨 Critical Rules
 1. **Backend setup**: Run `cd backend && uv sync` to install all dependencies.

@@ -115,18 +115,6 @@ wait_for_kserve_components() {
     wait_for_rollout deployment kserve-models-web-app kubeflow 600s
 }
 
-wait_for_phase1_apps() {
-    echo -e "${BLUE}⏳ Waiting for Phase 1 application workloads...${NC}"
-    wait_for_job_completion model-downloader "$VELLUM_NAMESPACE" 5400s
-    wait_for_rollout deployment embeddings-service "$VELLUM_NAMESPACE" 900s
-    wait_for_rollout deployment backend "$VELLUM_NAMESPACE" 900s
-    wait_for_rollout deployment frontend "$VELLUM_NAMESPACE" 900s
-
-    if bool_is_true "$ENABLE_LOCAL_LLM" && cluster_has_nvidia_gpu_capacity; then
-        wait_for_inferenceservice_ready llm-service "$VELLUM_NAMESPACE" 1800s
-    fi
-}
-
 wait_for_vellum_profile() {
     local elapsed=0
     local timeout_seconds="${1:-180}"
@@ -148,6 +136,27 @@ wait_for_vellum_profile() {
     done
 }
 
+apply_platform_foundation() {
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/cert-manager/base" "cert-manager base" 10 30
+    wait_for_rollout deployment cert-manager cert-manager 300s
+    wait_for_rollout deployment cert-manager-cainjector cert-manager 300s
+    wait_for_rollout deployment cert-manager-webhook cert-manager 300s
+
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/cert-manager/kubeflow-issuer/base" "the Kubeflow self-signing issuer" 10 30
+
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/istio-crds/base" "Istio CRDs" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/istio-namespace/base" "the Istio namespace" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/kubeflow-namespace/base" "the Kubeflow namespace" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/istio-install/overlays/oauth2-proxy" "the Istio control plane" 10 30
+
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind" "oauth2-proxy Kind overlay" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/dex/overlays/oauth2-proxy" "Dex" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/cluster-local-gateway/base" "the Istio cluster-local gateway" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/networkpolicies/base" "Kubeflow network policies" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/kubeflow-roles/base" "Kubeflow shared roles" 10 30
+    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/kubeflow-istio-resources/base" "Kubeflow Istio resources" 10 30
+}
+
 apply_application_resources() {
     apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/applications/kserve/kserve" "KServe core resources" 10 30
     apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/applications/kserve/models-web-app/overlays/kubeflow" "the KServe models web app" 10 30
@@ -156,8 +165,6 @@ apply_application_resources() {
     apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-profile.yaml" "vellum-profile.yaml" 10 30
     apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-profile-resources.yaml" "vellum-profile-resources.yaml" 10 30
     wait_for_vellum_profile
-
-    apply_with_retries -k "$PROJECT_ROOT/deployment/platform-apps" "the Kind Phase 1 app stack" 10 30
 }
 
 require_kind_host_runtime_prereqs() {
@@ -182,25 +189,42 @@ EOF
 }
 
 require_kind_host_inotify_prereqs() {
-        local max_user_instances
+    local max_user_instances
+    local target_value=1024
 
-        max_user_instances="$(sysctl -n fs.inotify.max_user_instances 2>/dev/null || echo 0)"
-        if [[ "$max_user_instances" -ge 1024 ]]; then
-                return 0
-        fi
+    max_user_instances="$(sysctl -n fs.inotify.max_user_instances 2>/dev/null || echo 0)"
+    if [[ "$max_user_instances" -ge "$target_value" ]]; then
+        return 0
+    fi
 
-        cat >&2 <<EOF
+    echo -e "${BLUE}🔧 Raising fs.inotify.max_user_instances from ${max_user_instances} to ${target_value} for Kind startup...${NC}"
+
+    if [[ "$EUID" -eq 0 ]]; then
+        sysctl -w fs.inotify.max_user_instances="$target_value" >/dev/null
+        printf 'fs.inotify.max_user_instances = %s\n' "$target_value" > /etc/sysctl.d/99-vellum-kind.conf
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo sysctl -w fs.inotify.max_user_instances="$target_value" >/dev/null
+        printf 'fs.inotify.max_user_instances = %s\n' "$target_value" | sudo tee /etc/sysctl.d/99-vellum-kind.conf >/dev/null
+    fi
+
+    max_user_instances="$(sysctl -n fs.inotify.max_user_instances 2>/dev/null || echo 0)"
+    if [[ "$max_user_instances" -ge "$target_value" ]]; then
+        echo -e "${GREEN}✅ fs.inotify.max_user_instances is now ${max_user_instances}.${NC}"
+        return 0
+    fi
+
+    cat >&2 <<EOF
 Kind node startup on this WSL host currently fails because fs.inotify.max_user_instances is too low (${max_user_instances}).
 
 Required host fix before rerunning setup-kind:
-    1. sudo sysctl -w fs.inotify.max_user_instances=1024
-    2. echo 'fs.inotify.max_user_instances = 1024' | sudo tee /etc/sysctl.d/99-vellum-kind.conf
+    1. sudo sysctl -w fs.inotify.max_user_instances=${target_value}
+    2. echo 'fs.inotify.max_user_instances = ${target_value}' | sudo tee /etc/sysctl.d/99-vellum-kind.conf
     3. rerun ./scripts/setup-kind.sh
 
 Without that change, the Kind node container exits during boot with:
     Failed to create control group inotify object: Too many open files
 EOF
-        exit 1
+    exit 1
 }
 
 if ! docker info >/dev/null 2>&1; then
@@ -208,7 +232,17 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-mkdir -p "$(dirname "$KIND_KUBECONFIG_PATH")"
+render_kind_config() {
+    local api_server_port="$1"
+    local temp_config_path="$2"
+
+    sed -E "s/(apiServerPort: ).*/\1${api_server_port}/" "$PROJECT_ROOT/kind-config.yaml" > "$temp_config_path"
+}
+
+mkdir -p "$(dirname "$MAIN_KUBECONFIG_PATH")"
+touch "$MAIN_KUBECONFIG_PATH"
+chmod 600 "$MAIN_KUBECONFIG_PATH"
+export KUBECONFIG="$MAIN_KUBECONFIG_PATH"
 require_kind_host_runtime_prereqs
 require_kind_host_inotify_prereqs
 require_kind_gpu_host_prereqs
@@ -217,16 +251,24 @@ echo -e "${BLUE}🚀 Bootstrapping Kind cluster '${KIND_CLUSTER_NAME}'...${NC}"
 if kind_cluster_exists; then
     echo -e "${YELLOW}ℹ️  Cluster already exists. Reusing it.${NC}"
 else
+    api_server_port="$(find_available_local_port "$KIND_DEFAULT_API_SERVER_PORT")"
+    temp_kind_config="$(mktemp)"
+    trap 'rm -f "${temp_kind_config:-}"' EXIT
+    render_kind_config "$api_server_port" "$temp_kind_config"
+
+    if [[ "$api_server_port" != "$KIND_DEFAULT_API_SERVER_PORT" ]]; then
+        echo -e "${YELLOW}ℹ️  Port ${KIND_DEFAULT_API_SERVER_PORT} is already in use. Using Kind API server port ${api_server_port} instead.${NC}"
+    fi
+
     kind create cluster \
         --name "$KIND_CLUSTER_NAME" \
-        --config "$PROJECT_ROOT/kind-config.yaml" \
+        --config "$temp_kind_config" \
         --image "$KIND_NODE_IMAGE" \
-        --kubeconfig "$KIND_KUBECONFIG_PATH" \
         --wait 300s
 fi
 
-export KUBECONFIG="$KIND_KUBECONFIG_PATH"
-chmod 600 "$KIND_KUBECONFIG_PATH"
+kind export kubeconfig --name "$KIND_CLUSTER_NAME" --kubeconfig "$MAIN_KUBECONFIG_PATH" >/dev/null
+ensure_kind_context
 kubectl cluster-info >/dev/null
 
 if kind_gpu_support_requested; then
@@ -235,7 +277,7 @@ if kind_gpu_support_requested; then
     echo -e "${GREEN}✅ Kind GPU prerequisites satisfied.${NC}"
 fi
 
-apply_with_retries -k "$PROJECT_ROOT/deployment/platform-foundation" "the Kind Phase 1 platform foundation" 10 30
+apply_platform_foundation
 wait_for_istio_foundation
 apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/knative/knative-serving/overlays/gateways" "Knative Serving" 10 30
 wait_for_knative_webhooks
@@ -254,11 +296,16 @@ fi
 wait_for_qdrant
 apply_application_resources
 wait_for_kserve_components
-wait_for_phase1_apps
 
 echo -e "${GREEN}✅ Kind Phase 1 platform setup complete.${NC}"
-echo -e "${GREEN}KUBECONFIG=${KIND_KUBECONFIG_PATH}${NC}"
+if bool_is_true "$ENABLE_LOCAL_LLM_REQUESTED" && ! bool_is_true "$ENABLE_LOCAL_LLM"; then
+    echo -e "${YELLOW}⚠️  Local LLM bootstrap was skipped for this run. API-backed providers are available now; the local GPU model can be enabled after Docker's NVIDIA runtime is configured.${NC}"
+fi
+echo -e "${GREEN}Kubeconfig merged into ${MAIN_KUBECONFIG_PATH}.${NC}"
 echo -e "${GREEN}Next steps:${NC}"
-echo "  export KUBECONFIG=${KIND_KUBECONFIG_PATH}"
+echo "  ./scripts/setup-local.sh          # first-time machine setup"
+echo "  kubectl config use-context ${KIND_CONTEXT_NAME}"
+echo "  cd backend && uv sync"
+echo "  cd frontend && pnpm install"
 echo "  ./scripts/deploy-local.sh"
 echo "  ./scripts/connect.sh"

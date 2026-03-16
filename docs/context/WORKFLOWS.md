@@ -9,11 +9,11 @@
 ### Guides (How-To)
 - `docs/guides/GETTING_STARTED.md` - First-time setup & Kind bootstrap
 - `docs/guides/DEVELOPMENT.md` - Running and debugging
-- `docs/guides/AUTHENTICATION.md` - Entra ID SSO, Dex, security
-- `docs/guides/KATIB_TUNING.md` - Hyperparameter optimization
-- `docs/guides/INGESTION_VERIFICATION.md` - Verifying pipeline runs
-- `docs/guides/HELLO_WORLD_PIPELINE.md` - First KFP pipeline
-- `docs/guides/MINIO_MODEL_MANAGEMENT.md` - Model storage
+- `docs/guides/AUTHENTICATION.md` - Entra ID for Vellum, Dex for Kubeflow, security
+- `docs/guides/KATIB_TUNING.md` - Phase 1 optional hyperparameter tuning
+- `docs/guides/INGESTION_VERIFICATION.md` - Verifying direct ingestion and optional KFP runs
+- `docs/guides/HELLO_WORLD_PIPELINE.md` - Optional KFP tutorial for Kubeflow debugging
+- `docs/guides/MINIO_MODEL_MANAGEMENT.md` - Historical note for older model-distribution flow
 
 ### Context (Reference)
 - `docs/context/ARCHITECTURE.md` - Stack & conventions
@@ -37,10 +37,11 @@
 3. **Update status** in `docs/README.md` table
 
 ### Local Platform Workflow
-1. Treat `./scripts/setup-kind.sh` as the primary Phase 1 bootstrap.
+1. Treat `./scripts/setup-kind.sh` as the primary completed Phase 1 bootstrap.
 2. `./scripts/setup-platform.sh` is a compatibility wrapper and should mirror `setup-kind.sh` behavior.
-3. Keep `deployment/kustomization.yaml` aligned with the active local default. In Phase 1, that means the slim Kubeflow overlay.
-4. Keep `docs/guides/MINIKUBE_SETUP_LEGACY.md` clearly marked as historical until the later archival phase is complete.
+3. Keep `deployment/kustomization.yaml` aligned with the active local default. In completed Phase 1, that means the slim Kubeflow overlay on Kind.
+4. Document `INGESTION_MODE=direct` as the default ingestion path unless a guide is explicitly about debugging KFP.
+5. Keep Kubeflow-era and Minikube-era guides clearly marked as optional or historical.
 
 ### When Completing a Plan
 1. **Move file** from `plans/active/` to `plans/implemented/`

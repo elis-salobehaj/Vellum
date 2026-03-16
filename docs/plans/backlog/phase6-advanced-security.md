@@ -25,7 +25,7 @@ Enterprise hardening of the Vellum platform:
 ## Scope
 
 ### Authentication Hardening
-- [ ] Investigate Istio OIDC `Jwt issuer is not configured` error to enable `kubectl create token` auth on port 8080
+- [ ] Investigate Istio OIDC `Jwt issuer is not configured` error to enable `kubectl create token` auth on port 8086
 - [ ] Service Account tokens for KFP API calls (replace hardcoded user IDs)
 - [ ] Token rotation and expiry policies
 - [ ] Audit logging for pipeline triggers

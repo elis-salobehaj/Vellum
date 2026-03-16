@@ -23,6 +23,9 @@ if [[ "${1:-}" == "--no-cache" ]]; then
 fi
 docker compose build $NO_CACHE frontend
 
+echo -e "${GREEN}🔐 Synchronizing Kubernetes secret from .env...${NC}"
+bash ./scripts/sync-env-secret.sh
+
 echo -e "${GREEN}📦 Loading frontend image into Kind cluster ${KIND_CLUSTER_NAME}...${NC}"
 publish_image "vellum-frontend:latest" frontend
 

@@ -1,20 +1,43 @@
 # Tutorial: Running Your First "Hello World" Pipeline
 
+This guide is optional in completed Phase 1. Use it only when you are explicitly debugging the retained Kubeflow path; the normal ingestion workflow is the backend's direct-ingestion route.
+
 This guide will walk you through creating, compiling, and running a simple Kubeflow Pipeline on the Vellum infrastructure.
 
 ## Prerequisites
 
-1.  **Python Environment**: You need Python 3.12+ installed locally.
-2.  **KFP SDK**: Installed via `uv sync` in the backend (kfp is a dependency in `pyproject.toml`).
-3.  **UI Access**: Ensure you have port-forwards active:
-    ```bash
-    ./scripts/connect.sh
-    ```
-    Access Dashboard at: [http://localhost:8080](http://localhost:8080)
+1. **Python Environment**: You need Python 3.12+ installed locally.
+2. **KFP SDK**: Installed via `uv sync` in the backend (`kfp` is a dependency in `pyproject.toml`).
+3. **UI Access**: Ensure you have port-forwards active:
+   ```bash
+   ./scripts/connect.sh
+   ```
+   Access the dashboard at [http://localhost:8086](http://localhost:8086).
 
 ## Step 1: Write the Pipeline Code
 
-We have created a simple example script at `examples/kfp/hello_world.py`.
+Create a temporary local file such as `/tmp/hello_world.py` with the following contents:
+
+```python
+from kfp import compiler, dsl
+
+
+@dsl.component(base_image="python:3.12")
+def say_hello(recipient: str = "World"):
+    print(f"Hello, {recipient}!")
+
+
+@dsl.pipeline(name="hello-world")
+def hello_world_pipeline(recipient: str = "World"):
+    say_hello(recipient=recipient)
+
+
+if __name__ == "__main__":
+    compiler.Compiler().compile(
+        pipeline_func=hello_world_pipeline,
+        package_path="hello_world_pipeline.yaml",
+    )
+```
 
 **Concepts**:
 *   **`@dsl.component`**: Decorator that turns a Python function into a Pipeline Component. This function will run inside a Docker container (default is python:3.7) on the cluster.
@@ -26,7 +49,7 @@ We have created a simple example script at `examples/kfp/hello_world.py`.
 Run the script to generate the YAML definition:
 
 ```bash
-cd examples/kfp
+cd /tmp
 uv run hello_world.py
 ```
 
@@ -34,7 +57,7 @@ You should see a file named `hello_world_pipeline.yaml` generated in the directo
 
 ## Step 3: Upload and Run via UI
 
-1.  Open the Dashboard at [http://localhost:8080](http://localhost:8080).
+1.  Open the Dashboard at [http://localhost:8086](http://localhost:8086).
 2.  Click **Pipelines** in the sidebar.
 3.  Click **+ Upload Pipeline**.
 4.  Select via **Upload a file** and choose `hello_world_pipeline.yaml`.
@@ -58,5 +81,5 @@ You should see a file named `hello_world_pipeline.yaml` generated in the directo
 ## Troubleshooting
 
 *   **Run Stuck in Pending**: This usually means the cluster cannot schedule the pod (resource limits) or cannot pull the image. Check pod status: `kubectl get pods -n kubeflow`.
-*   **ImagePullBackOff**: Ensure your cluster has internet access to pull `python:3.7`.
+*   **ImagePullBackOff**: Ensure your cluster has internet access to pull `python:3.12`.
 *   **Upload Fails**: Ensure the UI version matches the Backend compatibility. We are using KFP 2.2.0.

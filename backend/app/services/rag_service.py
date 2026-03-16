@@ -2,6 +2,7 @@ from llama_index.core import VectorStoreIndex, StorageContext
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 import qdrant_client
+from qdrant_client.http.exceptions import UnexpectedResponse
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -84,18 +85,38 @@ class RAGService:
         """
         logger.info("rag_query_start", query=query_text, k=k)
 
-        embed_model = self._get_embed_model()
-        index = VectorStoreIndex.from_vector_store(
-            self.vector_store,
-            storage_context=self.storage_context,
-            embed_model=embed_model,
-        )
+        if not self.client.collection_exists(settings.QDRANT_COLLECTION):
+            logger.warning(
+                "rag_collection_missing",
+                collection=settings.QDRANT_COLLECTION,
+            )
+            return []
 
-        # 1. Configure retriever for Source Diversity using MMR
-        retriever = index.as_retriever(
-            similarity_top_k=k * 4, vector_store_query_mode="mmr", mmr_threshold=0.7
-        )
-        nodes = await retriever.aretrieve(query_text)
+        embed_model = self._get_embed_model()
+        try:
+            index = VectorStoreIndex.from_vector_store(
+                self.vector_store,
+                storage_context=self.storage_context,
+                embed_model=embed_model,
+            )
+
+            # 1. Configure retriever for Source Diversity using MMR
+            retriever = index.as_retriever(
+                similarity_top_k=k * 4,
+                vector_store_query_mode="mmr",
+                mmr_threshold=0.7,
+            )
+            nodes = await retriever.aretrieve(query_text)
+        except UnexpectedResponse as exc:
+            if exc.status_code == 404:
+                logger.warning(
+                    "rag_collection_unavailable",
+                    collection=settings.QDRANT_COLLECTION,
+                    error=str(exc),
+                )
+                return []
+            raise
+
         logger.debug("rag_retrieval_complete", nodes_retrieved=len(nodes))
 
         # 2. Apply Postprocessor for Unique Files

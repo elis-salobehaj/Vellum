@@ -23,6 +23,9 @@ if [[ "${1:-}" == "--no-cache" ]]; then
 fi
 docker compose build $NO_CACHE backend
 
+echo -e "${GREEN}🔐 Synchronizing Kubernetes secret from .env...${NC}"
+bash ./scripts/sync-env-secret.sh
+
 echo -e "${GREEN}📦 Loading backend image into Kind cluster ${KIND_CLUSTER_NAME}...${NC}"
 publish_image "vellum-backend:latest" backend
 

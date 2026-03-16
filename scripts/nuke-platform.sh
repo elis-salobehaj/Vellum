@@ -14,7 +14,7 @@ pkill -f "kubectl port-forward" >/dev/null 2>&1 || true
 if kind_cluster_exists; then
     echo "🧨 Deleting Kind cluster '${KIND_CLUSTER_NAME}'..."
     kind delete cluster --name "$KIND_CLUSTER_NAME"
-    rm -f "$KIND_KUBECONFIG_PATH"
+    cleanup_kind_kubeconfig
     exit 0
 fi
 

@@ -27,8 +27,11 @@ if [[ "${1:-}" == "--no-cache" ]]; then
     echo -e "${GREEN}🛠️  Building images with --no-cache...${NC}"
 fi
 
-echo -e "${GREEN}🛠️  Building images (frontend, backend, ingestion)...${NC}"
-docker compose build $NO_CACHE frontend backend ingestion
+echo -e "${GREEN}🛠️  Building backend image first (required by ingestion)...${NC}"
+docker compose build $NO_CACHE backend
+
+echo -e "${GREEN}🛠️  Building frontend and ingestion images...${NC}"
+docker compose build $NO_CACHE frontend ingestion
 
 echo -e "${GREEN}📦 Loading local images into Kind cluster ${KIND_CLUSTER_NAME}...${NC}"
 publish_image "vellum-backend:latest" backend
@@ -43,6 +46,11 @@ kubectl delete job/model-downloader -n "$VELLUM_NAMESPACE" --ignore-not-found >/
 
 echo -e "${GREEN}⛵ Applying app manifests (server-side)...${NC}"
 kubectl kustomize --load-restrictor=LoadRestrictionsNone "$PROJECT_ROOT/deployment/platform-apps" | kubectl apply --server-side --force-conflicts -f -
+
+if kind_gpu_support_requested; then
+    echo -e "${GREEN}🧰 Refreshing Kind GPU support before local LLM scaling...${NC}"
+    bootstrap_kind_gpu_support
+fi
 
 echo -e "${GREEN}🤖 Applying local LLM toggle...${NC}"
 scale_local_llm

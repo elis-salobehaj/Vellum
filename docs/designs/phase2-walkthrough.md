@@ -1,5 +1,7 @@
 # Phase 2: Ingestion Pipeline Walkthrough
 
+Historical implementation report. It documents the original KFP-to-ChromaDB era and is no longer the current operational ingestion path.
+
 ## Overview
 We have successfully implemented a **Kubeflow Pipeline** to ingest documents from MinIO into ChromaDB. This moves us from a local script-based approach to a scalable, distributed data engineering workflow.
 

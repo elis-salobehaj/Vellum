@@ -1,9 +1,11 @@
 # Katib Hyperparameter Tuning Guide
 
+This guide is optional in completed Phase 1. Katib is not part of the slim default local boot, so use this only when you intentionally bring up the fuller Kubeflow-era tuning stack.
+
 Katib is Kubeflow's hyperparameter tuning engine. Vellum uses Katib to optimize RAG pipeline parameters (chunk size, chunk overlap) for retrieval quality.
 
 ## Prerequisites
-- Kubeflow platform running (`./scripts/setup-kind.sh` or `./scripts/setup-platform.sh`)
+- Kubeflow platform running with Katib enabled (`./scripts/setup-kind.sh` plus the fuller Kubeflow component set when needed)
 - Port-forwards active (`./scripts/connect.sh`)
 - Documents ingested into Qdrant
 
@@ -76,7 +78,7 @@ kubectl apply -f kubeflow/experiments/rag-tuning.yaml
 
 ### 2. Monitor Progress
 **Via Kubeflow Dashboard**:
-- Navigate to http://localhost:8080
+- Navigate to http://localhost:8086
 - Click **Katib** in the sidebar
 - Select your experiment to see trial progress
 

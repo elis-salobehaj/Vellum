@@ -1,11 +1,67 @@
 import os
 import argparse
+import hashlib
 import qdrant_client
 from llama_index.core import Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core.node_parser import SentenceSplitter, SemanticSplitterNodeParser
 from llama_index.core.ingestion import IngestionPipeline
+from qdrant_client.http.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    VectorParams,
+)
+
+
+def build_source_doc_id(file_key: str) -> str:
+    return hashlib.sha256(file_key.encode("utf-8")).hexdigest()
+
+
+def build_source_signature(obj: object) -> str:
+    etag = getattr(obj, "etag", "") or ""
+    size = getattr(obj, "size", 0) or 0
+    return f"{etag}:{size}"
+
+
+def ensure_collection(client: qdrant_client.QdrantClient, collection_name: str) -> None:
+    if client.collection_exists(collection_name):
+        return
+
+    print(f"🆕 Creating collection '{collection_name}'...")
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+    )
+
+
+def get_existing_source_signature(
+    client: qdrant_client.QdrantClient,
+    collection_name: str,
+    source_doc_id: str,
+):
+    response, _ = client.scroll(
+        collection_name=collection_name,
+        scroll_filter=Filter(
+            must=[
+                FieldCondition(
+                    key="doc_id",
+                    match=MatchValue(value=source_doc_id),
+                )
+            ]
+        ),
+        limit=1,
+        with_payload=True,
+        with_vectors=False,
+    )
+
+    if not response:
+        return False, None
+
+    payload = response[0].payload or {}
+    return True, payload.get("source_signature")
 
 
 def ingest(
@@ -39,13 +95,7 @@ def ingest(
         if client.collection_exists(collection_name):
             client.delete_collection(collection_name)
 
-        # We need to recreate it with correct parameters
-        from qdrant_client.http.models import VectorParams, Distance
-
-        client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-        )
+    ensure_collection(client, collection_name)
 
     vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
 
@@ -107,28 +157,78 @@ def ingest(
         shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
 
-    objects = m_client.list_objects(bucket, prefix=prefix, recursive=True)
-    files = [obj.object_name for obj in objects if not obj.is_dir]
-    files.sort()
+    objects = list(m_client.list_objects(bucket, prefix=prefix, recursive=True))
+    file_objects = [obj for obj in objects if not obj.is_dir]
+    file_objects.sort(key=lambda obj: obj.object_name)
 
-    if max_docs > 0 and len(files) > max_docs:
-        files = files[:max_docs]
+    if max_docs > 0 and len(file_objects) > max_docs:
+        file_objects = file_objects[:max_docs]
 
-    print(f"✅ Found {len(files)} files to download.")
+    print(f"✅ Found {len(file_objects)} files to evaluate.")
 
-    for file_key in files:
-        target_path = os.path.join(temp_dir, os.path.basename(file_key))
+    from llama_index.core import SimpleDirectoryReader
+
+    indexed_documents = 0
+    indexed_files = 0
+    unchanged_files = 0
+
+    for obj in file_objects:
+        file_key = obj.object_name
+        source_doc_id = build_source_doc_id(file_key)
+        source_signature = build_source_signature(obj)
+        exists, existing_signature = get_existing_source_signature(
+            client, collection_name, source_doc_id
+        )
+
+        if exists and existing_signature == source_signature:
+            unchanged_files += 1
+            print(f"   ⏭️ Skipping unchanged file: {file_key}")
+            continue
+
+        target_path = os.path.join(temp_dir, file_key)
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
         print(f"   📥 Downloading {file_key} -> {target_path}")
         m_client.fget_object(bucket, file_key, target_path)
 
-    print("📂 Loading documents from temp directory...")
-    from llama_index.core import SimpleDirectoryReader
+        try:
+            reader = SimpleDirectoryReader(input_files=[target_path])
+            documents = reader.load_data()
+        except Exception as exc:
+            print(f"   ⚠️ Skipping {file_key}: {exc}")
+            continue
 
-    reader = SimpleDirectoryReader(input_dir=temp_dir)
-    documents = reader.load_data()
+        if not documents:
+            print(f"   ⚠️ Skipping {file_key}: no supported content extracted")
+            continue
 
-    print(f"🔄 Running ingestion pipeline on {len(documents)} document chunks...")
-    pipeline.run(documents=documents)
+        for document in documents:
+            metadata = dict(document.metadata or {})
+            metadata["source_object_key"] = file_key
+            metadata["source_doc_id"] = source_doc_id
+            metadata["source_signature"] = source_signature
+            metadata["source_etag"] = getattr(obj, "etag", "") or ""
+            metadata["source_size"] = getattr(obj, "size", 0) or 0
+            document.metadata = metadata
+            document.doc_id = source_doc_id
+
+        if exists:
+            print(f"   ♻️ Replacing existing chunks for: {file_key}")
+            vector_store.delete(source_doc_id)
+
+        pipeline.run(documents=documents)
+        indexed_documents += len(documents)
+        indexed_files += 1
+
+    if unchanged_files:
+        print(f"ℹ️ Skipped {unchanged_files} unchanged files already in Qdrant")
+
+    if indexed_documents == 0:
+        print("✅ No new or changed documents to index")
+        return
+
+    print(
+        f"🔄 Running ingestion pipeline on {indexed_documents} extracted documents from {indexed_files} files..."
+    )
 
     print("✅ Ingestion Complete!")
 

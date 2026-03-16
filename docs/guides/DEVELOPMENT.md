@@ -2,16 +2,18 @@
 
 ## Running the Stack
 
+Completed Phase 1 baseline: use the Kind-hosted slim platform, run backend and frontend locally when possible, and treat `INGESTION_MODE=direct` as the default ingestion contract unless you are specifically debugging Kubeflow.
+
 ### Phase 1 Local Topology
 
 ```text
 ┌──────────────────────── Local Machine ────────────────────────┐
 │ frontend: pnpm dev (5173)                                    │
-│ backend: uvicorn (8000)                                      │
+│ backend: uvicorn (8006)                                      │
 │ kubectl port-forward: dashboard, KFP, Qdrant, TEI, MinIO     │
 └──────────────────────────────┬───────────────────────────────┘
                                │
-                     ~/.kube/kind-vellum.yaml
+                        ~/.kube/config
                                │
 ┌──────────────────────────── Kind cluster ─────────────────────┐
 │ slim Kubeflow v1.11.0 overlay                                │
@@ -24,7 +26,7 @@
 ### Hybrid Development (Recommended)
 Run backend and frontend locally against the Kind cluster. This avoids Docker rebuilds during normal feature work.
 
-Current Phase 1 local default:
+Completed Phase 1 local default:
 - `INGESTION_MODE=direct` bypasses KFP/MLMD and ingests from MinIO straight into Qdrant. Use this for day-to-day local development until the Kubeflow metadata path is no longer on the critical path.
 - `INGESTION_MODE=kfp` keeps the original Kubeflow Pipelines submission path and is only needed when you are explicitly debugging KFP itself.
 
@@ -51,7 +53,7 @@ Use this mode when you are iterating on FastAPI handlers, React code, prompt wir
 2. Terminal 2:
    ```bash
    cd backend
-   KFP_NAMESPACE=kubeflow-vellum uv run uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8000
+   KFP_NAMESPACE=kubeflow-vellum uv run uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8006
    ```
    Add `INGESTION_MODE=kfp` only when you want to exercise the Kubeflow Pipelines path. The normal local fallback is `INGESTION_MODE=direct` from `.env`.
 3. Terminal 3:
@@ -77,7 +79,8 @@ This Phase 1 deploy path:
 
 For Phase 1 Kind runs:
 - bootstrap with `./scripts/setup-kind.sh`
-- export `KUBECONFIG=$HOME/.kube/kind-vellum.yaml` before `./scripts/deploy-local.sh`
+- switch to the merged context with `kubectl config use-context vellum` before `./scripts/deploy-local.sh`
+- `./scripts/setup-kind.sh` automatically moves off `6551` when that local port is already occupied by another service
 - the deploy scripts load local backend, frontend, and ingestion images directly into the Kind cluster
 
 If the cluster does not advertise `nvidia.com/gpu`, the deploy helper scales the predictor back to zero and leaves the rest of the stack running.
@@ -99,6 +102,9 @@ Do not use it for rapid iteration if hybrid mode is sufficient.
 ```bash
 # Bootstrap the Kind Phase 1 platform
 ./scripts/setup-kind.sh
+
+# One-shot first-time setup from a clean machine
+./scripts/setup-local.sh
 
 # Compatibility wrapper for the same action
 ./scripts/setup-platform.sh
@@ -160,8 +166,17 @@ Full stack:
 
 ### Ingestion Pipeline
 ```bash
-# Trigger via the backend API on the active local backend (port 8000)
-curl -X POST http://localhost:8000/api/v1/admin/upload-and-ingest \
+# Trigger via the backend API on the active local backend (port 8006)
+curl -X POST http://localhost:8006/api/v1/admin/upload-and-ingest \
+   -H "kubeflow-userid: vellum@example.com"
+
+# Watch resumable direct-ingestion progress and recent skipped files
+curl http://localhost:8006/api/v1/admin/ingestion-status \
+   -H "kubeflow-userid: vellum@example.com" | jq
+
+# Force a clean-slate reindex only when you intentionally want to discard
+# existing chunks and rebuild the collection from scratch.
+curl -X POST "http://localhost:8006/api/v1/admin/upload-and-ingest?cleanup=true&reset_progress=true" \
    -H "kubeflow-userid: vellum@example.com"
 
 # Submit directly to KFP only when INGESTION_MODE=kfp
@@ -173,10 +188,17 @@ uv run kubeflow/pipelines/ingestion/submit_run.py --chunk_size 256 --chunk_overl
 
 Important Phase 1 note:
 - A backend running inside the cluster does not mount the repo-local `data/source_documents` directory. For full-cluster ingestion verification, seed MinIO first and then call `/api/v1/admin/upload-and-ingest`, or use the hybrid local-backend workflow when you want the backend to read files directly from the repo checkout.
+- The admin ingestion route now checks both the repo checkout path and `/data/source_documents`, so cluster-side runs can use manually staged pod data when present.
+- `cleanup=true` means "start from a clean slate": delete and recreate the Qdrant collection before ingesting, which discards any existing chunks.
+- `reset_progress=true` means "start scanning from the top again": ignore the saved `last_scanned_key` checkpoint and restart bucket traversal from the beginning.
+- `cleanup=true` already implies a fresh scan in the current implementation, so `cleanup=true&reset_progress=true` is the most explicit full rebuild form rather than two unrelated toggles.
+- Direct ingestion is append-or-replace by default: unchanged files are skipped, changed files replace their own prior chunks, and the collection is only cleared when you explicitly pass `cleanup=true`.
+- Do not trigger a second direct-ingestion run while `status=running`; the backend now rejects concurrent runs for the same bucket/prefix to avoid overlapping progress and misleading unchanged detections.
+- Progress is visible in two places: the streaming response from `/api/v1/admin/upload-and-ingest` and the persisted status payload from `/api/v1/admin/ingestion-status` (`current_file`, `last_scanned_key`, `indexed_source_doc_count`, `recent_skipped_files`, and `last_run_summary`).
 
 ### Kubernetes Debugging
 ```bash
-export KUBECONFIG=${KUBECONFIG:-$HOME/.kube/kind-vellum.yaml}
+kubectl config use-context vellum
 
 kubectl get pods -n kubeflow
 kubectl get pods -n kubeflow-vellum
@@ -193,8 +215,8 @@ kubectl rollout restart deployment -n kubeflow
 |---------|------|-----|--------|
 | **Frontend (dev)** | 5173 | http://localhost:5173 | `pnpm dev` |
 | **Frontend (K8s)** | 9090 | http://localhost:9090 | `./scripts/connect.sh` |
-| **Backend API** | 8000 | http://localhost:8000/docs | local `uvicorn` in hybrid mode or `./scripts/connect.sh` in cluster mode |
-| **Kubeflow Dashboard** | 8080 | http://localhost:8080 | Istio ingress port-forward |
+| **Backend API** | 8006 | http://localhost:8006/docs | local `uvicorn` in hybrid mode or `./scripts/connect.sh` in cluster mode |
+| **Kubeflow Dashboard** | 8086 | http://localhost:8086 | Istio ingress port-forward |
 | **LLM Service** | 8081 | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` |
 | **Embeddings (TEI)** | 8082 | http://localhost:8082 | `./scripts/connect.sh` |
 | **KFP API** | 8888 | http://localhost:8888 | `./scripts/connect.sh` |
@@ -202,14 +224,15 @@ kubectl rollout restart deployment -n kubeflow
 | **Qdrant** | 6333 | http://localhost:6333 | `./scripts/connect.sh` |
 
 Port rule of thumb:
-- `8000` is always the backend API for local development. In hybrid mode it is the local `uvicorn` process. In full cluster mode it is the port-forwarded backend service.
+- `8006` is always the backend API for local development. In hybrid mode it is the local `uvicorn` process. In full cluster mode it is the port-forwarded backend service.
 - `8082` is the local port-forward for embeddings/TEI.
 - `8888` is the local port-forward for the KFP API. If you are using `INGESTION_MODE=direct`, the app does not need KFP to ingest documents.
+- Those ports are the preferred defaults. If any of them are already in use, `./scripts/connect.sh` picks the next free localhost port and writes the actual bindings to `.vellum-runtime.env` for the hybrid scripts to consume.
 
 ## Authentication
 
 ### Kubeflow Dashboard
-- URL: http://localhost:8080
+- URL: http://localhost:8086
 - Credentials: `vellum@example.com` / `12341234`
 
 ### Bypass App Auth for Local UI Work
@@ -224,7 +247,7 @@ See [Authentication Guide](AUTHENTICATION.md) for the full split between Entra I
 ## Troubleshooting
 
 ### Backend Won't Start
-- Check the kubeconfig: `echo ${KUBECONFIG:-$HOME/.kube/kind-vellum.yaml}`
+- Check the active context: `kubectl config current-context`
 - Check cluster access: `kubectl cluster-info`
 - Check port-forwards: rerun `./scripts/connect.sh --hybrid`
 - Sync backend deps: `cd backend && uv sync`

@@ -40,7 +40,7 @@ Upgraded Vellum from a "Developer Playground" (standalone components) to a **Pro
 ### Verification
 | Component | Status |
 | :--- | :--- |
-| Dashboard | ✅ Running (localhost:8080) |
+| Dashboard | ✅ Running (localhost:8086) |
 | KFP Backend | ✅ Ready for pipelines |
 | Katib | ✅ Ready for tuning |
 | Qdrant | ✅ Ready for vectors |

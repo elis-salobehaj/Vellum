@@ -1,23 +1,13 @@
-# Ingestion Verification Guide
+# Ingestion Quick Reference
 
-After triggering the **Upload & Ingest** process from the Admin Settings page, follow these steps to verify success:
+The canonical ingestion guide now lives in `docs/guides/INGESTION_VERIFICATION.md`.
 
-## 1. Verify Minio Upload
-Documents should be present in the `documents` bucket.
-- **URL**: [MinIO Console](http://localhost:9000) (if port-forwarded)
-- **Creds**: `minio` / `minio123`
-- **Check**: Browse the `documents` bucket and verify files are present.
+Phase 1 accepted baseline:
+- `INGESTION_MODE=direct` is the normal local and cluster-side ingestion path.
+- `POST /api/v1/admin/upload-and-ingest` triggers ingestion.
+- `GET /api/v1/admin/ingestion-status` reports persisted progress, skipped files, and the last run summary.
+- `cleanup=true` performs a clean-slate rebuild.
+- `reset_progress=true` restarts scanning from the beginning of the bucket.
+- A second direct-ingestion trigger is rejected while another run is already `running`.
 
-## 2. Verify Kubeflow Pipeline
-The ingestion process triggers a Kubeflow Pipeline run.
-- **URL**: [Kubeflow Dashboard](http://localhost:8080/_/pipeline/#/runs)
-- **Check**: Look for a run starting with `ingest-` in the `kubeflow-vellum` namespace.
-- **Status**: It should transition to `Succeeded`.
-
-## 3. Verify Vector DB (Qdrant)
-The pipeline ingests data into Qdrant.
-- **URL**: [Qdrant Dashboard](http://localhost:6333/dashboard)
-- **Check**: Verify the `documents` collection has a non-zero count of vectors.
-
-## 4. Test Chat
-Once the pipeline succeeds, you should be able to ask questions about the uploaded documents in the main Chat page.
+Use the full guide for live validation steps, MinIO/Qdrant checks, and the optional `INGESTION_MODE=kfp` workflow.

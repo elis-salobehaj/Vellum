@@ -27,7 +27,7 @@ tags:
   - testing
 completion:
   - "# Phase 2: Hybrid Development Mode"
-  - [x] Configure Vite proxy in `vite.config.ts` to forward `/api/v1/*` to `localhost:8000` ✅
+  - [x] Configure Vite proxy in `vite.config.ts` to forward `/api/v1/*` to `localhost:8006` ✅
   - [x] Ensure backend `uv run uvicorn main:app --reload` works against port-forwarded K8s services ✅
   - [x] Create `scripts/dev.sh` helper script that starts connect.sh + backend + frontend in parallel ✅
   - [x] Verify hot-reload works for both backend (uvicorn --reload) and frontend (Vite HMR) ✅
@@ -117,7 +117,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8006',
         changeOrigin: true,
       },
     },
@@ -191,7 +191,7 @@ Improve the reliability and maintainability of the Vellum test suite.
 ### Completed Deliverables
 
 **Phase 2: Hybrid Development Mode** ✅
-- ✅ Vite proxy configuration for `/api/v1/*` → `localhost:8000`
+- ✅ Vite proxy configuration for `/api/v1/*` → `localhost:8006`
 - ✅ Backend runs with `uv run uvicorn main:app --reload` against K8s services
 - ✅ `scripts/dev.sh` for one-command hybrid mode startup
 - ✅ Hot-reload verified for both backend (uvicorn) and frontend (Vite HMR)

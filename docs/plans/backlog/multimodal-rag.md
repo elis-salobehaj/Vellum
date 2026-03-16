@@ -129,7 +129,7 @@ Evolve Vellum from a text-only RAG system to a **multimodal RAG** supporting tex
 ### Dependency
 
 This plan requires the **Infrastructure Migration** ([infra-migration.md](../active/infra-migration.md)) Phases 1-4 to be complete. Specifically:
-- k3d cluster with GPU (Phase 1)
+- KinD cluster with GPU (Phase 1)
 - KubeRay + Ray Serve (Phase 2-3)
 - Dagster pipeline (Phase 4)
 - PVC document storage (Phase 4)

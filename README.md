@@ -1,6 +1,6 @@
 # Vellum Enterprise Chatbot
 
-An enterprise-grade chatbot featuring Entra ID SSO, Multi-LLM support, and an advanced RAG pipeline orchestrated by **Kubeflow**.
+An enterprise-grade chatbot featuring Entra ID SSO, multi-LLM support, and a Kind-hosted Phase 1 RAG platform with direct ingestion as the operational default.
 
 ![Vellum Showcase](docs/showcase.png)
 
@@ -29,8 +29,8 @@ After setup, use the connect script to port-forward all services:
 | Service | Local URL |
 | :--- | :--- |
 | **Frontend** | [http://localhost:9090](http://localhost:9090) |
-| **Backend API** | [http://localhost:8000](http://localhost:8000/docs) |
-| **Kubeflow Dashboard** | [http://localhost:8080](http://localhost:8080) |
+| **Backend API** | [http://localhost:8006](http://localhost:8006/docs) |
+| **Kubeflow Dashboard** | [http://localhost:8086](http://localhost:8086) |
 | **MinIO API** | [http://localhost:9000](http://localhost:9000) |
 
 ---
@@ -45,7 +45,7 @@ Comprehensive documentation is located in the [**docs/**](./docs/README.md) dire
 | 💻 [**Development Guide**](./docs/guides/DEVELOPMENT.md) | Running locally, hybrid development mode, and critical commands. |
 | 🏰 [**Architecture**](./docs/context/ARCHITECTURE.md) | Deep dive into the stack, project structure, and code conventions. |
 | 🔐 [**Authentication**](./docs/guides/AUTHENTICATION.md) | Details on Entra ID SSO, Dex, and security configuration. |
-| 🧪 [**RAG Ingestion**](./docs/guides/INGESTION_VERIFICATION.md) | How to trigger and verify the Kubeflow ingestion pipeline. |
+| 🧪 [**RAG Ingestion**](./docs/guides/INGESTION_VERIFICATION.md) | How to trigger, resume, and verify the Phase 1 direct-ingestion path, with KFP as an optional debug route. |
 
 ---
 
@@ -67,7 +67,8 @@ Comprehensive documentation is located in the [**docs/**](./docs/README.md) dire
 -   **Local**: Self-hosted LLMs via KServe/LocalAI (Llama 3, Mistral).
 
 **📚 Advanced RAG Pipeline**:
--   **Orchestration**: Kubeflow Pipelines (KFP) for reliable, scalable ingestion.
+-   **Operational Default**: Resumable direct ingestion from MinIO to Qdrant, with persisted progress and clean-slate rebuild support.
+-   **Optional Kubeflow Path**: KFP remains available for targeted pipeline debugging on the retained Phase 1 stack.
 -   **Vector Store**: Qdrant (Production Grade).
 -   **Embeddings**: Dedicated **Text Embeddings Inference (TEI)** service.
 -   **Source Diversity**: MMR (Maximal Marginal Relevance) & Unique File Post-processing.
@@ -84,7 +85,7 @@ Vellum is built on a **Decoupled Microservices Architecture** designed for high 
 
 - **Frontend**: A premium React 19 application inspired by Claude's design language. Features a perceptually uniform OKLCH color system, refined typography, and an adaptive "Relative Push" sidebar for a seamless desktop experience. Includes native Entra ID SSO.
 - **Backend (API Gatekeeper)**: A lightweight FastAPI service that manages user sessions, chat history, and retrieval-augmented generation (RAG) queries.
-- **Distributed Ingestion**: Orchestrated by **Kubeflow Pipelines (KFP)**, handling document parsing, semantic chunking, and vectorization in isolated ML-optimized environments.
+- **Distributed Ingestion**: Phase 1 now defaults to backend-driven direct ingestion for day-to-day work, while the original Kubeflow Pipelines path remains available when you are explicitly debugging KFP or MLMD behavior.
 - **Vector Storage**: **Qdrant** provides high-performance vector search and metadata filtering.
 - **AI Infrastructure**:
     - **Embeddings**: Dedicated **TEI** (`text-embeddings-inference`) service for low-latency vectorization.
@@ -93,7 +94,7 @@ Vellum is built on a **Decoupled Microservices Architecture** designed for high 
 ### 🏗️ Design Principles
 
 1. **Decoupled Execution**: Heavy ML workloads are strictly isolated from the API path, ensuring the backend remains responsive and lightweight.
-2. **Kubeflow Native**: Every data move is tracked and versioned through the Kubeflow ML platform.
+2. **Kind-First Local Ops**: The accepted local baseline is the Kind-hosted slim Phase 1 stack, with direct ingestion as the normal operator workflow.
 3. **Security First**: mTLS via **Istio** and identity-aware proxying via **Dex**.
 
 For a deep dive into the system components and a detailed architecture diagram, see [**docs/context/ARCHITECTURE.md**](./docs/context/ARCHITECTURE.md).
@@ -119,7 +120,7 @@ For a deep dive into the system components and a detailed architecture diagram, 
 -   **API**: FastAPI (Python 3.12)
 -   **Tooling**: `uv` + `pyproject.toml`
 -   **Protocol**: `httpx` (Async)
--   **Orchestration**: Kubeflow Pipelines SDK
+-   **Orchestration**: Direct ingestion service by default, with Kubeflow Pipelines SDK retained for optional cluster-pipeline debugging
 -   **Storage**: MinIO (S3), Qdrant
 
 ## Configuration
@@ -135,14 +136,14 @@ See `deployment/manifests/` for details.
 
 ## Ingestion Pipeline
 
-Ingestion is handled as a decoupled **Kubeflow Pipeline**. Documents are streamed from MinIO, processed (chunked/embedded), and stored in Qdrant.
+Ingestion is handled through the admin API on the accepted Phase 1 baseline. By default, the backend streams documents from MinIO, embeds them through TEI, writes them to Qdrant, and persists progress so larger corpora can resume safely. The older KFP path is still available when `INGESTION_MODE=kfp` is set for focused Kubeflow debugging.
 
 - **Manual Trigger**:
   ```bash
-  cd kubeflow/pipelines/ingestion
-  uv run scripts/run_ingestion.py --bucket documents --cleanup
+  curl -X POST "http://localhost:8006/api/v1/admin/upload-and-ingest?cleanup=true&reset_progress=true" \
+    -H "kubeflow-userid: vellum@example.com"
   ```
-- **API Trigger**: `POST /api/v1/admin/ingest`
+- **Status**: `GET /api/v1/admin/ingestion-status`
 - **Verification**: See the [Ingestion Verification Guide](./docs/guides/INGESTION_VERIFICATION.md).
 
 ## Project Structure
@@ -173,4 +174,4 @@ For detailed development workflows, see the [**Development Guide**](./docs/guide
 
 -   **"CrashLoopBackOff"**: Check logs with `kubectl -n kubeflow-vellum logs <pod>`.
 -   **"Connection Refused"**: Ensure you ran `./scripts/connect.sh`.
--   **"401 Unauthorized"**: KFP requires `kubeflow-userid` header (handled by backend).
+-   **"401 Unauthorized"**: Phase 1 admin routes still expect the `kubeflow-userid` header unless auth bypass is enabled for local-only UI work.

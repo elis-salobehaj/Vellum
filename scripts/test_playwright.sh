@@ -23,24 +23,38 @@ use_default_kubeconfig
 echo -e "${BLUE}🔌 Connecting to Kubernetes infrastructure...${NC}"
 bash ./scripts/connect.sh --hybrid || { echo -e "${RED}Failed to connect to infra${NC}"; exit 1; }
 
-# 2. Ensure the harness controls port 8000 and starts a fresh local backend
-EXISTING_BACKEND_PIDS="$(lsof -ti :8000 || true)"
+if [[ -f "$PROJECT_ROOT/.vellum-runtime.env" ]]; then
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.vellum-runtime.env"
+fi
+
+# 2. Ensure the harness controls port 8006 and starts a fresh local backend
+EXISTING_BACKEND_PIDS="$(lsof -ti :8006 || true)"
 if [[ -n "$EXISTING_BACKEND_PIDS" ]]; then
-    echo -e "${BLUE}🧹 Reclaiming port 8000 from existing process(es): ${EXISTING_BACKEND_PIDS}${NC}"
+    echo -e "${BLUE}🧹 Reclaiming port 8006 from existing process(es): ${EXISTING_BACKEND_PIDS}${NC}"
     kill $EXISTING_BACKEND_PIDS 2>/dev/null || true
     sleep 2
 fi
 
-echo -e "${BLUE}🐍 Starting Backend (uvicorn) on http://localhost:8000...${NC}"
+echo -e "${BLUE}🐍 Starting Backend (uvicorn) on http://localhost:8006...${NC}"
 export PATH="$HOME/.local/bin:$PATH"
-(cd backend && BYPASS_AUTH=true KFP_NAMESPACE=kubeflow-vellum uv run uvicorn main:app --port 8000) &
+(cd backend && \
+    BYPASS_AUTH=true \
+    QDRANT_HOST=localhost \
+    QDRANT_PORT="${VELLUM_QDRANT_PORT:-${QDRANT_PORT:-6333}}" \
+    MINIO_ENDPOINT="${VELLUM_MINIO_ENDPOINT:-${MINIO_ENDPOINT:-localhost:9000}}" \
+    EMBEDDINGS_SERVICE_URL="${VELLUM_EMBEDDINGS_URL:-${EMBEDDINGS_SERVICE_URL:-http://localhost:8082/v1}}" \
+    KFP_HOST="${VELLUM_KFP_URL:-${KFP_HOST:-http://localhost:8888}}" \
+    LLM_SERVICE_URL="${VELLUM_LLM_URL:-${LLM_SERVICE_URL:-http://localhost:8081/v1}}" \
+    KFP_NAMESPACE=kubeflow-vellum \
+    uv run uvicorn main:app --port 8006) &
 BACKEND_PID=$!
 BACKEND_STARTED=true
 
 # Wait for backend to be ready
 echo -e "${BLUE}⏳ Waiting for backend to be ready...${NC}"
 for i in {1..30}; do
-    if curl -s http://localhost:8000/health > /dev/null; then
+    if curl -s http://localhost:8006/health > /dev/null; then
         echo -e "${GREEN}✅ Backend is ready!${NC}"
         break
     fi

@@ -1,5 +1,7 @@
 # Phase 3: Platform Engineering (Kubeflow Upgrade)
 
+Historical implementation report. This document captures the earlier Kubeflow platform upgrade work before the current Kind-based Phase 1 migration closeout.
+
 ## Goal
 Transition Vellum from a "Developer Playground" (Standalone Components) to a **Production-Grade MLOps Platform** (Kubeflow Manifests v1.11.0 + Qdrant).
 
@@ -28,7 +30,7 @@ At the time of writing this report the target runtime was Minikube. The current 
 ### Infrastructure Status
 | Component | Status | Notes |
 | :--- | :--- | :--- |
-| **Dashboard** | ✅ Running | Accessible at `localhost:8080` |
+| **Dashboard** | ✅ Running | Accessible at `localhost:8086` |
 | **KFP Backend** | ✅ Running | API Ready for Ingestion Pipelines |
 | **Katib** | ✅ Running | Ready for Hyperparameter Tuning |
 | **Qdrant** | ✅ Running | Ready for Vector Storage |

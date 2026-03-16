@@ -1,5 +1,6 @@
 # Environment Variables
 .env
+.vellum-runtime.env
 
 # Python
 __pycache__/

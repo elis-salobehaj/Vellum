@@ -1,5 +1,7 @@
 # Minikube Setup Guide (Kubeflow Native Stack)
 
+Historical reference only. The completed Phase 1 local baseline uses Kind, not Minikube. Keep this guide only for older forensic comparison or migration context.
+
 > Historical reference only. The active local workflow now uses `Kind`; see [GETTING_STARTED.md](GETTING_STARTED.md) for the current bootstrap path.
 
 This stack (Istio + Knative + KFP + KServe + Ollama) is resource-intensive.
