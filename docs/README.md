@@ -21,11 +21,11 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phase 1 is complete on Kind: bootstrap, slim overlay, auth enforcement, GPU-backed local LLM validation, resumable direct ingestion, and test coverage are all in place. The active work now moves to Phase 2 KubeRay bring-up and the later Ray/Dagster/Istio Ambient migration steps. |
+| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phase 1 is complete. Phase 2 (KubeRay) is locally verified up to the head node, pending host GPU-passthrough environment validation. Work expands next to Phase 3. |
 | 8 | **Multimodal RAG — Text + Image Search** | ⏳ Backlog | TEI → Infinity + SigLIP 2, dual-engine (vLLM + SGLang VLM), cross-modal Qdrant search. 6 phases. Depends on #7. |
 | 9 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 
-**Last Status Update**: 2026-03-16
+**Last Status Update**: 2026-03-20
 
 **Recently Completed**:
 - ✅ **Infrastructure Migration Phase 1 Closeout** — Kind is now the accepted local baseline: slim Kubeflow overlay, direct-ingestion default, clean-slate and resumable ingestion controls, concurrent-run rejection, auth enforcement, GPU-backed local LLM validation, and end-to-end tests are all documented and verified.

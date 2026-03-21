@@ -1,0 +1,46 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: vellum-ray
+  namespace: vellum-ray
+spec:
+  rayVersion: '2.44.0'
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.44.0-py312-cu124
+            resources:
+              requests:
+                cpu: "1"
+                memory: "2Gi"
+              limits:
+                cpu: "2"
+                memory: "4Gi"
+            ports:
+              - containerPort: 6379  # GCS
+              - containerPort: 8265  # Dashboard
+              - containerPort: 10001 # Client
+  workerGroupSpecs:
+    - groupName: gpu-workers
+      replicas: 1
+      rayStartParams: {}
+      template:
+        spec:
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.44.0-py312-cu124
+              resources:
+                requests:
+                  nvidia.com/gpu: 1
+                  memory: "6Gi"
+                limits:
+                  nvidia.com/gpu: 1
+                  memory: "8Gi"

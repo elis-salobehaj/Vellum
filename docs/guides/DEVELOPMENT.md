@@ -220,6 +220,7 @@ kubectl rollout restart deployment -n kubeflow
 | **LLM Service** | 8081 | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` |
 | **Embeddings (TEI)** | 8082 | http://localhost:8082 | `./scripts/connect.sh` |
 | **KFP API** | 8888 | http://localhost:8888 | `./scripts/connect.sh` |
+| **Ray Dashboard** | 8265 | http://localhost:8265 | `./scripts/connect.sh` |
 | **MinIO** | 9000 | http://localhost:9000 | `./scripts/connect.sh` |
 | **Qdrant** | 6333 | http://localhost:6333 | `./scripts/connect.sh` |
 

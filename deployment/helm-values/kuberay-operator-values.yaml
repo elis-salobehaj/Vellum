@@ -1,0 +1,12 @@
+# Default values for KubeRay Operator
+# Kept slim for Vellum's local Kind setup
+nameOverride: ""
+fullnameOverride: ""
+
+rbac:
+  # Whether to create RBAC resources (ClusterRole, ClusterRoleBinding, ServiceAccount, etc.)
+  create: true
+
+# Manage Webhook Configuration
+webhook:
+  enabled: true

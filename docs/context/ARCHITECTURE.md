@@ -55,6 +55,7 @@ graph TD
     subgraph "AI Infrastructure"
         TEI[Text Embeddings Inference]
         LLM[External LLM / KServe]
+        KubeRay[KubeRay Operator + Ray Cluster]
     end
     
     User <-->|HTTPS| Frontend
@@ -73,6 +74,7 @@ graph TD
     
     Backend -->|Embed Query| TEI
     Backend -->|Chat Gen| LLM
+    KubeRay -.->|Schedules| LLM
     
     subgraph "Security & Mesh"
         Istio[Istio Service Mesh]

@@ -112,6 +112,7 @@ start_port_forward qdrant svc/qdrant 6333 6333 "Qdrant" VELLUM_QDRANT_PORT VELLU
 start_port_forward kubeflow svc/ml-pipeline 8888 8888 "KFP API (optional direct-debug path)" VELLUM_KFP_PORT VELLUM_KFP_URL
 start_port_forward kubeflow-vellum svc/embeddings-service 80 8082 "Embeddings" VELLUM_EMBEDDINGS_PORT VELLUM_EMBEDDINGS_URL /v1
 start_port_forward kubeflow svc/minio-service 9000 9000 "MinIO" VELLUM_MINIO_PORT VELLUM_MINIO_URL
+start_port_forward vellum-ray svc/vellum-ray-head-svc 8265 8265 "Ray Dashboard" VELLUM_RAY_PORT VELLUM_RAY_URL
 write_runtime_env VELLUM_MINIO_ENDPOINT "localhost:${LAST_PORT_FORWARD_PORT}"
 
 if [[ "$HYBRID" == false ]]; then
