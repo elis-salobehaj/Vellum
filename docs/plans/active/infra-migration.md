@@ -5,7 +5,7 @@ priority: high
 estimated_hours: 40-60
 dependencies: []
 created: 2026-03-07
-date_updated: 2026-03-16
+date_updated: 2026-03-20
 related_files:
   - kind-config.yaml
   - scripts/setup-platform.sh
@@ -145,6 +145,7 @@ completion:
     - [ ] Update `.env` and `.env.example` with `USE_S3_STORAGE=false` and `DOCUMENT_STORAGE_PATH=/data/documents`
   - [ ] 4.3 Update `backend/app/api/endpoints/admin.py` — replace MinIO client with StorageService for upload
   - [ ] 4.4 Update `backend/app/api/endpoints/files.py` — replace MinIO proxy with StorageService for file serving
+    - [ ] Migrate `backend/app/services/direct_ingestion_service.py` — replace hardcoded MinIO with `StorageService` or remove if Dagster replaces the direct ingestion path
   - [ ] 4.5 Create `deployment/documents-pvc.yaml` — PersistentVolumeClaim for local document storage
   - [ ] 4.6 Mount documents PVC into backend pod (`deployment/vellum-backend.yaml`)
   - [ ] 4.7 Rewrite ingestion pipeline from KFP to Dagster — convert `@dsl.component` to `@asset`/`@op`
@@ -159,6 +160,7 @@ completion:
   - [ ] 4.16 Update `deployment/vellum-istio.yaml` — adapt AuthorizationPolicy for ambient mode (remove sidecar-specific config)
   - [ ] 4.17 Remove Kubeflow-bundled Istio manifests — use standalone `istioctl` Ambient install instead
   - [ ] 4.18 Remove Dex, OAuth2 Proxy, Cert Manager — no longer needed (backend JWT auth + Istio Ambient L7)
+    - [ ] Remove `kubeflow-userid` header fallback from `backend/app/core/auth.py` — post-Dex, this becomes a spoofable auth bypass; backend should only trust JWT tokens
   - [ ] 4.19 Remove full Kubeflow manifests from Kustomization (Central Dashboard, Profiles, KFP, Katib, Tensorboard, Jupyter, Trainer)
   - [ ] 4.20 **Remove `deployment/manifests` git submodule** — `git submodule deinit deployment/manifests && git rm deployment/manifests && rm -rf .git/modules/deployment/manifests`
   - [ ] 4.21 Remove `.gitmodules` file (no remaining submodules)
@@ -170,8 +172,8 @@ completion:
   - [ ] 4.27 Run full test suite — backend + Playwright E2E
   - [ ] 4.28 **Documentation Overhaul (Phase 4)** — Major rewrite reflecting new architecture
     - [ ] `docs/context/ARCHITECTURE.md` — Complete rewrite: Istio Ambient mesh diagram, component descriptions
-    - [ ] `docs/guides/GETTING_STARTED.md` — Simplified setup (Istio Ambient via istioctl, no Dex, no Kubeflow manifests, no MinIO)
-    - [ ] `docs/guides/DEVELOPMENT.md` — Simplified port reference, add Dagster UI, document `USE_S3_STORAGE` toggle
+    - [ ] `docs/guides/GETTING_STARTED.md` — Point to `setup-local.sh` as the developer entrypoint, clarify dynamic ports via `.vellum-runtime.env`, and document simplified setup (Istio Ambient via istioctl, no Dex, no MinIO)
+    - [ ] `docs/guides/DEVELOPMENT.md` — Update port reference to document `.vellum-runtime.env` auto-shifting, add Dagster UI, document `USE_S3_STORAGE` toggle
     - [ ] `docs/guides/AUTHENTICATION.md` — Document Istio Ambient + backend JWT as dual-layer auth (remove Dex/sidecar sections)
     - [ ] Retire `docs/designs/kfp-components.md` — mark as historical (Kubeflow-era)
     - [ ] Create `docs/designs/adr-002-ray-dagster-ambient.md` — ADR documenting shift from Kubeflow to Ray + Dagster + Istio Ambient
@@ -200,7 +202,7 @@ completion:
     - [ ] Every file in `docs/designs/*.md`
     - [ ] `docs/context/ARCHITECTURE.md`, `docs/context/WORKFLOWS.md`
     - [ ] `docs/README.md` — Move plan to "Recently Completed", update all tables
-  - [ ] 6.7 **Update `AGENTS.md`** — Refresh Critical Rules, Platform setup, Guides section to reflect Kind + Ray + Dagster + Istio Ambient architecture. Remove all Minikube, full-Kubeflow, and submodule references.
+  - [ ] 6.7 **Update `AGENTS.md`** — Refresh Critical Rules (promote `setup-local.sh` and dynamic port auto-shifting), Platform setup, Guides section to reflect Kind + Ray + Dagster + Istio Ambient architecture. Remove all Minikube, full-Kubeflow, and submodule references.
 ---
 
 # Infrastructure Migration from Minikube to Kind + Ray-Native Architecture
@@ -569,7 +571,7 @@ This is simpler than separate Kustomization overlays for KServe toggle.
 
 Phase 1 is complete and accepted on Kind with the following operating contract:
 
-- `./scripts/setup-kind.sh` is the primary local bootstrap path and `./scripts/setup-platform.sh` is compatibility-only.
+- `./scripts/setup-local.sh` is the primary one-click developer entrypoint. Use `setup-kind.sh` for cluster-only bootstrap; `setup-platform.sh` is deprecated.
 - The slim Kubeflow overlay is the default local platform shape.
 - `INGESTION_MODE=direct` is the normal ingestion path for local and full-cluster validation on Kind.
 - KFP remains available only as an optional debug path while later phases replace it with Dagster.
@@ -787,8 +789,8 @@ This gives you: Dagster Webserver (UI), Dagster Daemon (scheduler/sensors), Post
 Add to `connect.sh`:
 ```bash
 # Dagster UI
-nohup kubectl port-forward -n dagster svc/dagster-dagster-webserver 3000:80 > /dev/null 2>&1 &
-echo "✅ Dagster UI: http://localhost:3000"
+nohup kubectl port-forward -n dagster svc/dagster-dagster-webserver 3200:80 > /dev/null 2>&1 &
+echo "✅ Dagster UI: http://localhost:3200"
 ```
 
 ### 4.2-4.6: Storage Service Abstraction (MinIO → PVC/S3)
@@ -796,6 +798,7 @@ echo "✅ Dagster UI: http://localhost:3000"
 **Create `backend/app/services/storage_service.py`:**
 
 ```python
+import asyncio
 import os
 import shutil
 from abc import ABC, abstractmethod
@@ -828,7 +831,7 @@ class LocalStorageService(StorageService):
 
     async def upload(self, filename: str, filepath: str) -> None:
         dest = self.base_path / filename
-        shutil.copy2(filepath, dest)
+        await asyncio.to_thread(shutil.copy2, filepath, dest)
         logger.info("local_storage_uploaded", filename=filename)
 
     async def download(self, filename: str) -> AsyncGenerator[bytes, None]:
@@ -855,16 +858,16 @@ class S3StorageService(StorageService):
         )
 
     async def upload(self, filename: str, filepath: str) -> None:
-        self.client.upload_file(filepath, self.bucket, filename)
+        await asyncio.to_thread(self.client.upload_file, filepath, self.bucket, filename)
         logger.info("s3_storage_uploaded", filename=filename, bucket=self.bucket)
 
     async def download(self, filename: str) -> AsyncGenerator[bytes, None]:
-        response = self.client.get_object(Bucket=self.bucket, Key=filename)
+        response = await asyncio.to_thread(self.client.get_object, Bucket=self.bucket, Key=filename)
         for chunk in response["Body"].iter_chunks(32 * 1024):
             yield chunk
 
     async def list_files(self) -> list[str]:
-        response = self.client.list_objects_v2(Bucket=self.bucket)
+        response = await asyncio.to_thread(self.client.list_objects_v2, Bucket=self.bucket)
         return [obj["Key"] for obj in response.get("Contents", [])]
 
 
@@ -925,11 +928,13 @@ metadata:
   name: documents-pvc
   namespace: vellum
 spec:
-  accessModes: [ReadWriteOnce]
+  accessModes: [ReadWriteMany]  # RWX: backend + Dagster pods mount simultaneously
   resources:
     requests:
       storage: 5Gi
 ```
+
+> ⚠️ **RWX requirement**: `ReadWriteMany` needs a storage class that supports it (EFS on EKS, Filestore on GKE, NFS provisioner on Kind). For production, `USE_S3_STORAGE=true` avoids PVC contention entirely.
 
 **Mount into `deployment/vellum-backend.yaml`:**
 ```yaml
@@ -1053,6 +1058,13 @@ Update `backend/app/api/endpoints/admin.py`:
 Update `backend/app/api/endpoints/files.py`:
 - Replace MinIO proxy with `storage_service.download(filename)` streaming response
 
+Update `backend/app/services/direct_ingestion_service.py`:
+- Replace MinIO downloads with `StorageService` abstraction, or remove entirely if Dagster replaces the direct ingestion path
+
+Update `backend/app/core/auth.py` (post-Dex removal — task 4.18):
+- Remove `kubeflow-userid` header fallback — after Dex removal, no component injects this header, making it a spoofable auth bypass
+- Backend should only trust JWT tokens from Entra ID, verified by the Istio Ambient waypoint proxy
+
 ### 4.13-4.17: Istio Sidecar → Ambient Migration
 
 **Step 1: Install Istio Ambient (replaces Kubeflow-bundled Istio):**
@@ -1068,6 +1080,7 @@ This installs: istiod (control plane) + ztunnel (L4 DaemonSet) + istio-cni. No s
 ```bash
 kubectl label namespace vellum istio.io/dataplane-mode=ambient
 kubectl label namespace dagster istio.io/dataplane-mode=ambient
+kubectl label namespace qdrant istio.io/dataplane-mode=ambient
 ```
 
 **Step 3: Deploy waypoint proxy for L7 features (JWT verification):**
@@ -1107,7 +1120,7 @@ spec:
             requestPrincipals: ["*"]  # Any authenticated JWT
     - from:
         - source:
-            namespaces: ["vellum", "dagster"]  # Allow inter-service traffic
+            namespaces: ["vellum", "dagster", "qdrant"]  # Allow inter-service traffic
 ```
 
 **Auth flow with Istio Ambient (2 layers, production-grade):**
@@ -1314,7 +1327,7 @@ Install Lens, document workflow for inspecting:
 Final `AGENTS.md` should reflect:
 - **Package Managers**: `uv` (Backend), `pnpm` (Frontend), `helm` (Infrastructure)
 - **Infrastructure**: Kubernetes (Kind), KubeRay, Dagster, Qdrant, Istio Ambient
-- **Critical Rules**: `scripts/setup-kind.sh` is the primary local bootstrap path
+- **Critical Rules**: `scripts/setup-local.sh` is the primary developer entrypoint; it delegates to `scripts/setup-kind.sh`
 - **ML Tooling**: Ray Serve (LLM inference), Dagster (pipeline orchestration), TEI (embeddings)
 - **Service Mesh**: Istio Ambient Mode (L4 mTLS via ztunnel, L7 JWT via waypoint proxy)
 - **Storage**: `USE_S3_STORAGE=false` for local PVC, `USE_S3_STORAGE=true` for cloud S3
@@ -1330,7 +1343,7 @@ Final `AGENTS.md` should reflect:
 | Ray Serve + vLLM integration issues | Medium | vLLM has native Ray support. Test in Phase 3 before removing KServe. |
 | Dagster pipeline rewrite | Low | Current KFP pipeline is a single component. Rewrite is ~1-2 hours. Core logic unchanged. |
 | Dagster GraphQL API integration | Medium | Well-documented API. Test trigger in Phase 4.12 before removing KFP. |
-| PVC concurrent access (backend + Dagster) | Low | `ReadWriteOnce` PVC. Backend reads while Dagster writes — sequentially, not simultaneously. |
+| PVC concurrent access (backend + Dagster) | Low | `ReadWriteMany` PVC enables multi-pod access. For cloud, `USE_S3_STORAGE=true` avoids PVC contention entirely. |
 | S3 toggle (`USE_S3_STORAGE`) not tested | Medium | Test both modes in Phase 4.12 — local PVC and S3 with LocalStack or real S3. |
 | Istio Ambient on Kind | Medium | Istio Ambient is production-ready since v1.22. Test in Phase 4.13 before removing sidecar mode. |
 | Waypoint proxy JWT verification | Medium | Same AuthorizationPolicy CRDs, just targeted via `targetRefs`. Test in Phase 4.15. |
