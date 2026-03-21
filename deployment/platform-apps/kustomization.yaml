@@ -6,7 +6,7 @@ resources:
   - ../vellum-profile.yaml
   - ../vellum-profile-resources.yaml
   - ../llm-models-pvc.yaml
-  - ../llm-service.yaml
+  - ../ray-serve-llm.yaml
   - ../embeddings-service.yaml
   - ../model-downloader-job.yaml
   - ../vellum-backend-rbac.yaml

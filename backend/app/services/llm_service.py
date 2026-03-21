@@ -128,8 +128,8 @@ class LLMService:
                 raise ValueError("Error: OpenAI API Key not configured.")
             return OpenAI(model=config.id, api_key=api_key, api_base=api_base)
 
-        elif config.provider == "kubeflow":
-            # KServe/LocalAI endpoint. We assume standard OpenAI-compatible protocol.
+        elif config.provider == "ray":
+            # Ray Serve vLLM endpoint. We assume standard OpenAI-compatible protocol.
             # We use OpenAILike to bypass strict model name validation in LlamaIndex.
             api_base = config.base_url or settings.LLM_SERVICE_URL
             # If still None, default to internal DNS

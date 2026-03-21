@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ray-serve-llm-script
+  namespace: vellum-ray
+data:
+  ray_serve_llm.py: |
+    from vllm.engine.arg_utils import AsyncEngineArgs
+    from vllm.engine.async_llm_engine import AsyncLLMEngine
+    from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+    from vllm.entrypoints.openai.protocol import ChatCompletionRequest
+    from ray import serve
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse
+
+    app = FastAPI()
+
+    @serve.deployment(
+        ray_actor_options={"num_gpus": 1},
+        max_ongoing_requests=10,
+    )
+    @serve.ingress(app)
+    class VLLMDeployment:
+        def __init__(self):
+            # Same paths and args as original KServe deployment
+            engine_args = AsyncEngineArgs(
+                model="/mnt/models/Qwen3.5-2B",
+                served_model_name="Qwen3.5-2B",
+                dtype="half",
+                enforce_eager=True,
+                max_model_len=4096,
+                gpu_memory_utilization=0.85,
+            )
+            self.engine = AsyncLLMEngine.from_engine_args(engine_args)
+            model_config = self.engine.get_model_config()
+            self.openai_serving_chat = OpenAIServingChat(
+                engine=self.engine,
+                served_model_names=["Qwen3.5-2B"],
+                response_role="assistant",
+                lora_modules=None,
+                prompt_adapters=None,
+                request_logger=None,
+                chat_template=None,
+            )
+
+        @app.post("/v1/chat/completions")
+        async def create_chat_completion(self, request: ChatCompletionRequest, raw_request: Request):
+            generator = await self.openai_serving_chat.create_chat_completion(request, raw_request)
+            if isinstance(generator, JSONResponse):
+                return generator
+            
+            # Since this is a simple port, we'll return a JSONResponse for non-streaming
+            # For streaming, you'd return a StreamingResponse
+            return JSONResponse(content=generator)
+
+---
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: llm-service
+  namespace: vellum-ray
+spec:
+  serveConfigV2: |
+    applications:
+      - name: llm
+        import_path: ray_serve_llm:app
+        route_prefix: /v1
+  rayClusterConfig:
+    rayVersion: "2.54.0"
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: vllm/vllm-openai:latest-cu130
+              env:
+                - name: PYTHONPATH
+                  value: "/mnt/script"
+              ports:
+                - containerPort: 6379
+                  name: gcs
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+              volumeMounts:
+                - name: script-vol
+                  mountPath: /mnt/script
+          volumes:
+            - name: script-vol
+              configMap:
+                name: ray-serve-llm-script
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 1
+        minReplicas: 1
+        maxReplicas: 1
+        rayStartParams: {}
+        template:
+          spec:
+            tolerations:
+              - key: "nvidia.com/gpu"
+                operator: "Exists"
+                effect: "NoSchedule"
+            containers:
+              - name: ray-worker
+                image: vllm/vllm-openai:latest-cu130
+                env:
+                  - name: PYTHONPATH
+                    value: "/mnt/script"
+                resources:
+                  limits:
+                    nvidia.com/gpu: 1
+                    memory: "8Gi"
+                  requests:
+                    nvidia.com/gpu: 1
+                    memory: "6Gi"
+                volumeMounts:
+                  - name: model-volume
+                    mountPath: /mnt/models
+                  - name: script-vol
+                    mountPath: /mnt/script
+            volumes:
+              - name: model-volume
+                persistentVolumeClaim:
+                  claimName: llm-models-pvc
+              - name: script-vol
+                configMap:
+                  name: ray-serve-llm-script

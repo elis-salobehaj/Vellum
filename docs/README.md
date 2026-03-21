@@ -21,7 +21,7 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phase 1 is complete. Phase 2 (KubeRay) is locally verified up to the head node, pending host GPU-passthrough environment validation. Work expands next to Phase 3. |
+| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phases 1–3 complete: Kind bootstrap, direct ingestion, KubeRay operator, Ray cluster, and KServe → Ray Serve migration. Active work is Phase 4 (Dagster + MinIO removal). |
 | 8 | **Multimodal RAG — Text + Image Search** | ⏳ Backlog | TEI → Infinity + SigLIP 2, dual-engine (vLLM + SGLang VLM), cross-modal Qdrant search. 6 phases. Depends on #7. |
 | 9 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 

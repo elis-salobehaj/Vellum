@@ -124,19 +124,19 @@ completion:
     - [x] `docs/README.md` — Update plan status
     - [x] Create `docs/guides/RAY_CLUSTER.md` — Ray operator guide, debugging actors, memory inspection
   - "# Phase 3 — Ray Serve for LLM Inference (Replace KServe + vLLM)"
-  - [ ] 3.1 Write Ray Serve deployment script wrapping vLLM for Qwen 3.5 2B
-  - [ ] 3.2 Create `deployment/ray-serve-llm.yaml` (RayService CRD) — production deployment behind K8s Service
-  - [ ] 3.3 Update `backend/app/services/llm_service.py` — point kubeflow provider to Ray Serve endpoint
-  - [ ] 3.4 Update `backend/app/api/endpoints/admin.py` — change model config from KServe path to Ray Serve endpoint
-  - [ ] 3.5 Validate RAG query end-to-end with Ray Serve as the LLM backend
-  - [ ] 3.6 Remove old KServe InferenceService (`deployment/llm-service.yaml`)
-  - [ ] 3.7 Remove KServe + Knative from Kustomization (both dev and full overlays)
-  - [ ] 3.8 Validate TEI embeddings service still works independently (it stays as-is)
-  - [ ] 3.9 **Documentation Overhaul (Phase 3)** — Document Ray Serve and remove KServe references
-    - [ ] `docs/context/ARCHITECTURE.md` — Replace KServe with Ray Serve in system diagram
-    - [ ] `docs/guides/DEVELOPMENT.md` — Update LLM service troubleshooting
-    - [ ] `docs/designs/001-kubeflow-native-pivot.md` — Add ADR note about KServe → Ray Serve shift
-    - [ ] `docs/README.md` — Update plan status
+  - [x] 3.1 Write Ray Serve deployment script wrapping vLLM for Qwen 3.5 2B
+  - [x] 3.2 Create `deployment/ray-serve-llm.yaml` (RayService CRD) — production deployment behind K8s Service
+  - [x] 3.3 Update `backend/app/services/llm_service.py` — point `ray` provider to Ray Serve endpoint
+  - [x] 3.4 Update `backend/app/api/endpoints/admin.py` — change model config provider from `kubeflow` to `ray`
+  - [ ] 3.5 Validate RAG query end-to-end with Ray Serve as the LLM backend *(pending GPU worker scheduling)*
+  - [x] 3.6 Remove old KServe InferenceService (`deployment/llm-service.yaml`)
+  - [x] 3.7 Remove KServe + Knative from Kustomization (both dev and full overlays)
+  - [x] 3.8 Validate TEI embeddings service still works independently (it stays as-is)
+  - [x] 3.9 **Documentation Overhaul (Phase 3)** — Document Ray Serve and remove KServe references
+    - [x] `docs/context/ARCHITECTURE.md` — Replace KServe with Ray Serve in system diagram
+    - [x] `docs/guides/DEVELOPMENT.md` — Update LLM service port reference
+    - [x] `docs/context/ARCHITECTURE.md` — Add ADR 004 note about KServe → Ray Serve shift
+    - [x] `docs/README.md` — Update plan status
   - "# Phase 4 — Dagster + MinIO Removal + Istio Ambient + Kubeflow Stack Removal"
   - [ ] 4.1 Install Dagster via Helm (`dagster-helm`) into `dagster` namespace — webserver, daemon, PostgreSQL
   - [ ] 4.2 Implement `StorageService` abstraction with `USE_S3_STORAGE` env toggle

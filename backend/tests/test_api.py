@@ -3,7 +3,7 @@ import os
 os.environ["BYPASS_AUTH"] = "true"
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 from main import app
 from app.api.endpoints.admin import MODEL_CONFIGS

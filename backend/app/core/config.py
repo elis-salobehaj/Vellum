@@ -25,9 +25,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_API_BASE: str = "https://api.openai.com/v1"
 
-    # Kubeflow / KServe
+    # Ray Serve
     LLM_SERVICE_URL: str = (
-        "http://llm-service-predictor.kubeflow-vellum.svc.cluster.local:80/v1"
+        "http://llm-service-head-svc.vellum-ray.svc.cluster.local:8000/v1"
     )
     KFP_HOST: str = "http://ml-pipeline.kubeflow.svc.cluster.local:8888"
     KFP_NAMESPACE: str = "kubeflow-vellum"

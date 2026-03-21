@@ -1,7 +1,5 @@
 from typing import Dict, Any, List
 from app.graph.graph import rag_graph
-from app.graph.state import GraphState
-from langchain_core.documents import Document
 
 
 class GraphService:

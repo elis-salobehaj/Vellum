@@ -48,7 +48,7 @@ MODEL_CONFIGS: List[ModelConfig] = [
         id="Qwen3.5-2B",
         model_api_path="qwen-3-5-2b",
         name="Qwen 3.5 2B",
-        provider="kubeflow",
+        provider="ray",
         is_active=_default_active_model_id() == "Qwen3.5-2B",
     ),
 ]

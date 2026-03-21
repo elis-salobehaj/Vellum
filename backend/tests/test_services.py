@@ -1,7 +1,7 @@
 import pytest
 import os
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 from app.services.direct_ingestion_service import DirectIngestionService
 from app.services.history_service import HistoryService
 from app.services.llm_service import LLMService
@@ -88,13 +88,13 @@ async def test_llm_service_google(ll_service):
 
 
 @pytest.mark.asyncio
-async def test_llm_service_kubeflow(ll_service):
+async def test_llm_service_ray(ll_service):
     config = ModelConfig(
         id="qwen",
         model_api_path="qwen",
         name="Qwen",
-        provider="kubeflow",
-        base_url="http://kfp:80",
+        provider="ray",
+        base_url="http://llm-service-head-svc.vellum-ray.svc.cluster.local:8000",
     )
 
     # Patch where it's imported (inside the method)
@@ -103,7 +103,7 @@ async def test_llm_service_kubeflow(ll_service):
         assert mock_openai_like.called
         mock_openai_like.assert_called_with(
             model="qwen",
-            api_base="http://kfp:80",
+            api_base="http://llm-service-head-svc.vellum-ray.svc.cluster.local:8000",
             api_key="dummy",
             is_chat_model=True,
             max_tokens=2048,

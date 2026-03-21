@@ -109,10 +109,7 @@ wait_for_qdrant() {
 }
 
 wait_for_kserve_components() {
-    echo -e "${BLUE}⏳ Waiting for KServe controllers...${NC}"
-    wait_for_rollout deployment kserve-controller-manager kubeflow 600s
-    wait_for_rollout deployment kserve-localmodel-controller-manager kubeflow 600s
-    wait_for_rollout deployment kserve-models-web-app kubeflow 600s
+    echo -e "${YELLOW}ℹ️  KServe is removed from the platform in favor of Ray Serve.${NC}"
 }
 
 wait_for_vellum_profile() {
@@ -158,9 +155,6 @@ apply_platform_foundation() {
 }
 
 apply_application_resources() {
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/applications/kserve/kserve" "KServe core resources" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/applications/kserve/models-web-app/overlays/kubeflow" "the KServe models web app" 10 30
-
     apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-namespace.yaml" "vellum-namespace.yaml" 10 30
     apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-profile.yaml" "vellum-profile.yaml" 10 30
     apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-profile-resources.yaml" "vellum-profile-resources.yaml" 10 30

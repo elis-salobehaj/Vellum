@@ -217,7 +217,7 @@ kubectl rollout restart deployment -n kubeflow
 | **Frontend (K8s)** | 9090 | http://localhost:9090 | `./scripts/connect.sh` |
 | **Backend API** | 8006 | http://localhost:8006/docs | local `uvicorn` in hybrid mode or `./scripts/connect.sh` in cluster mode |
 | **Kubeflow Dashboard** | 8086 | http://localhost:8086 | Istio ingress port-forward |
-| **LLM Service** | 8081 | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` |
+| **Ray Serve LLM** | 8081 | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` and `llm-service` RayService is deployed |
 | **Embeddings (TEI)** | 8082 | http://localhost:8082 | `./scripts/connect.sh` |
 | **KFP API** | 8888 | http://localhost:8888 | `./scripts/connect.sh` |
 | **Ray Dashboard** | 8265 | http://localhost:8265 | `./scripts/connect.sh` |

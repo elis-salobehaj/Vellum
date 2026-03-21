@@ -10,7 +10,7 @@ What stays in Phase 1:
 - Istio ingress and mesh policy
 - Dex + oauth2-proxy
 - Kubeflow Pipelines
-- KServe + Knative for the local Qwen model
+- **Ray Serve + vLLM** for the local Qwen model (Phase 3 promotion)
 - MinIO for document storage
 - TEI, Qdrant, backend, and frontend
 
@@ -26,6 +26,7 @@ What is removed from the default local boot in Phase 1:
 - PVC Viewer
 - Volumes web app
 - Trainer
+- **KServe + Knative** (removed in Phase 3 in favour of Ray Serve)
 
 The `deployment/manifests` submodule should track **Kubeflow manifests v1.11.0**. The local cluster bootstrap uses `kind-config.yaml`, `deployment/kustomization.yaml`, and `scripts/setup-kind.sh`.
 
@@ -54,8 +55,9 @@ graph TD
     
     subgraph "AI Infrastructure"
         TEI[Text Embeddings Inference]
-        LLM[External LLM / KServe]
-        KubeRay[KubeRay Operator + Ray Cluster]
+        RaySrv[Ray Serve + vLLM]
+        LLM[External LLM API]
+        KubeRay[KubeRay Operator]
     end
     
     User <-->|HTTPS| Frontend
@@ -73,8 +75,9 @@ graph TD
     KFP -->|Write Vectors| Qdrant
     
     Backend -->|Embed Query| TEI
-    Backend -->|Chat Gen| LLM
-    KubeRay -.->|Schedules| LLM
+    Backend -->|Chat Gen - local| RaySrv
+    Backend -->|Chat Gen - cloud| LLM
+    KubeRay -.->|Manages| RaySrv
     
     subgraph "Security & Mesh"
         Istio[Istio Service Mesh]
@@ -117,7 +120,7 @@ graph TD
 
 #### 5. AI Infrastructure
 - **Embeddings (TEI)**: Dedicated `text-embeddings-inference` service providing OpenAI-compatible endpoints for vectorization.
-- **Inference**: Pluggable support for OpenAI, Google Gemini, AWS Bedrock, or self-hosted models via **KServe** in the retained Phase 1 stack.
+- **Inference**: Pluggable support for OpenAI, Google Gemini, AWS Bedrock, or **self-hosted models via Ray Serve** (KubeRay-managed, wrapping vLLM with an OpenAI-compatible API). KServe has been removed in favour of Ray Serve.
 
 ## Local Infrastructure Conventions
 
@@ -165,3 +168,4 @@ Vellum/
 - **[ADR 001] Decoupled Ingestion**: Separating heavy ingestion from the API ensures the chatbot remains responsive even during large data imports.
 - **[ADR 002] Qdrant vs ChromaDB**: Chose Qdrant for its Rust-based performance, namespace support, and built-in dashboard.
 - **[ADR 003] TEI for Embeddings**: Offloading vectorization to a dedicated service reduces the backend CPU footprint and centralizes model management.
+- **[ADR 004] Ray Serve over KServe**: KServe's dependency on Knative adds significant cluster overhead (RAM, CRDs, webhook latency). Ray Serve wrapping vLLM provides the same OpenAI-compatible API at lower cost, integrates naturally with KubeRay, and positions the platform for future distributed fine-tuning workloads.

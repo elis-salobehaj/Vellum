@@ -40,7 +40,7 @@ resources:
   - manifests/common/istio/istio-install/overlays/oauth2-proxy
   - manifests/common/oauth2-proxy/overlays/m2m-dex-only
   - manifests/common/dex/overlays/oauth2-proxy
-  - manifests/common/knative/knative-serving/overlays/gateways
+
   - manifests/common/istio/cluster-local-gateway/base
   - manifests/common/kubeflow-namespace/base
   - manifests/common/networkpolicies/base
@@ -53,10 +53,8 @@ resources:
   - vellum-namespace.yaml
   - vellum-profile.yaml
   - vellum-profile-resources.yaml
-  - manifests/applications/kserve/kserve
-  - manifests/applications/kserve/models-web-app/overlays/kubeflow
   - llm-models-pvc.yaml
-  - llm-service.yaml
+  - ray-serve-llm.yaml
   - embeddings-service.yaml
   - model-downloader-job.yaml
   - vellum-backend.yaml

@@ -120,10 +120,10 @@ if [[ "$HYBRID" == false ]]; then
 fi
 
 if bool_is_true "$ENABLE_LOCAL_LLM"; then
-  if kubectl get deployment llm-service-predictor -n kubeflow-vellum -o jsonpath='{.spec.replicas}' 2>/dev/null | grep -qx '1'; then
-    start_port_forward kubeflow-vellum svc/llm-service-predictor 80 8081 "LLM Service" VELLUM_LLM_PORT VELLUM_LLM_URL /v1
+  if kubectl get pod -l ray.io/node-type=head -n vellum-ray >/dev/null 2>&1; then
+    start_port_forward vellum-ray svc/llm-service-head-svc 8000 8081 "Ray Serve LLM" VELLUM_LLM_PORT VELLUM_LLM_URL /v1
   else
-    echo "ℹ️  Local LLM deployment is scaled down; skipping LLM port-forward."
+    echo "ℹ️  Ray Serve head is not running; skipping LLM port-forward."
   fi
 else
   echo "ℹ️  ENABLE_LOCAL_LLM=${ENABLE_LOCAL_LLM}; skipping LLM port-forward."
