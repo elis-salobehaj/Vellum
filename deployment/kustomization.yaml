@@ -1,75 +1,28 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-sortOptions:
-  order: legacy
-  legacySortOptions:
-    orderFirst:
-    - Namespace
-    - ResourceQuota
-    - StorageClass
-    - CustomResourceDefinition
-    - MutatingWebhookConfiguration
-    - ServiceAccount
-    - PodSecurityPolicy
-    - NetworkPolicy
-    - Role
-    - ClusterRole
-    - RoleBinding
-    - ClusterRoleBinding
-    - ConfigMap
-    - Secret
-    - Endpoints
-    - Service
-    - LimitRange
-    - PriorityClass
-    - PersistentVolume
-    - PersistentVolumeClaim
-    - Deployment
-    - StatefulSet
-    - CronJob
-    - PodDisruptionBudget
-    orderLast:
-    - ValidatingWebhookConfiguration
+# Phase 4: Kubeflow manifests submodule removed.
+# Platform services (Istio Ambient, Qdrant, Dagster, KubeRay) are now installed
+# via their respective Helm charts in setup-kind.sh.
+# This kustomization only manages Vellum application resources.
 
 resources:
-  - manifests/common/cert-manager/base
-  - manifests/common/cert-manager/kubeflow-issuer/base
-  - manifests/common/istio/istio-crds/base
-  - manifests/common/istio/istio-namespace/base
-  - manifests/common/istio/istio-install/overlays/oauth2-proxy
-  - manifests/common/oauth2-proxy/overlays/m2m-dex-only
-  - manifests/common/dex/overlays/oauth2-proxy
-
-  - manifests/common/istio/cluster-local-gateway/base
-  - manifests/common/kubeflow-namespace/base
-  - manifests/common/networkpolicies/base
-  - manifests/common/kubeflow-roles/base
-  - manifests/common/istio/kubeflow-istio-resources/base
-  - manifests/applications/pipeline/upstream/env/cert-manager/platform-agnostic-multi-user
-  - manifests/applications/centraldashboard/overlays/oauth2-proxy
-  - manifests/applications/admission-webhook/upstream/overlays/cert-manager
-  - manifests/applications/profiles/pss
+  # ── Namespace + RBAC ───────────────────────────────────────────────────────
   - vellum-namespace.yaml
-  - vellum-profile.yaml
-  - vellum-profile-resources.yaml
-  - llm-models-pvc.yaml
-  - ray-serve-llm.yaml
-  - embeddings-service.yaml
-  - model-downloader-job.yaml
-  - vellum-backend.yaml
   - vellum-backend-rbac.yaml
+
+  # ── Persistent Storage ─────────────────────────────────────────────────────
+  - documents-pvc.yaml
+  - llm-models-pvc.yaml
+
+  # ── Vellum Application ─────────────────────────────────────────────────────
+  - vellum-backend.yaml
   - vellum-frontend.yaml
+
+  # ── Istio Ambient (waypoint + AuthorizationPolicy + RequestAuthentication) ─
   - vellum-istio.yaml
 
-
-# Ray is an experimental integration
-# Here is the documentation for Ray: https://docs.ray.io/en/latest/
-# Here is the internal documentation for Ray: - manifests/experimental/ray/README.md
-# - manifests/experimental/ray/kuberay-operator/overlays/kubeflow
-
-components:
-# https://kubernetes.io/docs/concepts/security/pod-security-standards/
-# For all static namespaces we already enforce PSS restricted
-# This should be used together with Kubernetes 1.33+ user namespaces to block root user exploits
-- manifests/common/security/PSS/dynamic/baseline
+  # ── AI / Inference ─────────────────────────────────────────────────────────
+  - embeddings-service.yaml
+  - model-downloader-job.yaml
+  - ray-serve-llm.yaml

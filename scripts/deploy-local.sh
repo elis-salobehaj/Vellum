@@ -14,7 +14,6 @@ NC='\033[0m' # No Color
 ensure_project_root
 load_env_file
 require_commands docker kubectl
-ensure_kubeflow_manifests_submodule
 require_kubectl_access
 
 echo -e "${BLUE}🚀 Syncing environment and redeploying Vellum...${NC}"
@@ -30,13 +29,14 @@ fi
 echo -e "${GREEN}🛠️  Building backend image first (required by ingestion)...${NC}"
 docker compose build $NO_CACHE backend
 
-echo -e "${GREEN}🛠️  Building frontend and ingestion images...${NC}"
-docker compose build $NO_CACHE frontend ingestion
+echo -e "${GREEN}🛠️  Building frontend and dagster images...${NC}"
+docker compose build $NO_CACHE frontend
+docker build $NO_CACHE -t dagster-vellum:local dagster/
 
 echo -e "${GREEN}📦 Loading local images into Kind cluster ${KIND_CLUSTER_NAME}...${NC}"
 publish_image "vellum-backend:latest" backend
 publish_image "vellum-frontend:latest" frontend
-publish_image "vellum-ingest:local" ingestion
+publish_image "dagster-vellum:local" dagster-vellum
 
 echo -e "${GREEN}🔐 Synchronizing Kubernetes secret from .env...${NC}"
 bash ./scripts/sync-env-secret.sh
@@ -45,7 +45,7 @@ echo -e "${GREEN}🧹 Recreating the model downloader job to pick up any local m
 kubectl delete job/model-downloader -n "$VELLUM_NAMESPACE" --ignore-not-found >/dev/null 2>&1 || true
 
 echo -e "${GREEN}⛵ Applying app manifests (server-side)...${NC}"
-kubectl kustomize --load-restrictor=LoadRestrictionsNone "$PROJECT_ROOT/deployment/platform-apps" | kubectl apply --server-side --force-conflicts -f -
+kubectl kustomize --load-restrictor=LoadRestrictionsNone "$PROJECT_ROOT/deployment" | kubectl apply --server-side --force-conflicts -f -
 
 if kind_gpu_support_requested; then
     echo -e "${GREEN}🧰 Refreshing Kind GPU support before local LLM scaling...${NC}"

@@ -10,8 +10,7 @@ NC='\033[0m'
 
 ensure_project_root
 load_env_file
-require_commands docker kubectl helm kind
-ensure_kubeflow_manifests_submodule
+require_commands docker kubectl helm kind istioctl
 
 export CLUSTER_RUNTIME=kind
 
@@ -62,46 +61,15 @@ wait_for_knative_webhooks() {
     wait_for_endpoints knative-serving webhook 300
 }
 
-wait_for_istio_foundation() {
-    echo -e "${BLUE}⏳ Waiting for the Istio control plane to stabilize before starting Knative...${NC}"
-    wait_for_rollout deployment cert-manager cert-manager 300s
-    wait_for_rollout deployment cert-manager-cainjector cert-manager 300s
-    wait_for_rollout deployment cert-manager-webhook cert-manager 300s
-    wait_for_rollout deployment dex auth 300s
-    wait_for_rollout deployment oauth2-proxy oauth2-proxy 300s
+wait_for_istio_ambient() {
+    echo -e "${BLUE}⏳ Waiting for Istio Ambient (istiod + ztunnel)...${NC}"
     wait_for_rollout deployment istiod istio-system 300s
-    wait_for_rollout deployment istio-ingressgateway istio-system 300s
-    wait_for_rollout deployment cluster-local-gateway istio-system 300s
-    sleep 30
+    wait_for_rollout daemonset ztunnel istio-system 300s || true
+    wait_for_rollout deployment istio-ingressgateway istio-system 300s || true
+    sleep 10
 }
 
-wait_for_knative_components() {
-    echo -e "${BLUE}⏳ Waiting for Knative Serving controllers...${NC}"
-    wait_for_rollout deployment activator knative-serving 300s
-    wait_for_rollout deployment autoscaler knative-serving 300s
-    wait_for_rollout deployment controller knative-serving 300s
-    wait_for_rollout deployment net-istio-controller knative-serving 300s
-    wait_for_rollout deployment net-istio-webhook knative-serving 300s
-    wait_for_rollout deployment webhook knative-serving 300s
-}
 
-wait_for_kubeflow_core() {
-    echo -e "${BLUE}⏳ Waiting for Kubeflow core services...${NC}"
-    wait_for_rollout deployment mysql kubeflow 600s
-    wait_for_rollout deployment seaweedfs kubeflow 600s
-    wait_for_rollout deployment admission-webhook-deployment kubeflow 600s
-    wait_for_rollout deployment profiles-deployment kubeflow 600s
-    wait_for_rollout deployment kubeflow-pipelines-profile-controller kubeflow 600s
-    wait_for_rollout deployment metadata-grpc-deployment kubeflow 600s
-    wait_for_rollout deployment metadata-envoy-deployment kubeflow 600s
-    wait_for_rollout deployment metadata-writer kubeflow 600s
-    wait_for_rollout deployment ml-pipeline kubeflow 600s
-    wait_for_rollout deployment ml-pipeline-persistenceagent kubeflow 600s
-    wait_for_rollout deployment ml-pipeline-ui kubeflow 600s
-    wait_for_rollout deployment cache-server kubeflow 600s
-    wait_for_rollout deployment workflow-controller kubeflow 600s
-    wait_for_rollout deployment centraldashboard kubeflow 600s
-}
 
 wait_for_qdrant() {
     echo -e "${BLUE}⏳ Waiting for Qdrant...${NC}"
@@ -133,32 +101,23 @@ wait_for_vellum_profile() {
     done
 }
 
-apply_platform_foundation() {
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/cert-manager/base" "cert-manager base" 10 30
-    wait_for_rollout deployment cert-manager cert-manager 300s
-    wait_for_rollout deployment cert-manager-cainjector cert-manager 300s
-    wait_for_rollout deployment cert-manager-webhook cert-manager 300s
-
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/cert-manager/kubeflow-issuer/base" "the Kubeflow self-signing issuer" 10 30
-
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/istio-crds/base" "Istio CRDs" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/istio-namespace/base" "the Istio namespace" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/kubeflow-namespace/base" "the Kubeflow namespace" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/istio-install/overlays/oauth2-proxy" "the Istio control plane" 10 30
-
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind" "oauth2-proxy Kind overlay" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/dex/overlays/oauth2-proxy" "Dex" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/cluster-local-gateway/base" "the Istio cluster-local gateway" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/networkpolicies/base" "Kubeflow network policies" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/kubeflow-roles/base" "Kubeflow shared roles" 10 30
-    apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/istio/kubeflow-istio-resources/base" "Kubeflow Istio resources" 10 30
+install_istio_ambient() {
+    echo -e "${BLUE}🌐 Installing Istio Ambient mesh via istioctl...${NC}"
+    if kubectl get deployment istiod -n istio-system > /dev/null 2>&1; then
+        echo -e "${YELLOW}ℹ️  Istio already installed. Skipping istioctl install.${NC}"
+        return 0
+    fi
+    istioctl install --set profile=ambient -y
+    # Install the Kubernetes Gateway API CRDs required for waypoint proxies
+    kubectl get crd gateways.gateway.networking.k8s.io > /dev/null 2>&1 || \
+        kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+    echo -e "${GREEN}✅ Istio Ambient installed.${NC}"
 }
 
 apply_application_resources() {
-    apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-namespace.yaml" "vellum-namespace.yaml" 10 30
-    apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-profile.yaml" "vellum-profile.yaml" 10 30
-    apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-profile-resources.yaml" "vellum-profile-resources.yaml" 10 30
-    wait_for_vellum_profile
+    apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-namespace.yaml" "vellum-namespace.yaml" 3 10
+    apply_with_retries -f "$PROJECT_ROOT/deployment/vellum-backend-rbac.yaml" "vellum-backend-rbac.yaml" 3 10
+    apply_with_retries -f "$PROJECT_ROOT/deployment/documents-pvc.yaml" "documents-pvc.yaml" 3 10
 }
 
 require_kind_host_runtime_prereqs() {
@@ -237,7 +196,6 @@ mkdir -p "$(dirname "$MAIN_KUBECONFIG_PATH")"
 touch "$MAIN_KUBECONFIG_PATH"
 chmod 600 "$MAIN_KUBECONFIG_PATH"
 export KUBECONFIG="$MAIN_KUBECONFIG_PATH"
-require_kind_host_runtime_prereqs
 require_kind_host_inotify_prereqs
 require_kind_gpu_host_prereqs
 
@@ -271,13 +229,17 @@ if kind_gpu_support_requested; then
     echo -e "${GREEN}✅ Kind GPU prerequisites satisfied.${NC}"
 fi
 
-apply_platform_foundation
-wait_for_istio_foundation
-apply_with_retries -k "$PROJECT_ROOT/deployment/manifests/common/knative/knative-serving/overlays/gateways" "Knative Serving" 10 30
-wait_for_knative_webhooks
-wait_for_knative_components
-apply_with_retries -k "$PROJECT_ROOT/deployment/platform-kubeflow" "the Phase 1 Kubeflow core" 10 30
-wait_for_kubeflow_core
+install_istio_ambient
+wait_for_istio_ambient
+
+echo -e "${BLUE}⚡ Ensuring KubeRay Operator exists...${NC}"
+helm repo add kuberay https://ray-project.github.io/kuberay-helm/ --force-update >/dev/null
+helm repo update >/dev/null
+if ! helm list -n kuberay-system | grep -q '^kuberay-operator\b'; then
+    helm install kuberay-operator kuberay/kuberay-operator -n kuberay-system --create-namespace --wait
+else
+    echo -e "${YELLOW}ℹ️  KubeRay Operator already installed. Skipping Helm install.${NC}"
+fi
 
 echo -e "${BLUE}💾 Ensuring Qdrant release exists...${NC}"
 helm repo add qdrant https://qdrant.github.io/qdrant-helm --force-update >/dev/null
@@ -288,10 +250,23 @@ else
     echo -e "${YELLOW}ℹ️  Qdrant already installed. Skipping Helm install.${NC}"
 fi
 wait_for_qdrant
-apply_application_resources
-wait_for_kserve_components
 
-echo -e "${GREEN}✅ Kind Phase 1 platform setup complete.${NC}"
+echo -e "${BLUE}📅 Ensuring Dagster release exists...${NC}"
+helm repo add dagster https://dagster-io.github.io/helm --force-update > /dev/null
+helm repo update > /dev/null
+if ! helm list -n kubeflow-vellum | grep -q '^dagster\b'; then
+    helm install dagster dagster/dagster -n kubeflow-vellum --create-namespace \
+        -f "$PROJECT_ROOT/deployment/helm-values/dagster-values.yaml"
+else
+    echo -e "${YELLOW}ℹ️  Dagster already installed. Skipping Helm install.${NC}"
+fi
+
+apply_application_resources
+
+# Deploy Vellum application stack (backend, frontend, Istio resources, etc.)
+apply_with_retries -k "$PROJECT_ROOT/deployment" "Vellum application stack" 5 20
+
+echo -e "${GREEN}✅ Vellum platform setup complete — Istio Ambient, Qdrant, Dagster, KubeRay installed.${NC}"
 if bool_is_true "$ENABLE_LOCAL_LLM_REQUESTED" && ! bool_is_true "$ENABLE_LOCAL_LLM"; then
     echo -e "${YELLOW}⚠️  Local LLM bootstrap was skipped for this run. API-backed providers are available now; the local GPU model can be enabled after Docker's NVIDIA runtime is configured.${NC}"
 fi

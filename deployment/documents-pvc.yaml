@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: documents-pvc
+  namespace: kubeflow-vellum
+spec:
+  # ReadWriteMany required so the backend pod and Dagster worker pods can
+  # mount simultaneously. On EKS use EFS StorageClass, on GKE use Filestore.
+  # On Kind (local dev), standard local-path provisioner is RWO only — use
+  # USE_S3_STORAGE=true or set up an NFS provisioner for full RWX support.
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

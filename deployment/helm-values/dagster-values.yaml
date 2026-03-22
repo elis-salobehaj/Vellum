@@ -1,0 +1,49 @@
+# Dagster Helm values for local Kind deployment
+# Full chart reference: https://github.com/dagster-io/helm
+
+dagsterWebserver:
+  replicaCount: 1
+  service:
+    port: 3000
+
+dagsterDaemon: {}
+
+# Embedded PostgreSQL — needed for the run store and schedule state
+# In production, point to an external RDS/Cloud SQL instance.
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: dagster
+    username: dagster
+    database: dagster
+
+# User code deployment — runs dagster_vellum.definitions
+dagster-user-deployments:
+  enabled: true
+  deployments:
+    - name: dagster-vellum
+      image:
+        # Built via: docker build -t dagster-vellum:local dagster/
+        repository: dagster-vellum
+        tag: local
+        pullPolicy: IfNotPresent
+      dagsterApiGrpcArgs:
+        - "-m"
+        - "dagster_vellum.definitions"
+      port: 3030
+      env:
+        - name: DOCUMENT_STORAGE_PATH
+          value: "/data/documents"
+        - name: USE_S3_STORAGE
+          value: "false"
+        - name: QDRANT_HOST
+          value: "qdrant.qdrant.svc.cluster.local"
+        - name: EMBEDDINGS_SERVICE_URL
+          value: "http://embeddings-service.kubeflow-vellum.svc.cluster.local/v1"
+      volumeMounts:
+        - name: documents
+          mountPath: /data/documents
+      volumes:
+        - name: documents
+          persistentVolumeClaim:
+            claimName: documents-pvc

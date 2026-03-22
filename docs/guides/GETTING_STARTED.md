@@ -1,253 +1,188 @@
 # Getting Started
 
-This guide reflects the accepted completed Phase 1 baseline: Kind is the required local runtime, the slim Kubeflow overlay is the default platform boot, and direct ingestion is the normal operator path.
+Welcome to Vellum — an enterprise-grade RAG chatbot platform. This guide gets you from zero to a running local cluster.
+
+> **Phase 4 (current):** Kubeflow, Dex, MinIO, and KFP are gone.
+> The platform is now: **Kind + Istio Ambient + Qdrant + Dagster + Ray Serve**.
+> Total resource footprint is significantly lighter than the Phase 1 Kubeflow stack.
+
+---
 
 ## Prerequisites
 
 ### Required Tools
-- **Docker Desktop** or Docker Engine reachable from your shell
-- **Kind**: [Installation Guide](https://kind.sigs.k8s.io/)
-- **kubectl**: [Installation Guide](https://kubernetes.io/docs/tasks/tools/)
-- **Helm**: [Installation Guide](https://helm.sh/docs/intro/install/)
-- **Git** with submodule support
-- **Python 3.12+** for backend and pipeline scripts (`uv` recommended)
-- **Node.js 24.13.0+** for frontend development
-- **pnpm** via `corepack enable`
 
-### Resource Requirements (Phase 1 Slim Overlay)
+| Tool | Install | Notes |
+|---|---|---|
+| **Docker Engine** | [docs.docker.com](https://docs.docker.com/get-docker/) | Docker Desktop works too |
+| **Kind** | [kind.sigs.k8s.io](https://kind.sigs.k8s.io/) | `v0.24+` recommended |
+| **kubectl** | [kubernetes.io](https://kubernetes.io/docs/tasks/tools/) | |
+| **Helm** | [helm.sh](https://helm.sh/docs/intro/install/) | `v3.16+` |
+| **istioctl** | [istio.io/docs/setup/install/istioctl/](https://istio.io/docs/setup/install/istioctl/) | Must match Istio version in cluster |
+| **Python 3.12+** | [python.org](https://python.org) | `uv` recommended for backend |
+| **Node.js 24 LTS** | [nodejs.org](https://nodejs.org) | |
+| **pnpm** | `corepack enable` | After Node install |
+| **Git** | | |
 
-| Resource | Minimum | Recommended | Why? |
-| :--- | :--- | :--- | :--- |
-| **RAM** | **12 GB** | **16-24 GB** | Phase 1 still keeps Istio, Dex, KFP, KServe, MinIO, TEI, and Qdrant, but removes Katib, Jupyter, TensorBoard, PVC Viewer, Volumes UI, and Trainer from the default local boot. |
-| **CPUs** | **6 Cores** | **8+ vCPUs** | Kubeflow controllers, Istio ingress, and local model serving still compete for CPU. |
-| **Disk** | **40 GB** | **80-100 GB** | Kubeflow images plus the local registry and model downloads are large. |
-| **GPU** | Optional | 1 NVIDIA GPU | Required only when using the local KServe-hosted Qwen model. |
+### Resource Requirements
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| **RAM** | **8 GB** | **16 GB** |
+| **CPUs** | **4 cores** | **8 vCPUs** |
+| **Disk** | **20 GB** | **40 GB** |
+| **GPU** | Optional | NVIDIA GPU for local LLM |
+
+> Phase 4 is significantly lighter than Phase 1. Kubeflow, Dex, MinIO, Cert-Manager and oauth2-proxy are gone.
 
 ### WSL2 Configuration (Windows)
 
-#### Docker Desktop + WSL2 Backend
-1. Install current NVIDIA drivers on Windows if GPU passthrough is required.
-2. In Docker Desktop, enable `Use the WSL 2 based engine`.
-3. In Docker Desktop, enable WSL integration for your Linux distro.
-4. Optional GPU check:
-    ```bash
-    docker run --rm --gpus all ubuntu nvidia-smi
-    ```
+1. Ensure NVIDIA drivers are installed on Windows (for GPU passthrough if needed).
+2. In Docker Desktop → Settings → Resources → WSL Integration: enable for your distro.
+3. Optional GPU verification: `docker run --rm --gpus all ubuntu nvidia-smi`
 
-#### WSL Runtime Note for Kind Node Containers
-Keep Docker's default runtime on `runc` for the Kind workflow on this machine.
-
-Required Docker daemon state:
-```json
-{
-    "default-runtime": "runc",
-    "runtimes": {
-        "nvidia": {
-            "path": "nvidia-container-runtime",
-            "runtimeArgs": []
-        }
-    }
-}
-```
-
-This keeps Kind node startup reliable while still preserving the NVIDIA runtime definition for explicit use later.
-
-Additional WSL host prerequisite observed on this machine:
+Host sysctl prerequisites for Kind:
 ```bash
 sudo sysctl -w fs.inotify.max_user_instances=1024
 echo 'fs.inotify.max_user_instances = 1024' | sudo tee /etc/sysctl.d/99-vellum-kind.conf
 ```
 
-If this value stays at `128`, Kind node containers can exit during boot with `Failed to create control group inotify object: Too many open files`.
+---
 
-#### Recommended `.wslconfig`
-Create `%UserProfile%/.wslconfig`:
-```ini
-[wsl2]
-memory=26GB
-processors=12
-```
+## Quick Start
 
-Run `wsl --shutdown` after changing it.
-
-## First-Time Setup
-
-### 1. Clone the Repo
+### 1. Clone and enter the repo
 ```bash
-git clone --recursive https://github.com/elis-salobehaj/Vellum.git
+git clone <repo-url>
 cd Vellum
 ```
 
-If you already cloned without submodules:
-```bash
-git submodule update --init --recursive deployment/manifests
-```
-
-### 2. Create Local Config
-```bash
-cp .env.example .env
-```
-
-Important defaults for Phase 1:
-- `ENABLE_LOCAL_LLM=true` keeps the KServe predictor running.
-- `ENABLE_LOCAL_LLM=false` scales the local LLM deployment to zero after deploy, which is useful when you are using Bedrock, OpenAI, or Gemini instead.
-- If the cluster does not advertise `nvidia.com/gpu` capacity, the deploy scripts automatically scale the local LLM back to zero even when `ENABLE_LOCAL_LLM=true`.
-- `./scripts/setup-kind.sh` now treats GPU support as a bootstrap requirement when `ENABLE_LOCAL_LLM=true`: it applies the NVIDIA `RuntimeClass`, deploys the device plugin, and fails fast if the Kind node itself was not created with `/dev/nvidia*` devices.
-- `LLM_SERVICE_URL=http://localhost:8081/v1` is only valid when the local LLM is enabled and `./scripts/connect.sh` is forwarding it.
-
-### Local LLM GPU Prerequisites
-
-For local Qwen on Kind, all of the following must be true before the cluster can advertise `nvidia.com/gpu`:
-
-1. The host shell can see the GPU:
-    ```bash
-    nvidia-smi -L
-    ```
-2. Docker can launch GPU-enabled containers:
-    ```bash
-    docker run --rm --gpus all ubuntu nvidia-smi -L
-    ```
-3. The Kind node container itself must be created with NVIDIA device access so `/dev/nvidia*` exists inside the node.
-4. The cluster must have the `nvidia` `RuntimeClass` and NVIDIA device plugin installed.
-
-This repo now automates step 4 during `./scripts/setup-kind.sh`, and it also provisions the Kind node with the NVIDIA runtime handler and host-side NVIDIA user-space files when they are available. If the cluster still cannot advertise stable `nvidia.com/gpu` capacity after that, the remaining problem is in the host/container runtime stack rather than the Vellum manifests.
-
-### 3. Bootstrap the Kind Platform
-Primary entrypoint:
-```bash
-./scripts/setup-kind.sh
-```
-
-First-time machine setup from a clean host:
+### 2. First-time machine setup
 ```bash
 ./scripts/setup-local.sh
 ```
+This installs system-level tools (kind, kubectl, helm, istioctl). Safe to re-run.
 
-Compatibility wrapper:
+### 3. Bootstrap the cluster
 ```bash
-./scripts/setup-platform.sh
+./scripts/setup-kind.sh
+```
+This will:
+- Create the Kind cluster (if not already running)
+- Install **Istio Ambient** via `istioctl install --set profile=ambient`
+- Install **Qdrant** via Helm into the `qdrant` namespace
+- Install **Dagster** via Helm into the `dagster` namespace
+- Apply Vellum application resources (namespace, RBAC, PVC)
+- Apply the full Vellum k8s stack via Kustomize
+
+> ⏱ First run takes ~10-15 minutes (image pulls). Subsequent runs are much faster.
+
+### 4. Install dependencies
+```bash
+cd backend && uv sync
+cd ../frontend && pnpm install
 ```
 
-What the bootstrap does in Phase 1:
-- Validates Docker, `kubectl`, `helm`, and `kind`
-- Initializes the `deployment/manifests` submodule if needed
-- Creates a `Kind` cluster from `kind-config.yaml`
-- Applies the slim Kubeflow Phase 1 manifest set and installs Qdrant
-- Merges the cluster into `~/.kube/config`, normalizes the context to `vellum`, and auto-selects a free local API server port when `6551` is already in use
-
-What `./scripts/setup-local.sh` adds on top:
-- runs `./scripts/setup-kind.sh`
-- runs `cd backend && uv sync`
-- runs `cd frontend && pnpm install`
-- installs Playwright Chromium for fresh-machine test runs
-- runs `./scripts/deploy-local.sh`
-
-### 4. Install App Dependencies
-Backend:
+### 5. Configure environment
 ```bash
-cd backend
-uv sync
+cp .env.example .env
+# Edit .env — at minimum set AZURE_CLIENT_ID and AZURE_TENANT_ID
 ```
 
-Frontend:
-```bash
-cd frontend
-pnpm install
-```
-
-### 5. Build, Push, and Deploy the App
-```bash
-./scripts/deploy-local.sh
-```
-
-This now:
-- builds backend, frontend, and ingestion images locally
-- loads them directly into the Kind cluster
-- syncs the `vellum-env` Kubernetes secret from `.env`
-- applies the Vellum app workload manifests on top of the already-bootstrapped platform
-- optionally scales the local LLM deployment based on `ENABLE_LOCAL_LLM`
-
-### 6. Connect to Services
+### 6. Start port-forwards
 ```bash
 ./scripts/connect.sh
 ```
+Port bindings are written to `.vellum-runtime.env` (auto-detected by the backend in hybrid mode).
 
-`./scripts/connect.sh` prefers the standard localhost ports shown below, but if any of them are already taken it automatically picks the next free port and records the live bindings in `.vellum-runtime.env`.
-
-| Service | Local URL | Notes |
-| :--- | :--- | :--- |
-| **Kubeflow Dashboard** | http://localhost:8086 | Dex login: `vellum@example.com` / `12341234` |
-| **Frontend** | http://localhost:9090 | Skipped in hybrid mode |
-| **Backend API** | http://localhost:8006/docs | Skipped in hybrid mode |
-| **KFP API** | http://localhost:8888 | Direct SDK/API access |
-| **Qdrant** | http://localhost:6333 | Vector DB |
-| **Embeddings** | http://localhost:8082 | TEI service |
-| **MinIO** | http://localhost:9000 | Still used in Phase 1 |
-| **LLM Service** | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` |
-
-## Verify Installation
-
+### 7. Start local dev servers (hybrid mode)
+In separate terminals:
 ```bash
-kubectl config use-context vellum
-
-kubectl get pods -n kubeflow
-kubectl get pods -n kubeflow-vellum
-kubectl get pods -n qdrant
+cd backend && uv run uvicorn main:app --reload --port 8000
+cd frontend && pnpm dev
 ```
 
-You should expect the slim Phase 1 stack to include:
-- Kubeflow Pipelines
-- Central Dashboard
-- Dex and oauth2-proxy
-- Istio ingress
-- KServe + Knative
-- MinIO
-- TEI, backend, frontend, and Qwen model download job
+Then open: [http://localhost:5173](http://localhost:5173)
 
-You should not expect the default Phase 1 boot to include:
-- Katib
-- Jupyter web app or notebook controller
-- TensorBoard controller or web app
-- PVC Viewer
-- Volumes web app
-- Trainer
+---
+
+## Environment Variables
+
+Key variables in `.env`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `AZURE_CLIENT_ID` | — | Entra ID App Client ID (required) |
+| `AZURE_TENANT_ID` | — | Entra ID Tenant ID (required) |
+| `BYPASS_AUTH` | `false` | Set `true` for local dev without Entra ID |
+| `INGESTION_MODE` | `direct` | `direct` (sync PVC) or `dagster` (async job) |
+| `USE_S3_STORAGE` | `false` | `true` to use S3 instead of local PVC |
+| `DOCUMENT_STORAGE_PATH` | `./data/source_documents` | Local document directory (PVC path in cluster) |
+| `EMBEDDINGS_SERVICE_URL` | `http://localhost:8082/v1` | TEI embeddings endpoint |
+| `DAGSTER_GRAPHQL_URL` | `http://localhost:3200/graphql` | Dagster UI GraphQL (port-forwarded) |
+| `ENABLE_LOCAL_LLM` | `false` | Enable Ray Serve / vLLM inference |
+| `LLM_SERVICE_URL` | `http://localhost:8081/v1` | Ray Serve endpoint (port-forwarded) |
+
+---
+
+## Port Reference
+
+`connect.sh` dynamically allocates ports. Stable defaults after the standard Kind cluster bootstrap:
+
+| Service | Default Port | URL |
+|---|---|---|
+| Frontend (cluster) | 9090 | http://localhost:9090 |
+| Frontend (hybrid dev) | 5173 | http://localhost:5173 |
+| Backend (hybrid dev) | 8000 | http://localhost:8000 |
+| Backend (cluster) | 8006 | http://localhost:8006 |
+| Istio Ingress | 8086 | http://localhost:8086 |
+| Embeddings (TEI) | 8082 | http://localhost:8082/v1 |
+| Dagster UI | 3200 | http://localhost:3200 |
+| Qdrant | 6333 | http://localhost:6333 |
+| Ray Dashboard | 8265 | http://localhost:8265 |
+| Ray Serve LLM | 8081 | http://localhost:8081/v1 |
+
+> Actual port bindings are written to `.vellum-runtime.env` by `connect.sh` and automatically read by the backend.
+
+---
+
+## Authentication
+
+- **Local dev with BYPASS_AUTH=true**: no Entra ID required.
+- **Full auth**: Entra ID (Azure AD). Configure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, add redirect URI `http://localhost:8086/` in your App Registration.
+- **No Dex/Kubeflow login** — the Kubeflow Central Dashboard and its auth stack are removed.
+
+See [`docs/guides/AUTHENTICATION.md`](AUTHENTICATION.md) for full auth details.
+
+---
+
+## Ingestion
+
+### Direct Ingestion (default, synchronous)
+Place documents in `DOCUMENT_STORAGE_PATH` (default: `./data/source_documents/`) and trigger via the Admin UI or:
+```bash
+curl -X POST http://localhost:8000/api/v1/admin/upload-and-ingest
+```
+Or upload a file directly:
+```bash
+curl -X POST http://localhost:8000/api/v1/admin/upload-file \
+  -F "file=@/path/to/document.pdf"
+```
+
+### Dagster Ingestion (async)
+Set `INGESTION_MODE=dagster` to trigger Dagster jobs instead.
+The `new_documents_sensor` polls storage every 30 s and fires automatically.
+Monitor runs in the Dagster UI: http://localhost:3200
+
+---
 
 ## Troubleshooting
 
-### `kind` Is Missing
-Install `kind` first. The Phase 1 bootstrap intentionally fails fast if the runtime is not installed.
-
-### `deployment/manifests` Is Empty
-Run:
-```bash
-git submodule update --init --recursive deployment/manifests
-```
-
-The repo should be pinned to Kubeflow manifests `v1.11.0` for Phase 1.
-
-### Docker Is Installed but Unreachable
-Make sure `docker info` succeeds in the same shell where you run `./scripts/setup-kind.sh`.
-
-### Local LLM Is Consuming Too Much RAM or GPU
-Disable it before deploy:
-```bash
-ENABLE_LOCAL_LLM=false ./scripts/deploy-local.sh
-```
-
-Re-enable it later:
-```bash
-ENABLE_LOCAL_LLM=true ./scripts/deploy-local.sh
-```
-
-### Reset / Uninstall
-To destroy the local runtime:
-```bash
-./scripts/nuke-platform.sh
-```
-
-## Next Steps
-
-Continue with:
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** for the hybrid workflow and troubleshooting
-- **[../context/ARCHITECTURE.md](../context/ARCHITECTURE.md)** for Phase 1 architecture notes
-- **[HELLO_WORLD_PIPELINE.md](HELLO_WORLD_PIPELINE.md)** for the KFP programming model
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `istioctl: command not found` | istioctl not installed | `brew install istioctl` or see [istio.io](https://istio.io) |
+| Waypoint not ready | CRDs missing | `kubectl apply -f https://...gateway-api.../standard-install.yaml` |
+| `ztunnel not running` | Ambient profile not installed | Re-run `istioctl install --set profile=ambient -y` |
+| PVC pending | No RWX provisioner on Kind | Set `USE_S3_STORAGE=true` or install NFS provisioner |
+| Dagster not reachable | Port-forward not running | `./scripts/connect.sh` |
+| `No files found` on ingest | Wrong path | Check `DOCUMENT_STORAGE_PATH` in `.env` |

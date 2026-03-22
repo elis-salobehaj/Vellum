@@ -30,16 +30,25 @@ spec:
           value: "BAAI/bge-small-en-v1.5"
         - name: EMBEDDINGS_SERVICE_URL
           value: "http://embeddings-service.kubeflow-vellum.svc.cluster.local/v1"
-        - name: MINIO_ENDPOINT
-          value: "minio-service.kubeflow.svc:9000"
-        - name: KFP_HOST
-          value: "http://ml-pipeline.kubeflow.svc.cluster.local:8888"
-        - name: INGESTION_PIPELINE_IMAGE
-          value: "vellum-ingest:local"
         - name: QDRANT_HOST
           value: "qdrant.qdrant.svc.cluster.local"
         - name: LLM_SERVICE_URL
-          value: "http://llm-service-predictor.kubeflow-vellum.svc.cluster.local:80/v1"
+          value: "http://llm-service-head-svc.vellum-ray.svc.cluster.local:8000/v1"
+        - name: DAGSTER_GRAPHQL_URL
+          value: "http://dagster-dagster-webserver.kubeflow-vellum.svc.cluster.local:3000/graphql"
+        - name: DOCUMENT_STORAGE_PATH
+          value: "/data/documents"
+        - name: USE_S3_STORAGE
+          value: "false"
+        - name: INGESTION_MODE
+          value: "direct"
+        volumeMounts:
+        - name: documents
+          mountPath: /data/documents
+      volumes:
+      - name: documents
+        persistentVolumeClaim:
+          claimName: documents-pvc
 ---
 apiVersion: v1
 kind: Service

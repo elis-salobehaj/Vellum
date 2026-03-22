@@ -13,7 +13,6 @@ os.environ["QDRANT_PORT"] = "6333"
 
 try:
     from app.services.rag_service import rag_service
-    from app.models.schemas import Citation
 except ImportError as e:
     print(f"Import Error: {e}")
     sys.exit(1)

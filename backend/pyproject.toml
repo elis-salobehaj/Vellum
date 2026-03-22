@@ -20,26 +20,21 @@ dependencies = [
     "httpx",
     "python-dotenv",
     "openai",
-    "kfp>=2.5.0",
-    "minio",
     "structlog",
-    "requests-toolbelt<1.0.0",
-    "urllib3<2.0.0",
     "boto3",
     "langchain",
     "langchain-core",
     "langchain-aws",
     "langchain-openai",
     "langgraph",
-    "llama-index-readers-s3",
     "llama-index-readers-file",
     "pypdf",
     "google-generativeai>=0.8.0",
-    "vellum-ingestion",
     "openpyxl>=3.1.5",
     "xlrd>=2.0.2",
     "python-pptx>=1.0.2",
     "docx2txt>=0.9",
+    "aiofiles>=25.1.0",
 ]
 
 [build-system]
@@ -49,8 +44,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["app"]
 
-[tool.uv.sources]
-vellum-ingestion = { path = "../kubeflow/pipelines/ingestion" }
 
 [dependency-groups]
 dev = [

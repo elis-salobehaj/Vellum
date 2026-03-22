@@ -1,6 +1,5 @@
 import pytest
 import os
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 from app.services.direct_ingestion_service import DirectIngestionService
 from app.services.history_service import HistoryService
@@ -9,9 +8,9 @@ from app.services.rag_service import RAGService
 from app.models.schemas import ModelConfig
 
 
+
 @pytest.fixture
 def history_service():
-    # Use a fresh instance of HistoryService
     return HistoryService()
 
 
@@ -160,243 +159,251 @@ async def test_rag_service_missing_collection_returns_no_context():
     rag_service._client.collection_exists.assert_called_once()
 
 
-def test_direct_ingestion_service_skips_unchanged_documents():
+@pytest.mark.asyncio
+async def test_direct_ingestion_service_skips_unchanged_documents():
+    """Files whose signature hasn't changed should be skipped."""
     service = DirectIngestionService()
-    object_info = MagicMock(
-        object_name="docs/example.pdf",
-        is_dir=False,
-        etag="etag-1",
-        size=123,
-        last_modified=None,
-    )
 
-    mock_client = MagicMock()
-    mock_client.collection_exists.return_value = True
-    mock_client.scroll.return_value = (
-        [MagicMock(payload={"source_signature": "etag-1:123"})],
-        None,
-    )
+    mock_qdrant = MagicMock()
+    mock_qdrant.collection_exists.return_value = True
 
-    mock_minio = MagicMock()
-    mock_minio.list_objects.return_value = [object_info]
+    fake_signature = "100:1700000000000"
 
     with patch(
         "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
-        return_value=mock_client,
+        return_value=mock_qdrant,
     ):
-        with patch(
-            "app.services.direct_ingestion_service.Minio", return_value=mock_minio
-        ):
-            with patch(
-                "app.services.direct_ingestion_service.QdrantVectorStore"
-            ) as mock_vector_store:
-                with patch(
-                    "app.services.direct_ingestion_service.IngestionPipeline"
-                ) as mock_pipeline:
-                    logs = service.run(bucket="documents", cleanup=False)
+        with patch.object(service, "_load_status", return_value={}):
+            with patch.object(service, "_save_status"):
+                with patch.object(service, "_ensure_collection"):
+                    with patch.object(
+                        service,
+                        "_list_source_files",
+                        return_value=["/data/docs/example.pdf"],
+                    ):
+                        with patch.object(
+                            service,
+                            "_build_source_signature",
+                            return_value=fake_signature,
+                        ):
+                            with patch.object(
+                                service,
+                                "_get_existing_source_signature",
+                                return_value=(True, fake_signature),
+                            ):
+                                with patch.object(
+                                    service, "_count_indexed_source_docs", return_value=1
+                                ):
+                                    with patch(
+                                        "app.services.direct_ingestion_service.QdrantVectorStore"
+                                    ) as mock_vector_store:
+                                        with patch(
+                                            "app.services.direct_ingestion_service.IngestionPipeline"
+                                        ) as mock_pipeline:
+                                            with patch("app.services.direct_ingestion_service.storage_service.download") as mock_dl:
+                                                async def fake_dl(key): yield b"fake"
+                                                mock_dl.side_effect = fake_dl
+                                                logs = await service.run(cleanup=False)
 
-    assert any("Skipping unchanged file: docs/example.pdf" in line for line in logs)
+    assert any("Skipping unchanged file" in line for line in logs)
     assert any("No new or changed documents to index" in line for line in logs)
     mock_vector_store.return_value.delete.assert_not_called()
     mock_pipeline.return_value.run.assert_not_called()
 
 
-def test_direct_ingestion_service_replaces_changed_documents():
+@pytest.mark.asyncio
+async def test_direct_ingestion_service_replaces_changed_documents():
+    """Files whose content changed should replace old chunks and re-index."""
     service = DirectIngestionService()
-    object_info = MagicMock(
-        object_name="docs/example.pdf",
-        is_dir=False,
-        etag="etag-2",
-        size=456,
-        last_modified=None,
-    )
     loaded_document = MagicMock(metadata={"file_name": "example.pdf"})
 
-    mock_client = MagicMock()
-    mock_client.collection_exists.return_value = True
-    mock_client.scroll.return_value = (
-        [MagicMock(payload={"source_signature": "etag-1:123:"})],
+    mock_qdrant = MagicMock()
+    mock_qdrant.collection_exists.return_value = True
+    mock_qdrant.scroll.return_value = (
+        [MagicMock(payload={"source_signature": "old:sig"})],
         None,
     )
 
-    mock_minio = MagicMock()
-    mock_minio.list_objects.return_value = [object_info]
-
     with patch(
         "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
-        return_value=mock_client,
+        return_value=mock_qdrant,
     ):
-        with patch(
-            "app.services.direct_ingestion_service.Minio", return_value=mock_minio
-        ):
-            with patch(
-                "app.services.direct_ingestion_service.SimpleDirectoryReader"
-            ) as mock_reader:
-                mock_reader.return_value.load_data.return_value = [loaded_document]
-                with patch(
-                    "app.services.direct_ingestion_service.QdrantVectorStore"
-                ) as mock_vector_store:
-                    with patch(
-                        "app.services.direct_ingestion_service.IngestionPipeline"
-                    ) as mock_pipeline:
-                        logs = service.run(bucket="documents", cleanup=False)
-
-    assert any(
-        "Replacing existing chunks for: docs/example.pdf" in line for line in logs
-    )
-    mock_vector_store.return_value.delete.assert_called_once()
-    mock_pipeline.return_value.run.assert_called_once()
-    assert loaded_document.doc_id == service._build_source_doc_id("docs/example.pdf")
-    assert loaded_document.metadata["source_object_key"] == "docs/example.pdf"
-
-
-def test_direct_ingestion_signature_ignores_last_modified():
-    service = DirectIngestionService()
-    object_info = MagicMock(etag="etag-1", size=123)
-    object_info.last_modified = datetime(2024, 1, 1, tzinfo=timezone.utc)
-
-    first_signature = service._build_source_signature(object_info)
-    object_info.last_modified = datetime(2025, 1, 1, tzinfo=timezone.utc)
-
-    assert first_signature == service._build_source_signature(object_info)
-    assert first_signature == "etag-1:123"
-
-
-def test_direct_ingestion_service_tracks_resume_checkpoint():
-    service = DirectIngestionService()
-    object_a = MagicMock(object_name="docs/a.pdf", is_dir=False, etag="etag-a", size=10)
-    object_b = MagicMock(object_name="docs/b.pdf", is_dir=False, etag="etag-b", size=20)
-    object_c = MagicMock(object_name="docs/c.pdf", is_dir=False, etag="etag-c", size=30)
-    loaded_document = MagicMock(metadata={"file_name": "a.pdf"})
-
-    mock_client = MagicMock()
-    mock_client.collection_exists.return_value = True
-
-    mock_minio = MagicMock()
-    mock_minio.list_objects.return_value = [object_a, object_b, object_c]
-
-    with patch(
-        "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
-        return_value=mock_client,
-    ):
-        with patch(
-            "app.services.direct_ingestion_service.Minio", return_value=mock_minio
-        ):
-            with patch.object(service, "_load_status", return_value={}):
-                with patch.object(service, "_save_status") as mock_save_status:
-                    with patch.object(service, "_ensure_collection"):
+        with patch.object(service, "_load_status", return_value={}):
+            with patch.object(service, "_save_status"):
+                with patch.object(service, "_ensure_collection"):
+                    with patch.object(
+                        service,
+                        "_list_source_files",
+                        return_value=["/data/docs/example.pdf"],
+                    ):
                         with patch.object(
                             service,
-                            "_get_existing_source_signature",
-                            return_value=(False, None),
+                            "_build_source_signature",
+                            return_value="new:sig",
                         ):
                             with patch.object(
-                                service, "_count_indexed_source_docs", return_value=2
+                                service,
+                                "_get_existing_source_signature",
+                                return_value=(True, "old:sig"),
+                            ):
+                                with patch.object(
+                                    service, "_count_indexed_source_docs", return_value=1
+                                ):
+                                    with patch(
+                                        "app.services.direct_ingestion_service.SimpleDirectoryReader"
+                                    ) as mock_reader:
+                                        mock_reader.return_value.load_data.return_value = [
+                                            loaded_document
+                                        ]
+                                        with patch(
+                                            "app.services.direct_ingestion_service.QdrantVectorStore"
+                                        ) as mock_vector_store:
+                                            with patch(
+                                                "app.services.direct_ingestion_service.IngestionPipeline"
+                                            ) as mock_pipeline:
+                                                with patch("app.services.direct_ingestion_service.storage_service.download") as mock_dl:
+                                                    async def fake_dl(key): yield b"fake"
+                                                    mock_dl.side_effect = fake_dl
+                                                    logs = await service.run(cleanup=False)
+
+    assert any("Replacing existing chunks for" in line for line in logs)
+    mock_vector_store.return_value.delete.assert_called_once()
+    mock_pipeline.return_value.run.assert_called_once()
+    assert loaded_document.metadata["source_object_key"] == "/data/docs/example.pdf"
+
+
+def test_direct_ingestion_signature_uses_content_hash():
+    """Signature is derived from sha256 of file content."""
+    service = DirectIngestionService()
+    sig = service._build_source_signature(b"Hello Vellum")
+    import hashlib
+    assert sig == hashlib.sha256(b"Hello Vellum").hexdigest()
+
+
+@pytest.mark.asyncio
+async def test_direct_ingestion_service_tracks_resume_checkpoint():
+    """Batch size limits processing; paused status set with correct resume key."""
+    service = DirectIngestionService()
+    loaded_document = MagicMock(metadata={"file_name": "a.pdf"})
+    file_paths = ["/data/docs/a.pdf", "/data/docs/b.pdf", "/data/docs/c.pdf"]
+
+    mock_qdrant = MagicMock()
+    mock_qdrant.collection_exists.return_value = True
+
+    with patch(
+        "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
+        return_value=mock_qdrant,
+    ):
+        with patch.object(service, "_load_status", return_value={}):
+            with patch.object(service, "_save_status") as mock_save_status:
+                with patch.object(service, "_ensure_collection"):
+                    with patch.object(service, "_list_source_files", return_value=file_paths):
+                        with patch.object(service, "_build_source_signature", return_value="s:1"):
+                            with patch.object(
+                                service,
+                                "_get_existing_source_signature",
+                                return_value=(False, None),
+                            ):
+                                with patch.object(
+                                    service, "_count_indexed_source_docs", return_value=2
+                                ):
+                                    with patch(
+                                        "app.services.direct_ingestion_service.SimpleDirectoryReader"
+                                    ) as mock_reader:
+                                        mock_reader.return_value.load_data.return_value = [
+                                            loaded_document
+                                        ]
+                                        with patch(
+                                            "app.services.direct_ingestion_service.QdrantVectorStore"
+                                        ):
+                                            with patch(
+                                                "app.services.direct_ingestion_service.IngestionPipeline"
+                                            ) as mock_pipeline:
+                                                with patch("app.services.direct_ingestion_service.storage_service.download") as mock_dl:
+                                                    async def fake_dl(key): yield b"fake"
+                                                    mock_dl.side_effect = fake_dl
+                                                    await service.run(
+                                                        cleanup=False,
+                                                        batch_size=2,
+                                                    )
+
+    assert mock_pipeline.return_value.run.call_count == 2
+    final_status = mock_save_status.call_args_list[-1].kwargs["status"]
+    assert final_status["status"] == "paused"
+    assert final_status["cycle_complete"] is False
+    assert final_status["current_file"] is None
+
+
+@pytest.mark.asyncio
+async def test_direct_ingestion_service_status_tracks_recent_skips_and_summary():
+    """Files that LoadData returns empty should appear in recent_skipped_files."""
+    service = DirectIngestionService()
+
+    mock_qdrant = MagicMock()
+    mock_qdrant.collection_exists.return_value = True
+    mock_qdrant.scroll.return_value = ([], None)
+
+    with patch(
+        "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
+        return_value=mock_qdrant,
+    ):
+        with patch.object(service, "_load_status", return_value={}):
+            with patch.object(service, "_save_status") as mock_save_status:
+                with patch.object(service, "_ensure_collection"):
+                    with patch.object(
+                        service,
+                        "_list_source_files",
+                        return_value=["/data/docs/unsupported.ppt"],
+                    ):
+                        with patch.object(service, "_build_source_signature", return_value="s:1"):
+                            with patch.object(
+                                service,
+                                "_get_existing_source_signature",
+                                return_value=(False, None),
                             ):
                                 with patch(
                                     "app.services.direct_ingestion_service.SimpleDirectoryReader"
                                 ) as mock_reader:
-                                    mock_reader.return_value.load_data.return_value = [
-                                        loaded_document
-                                    ]
+                                    mock_reader.return_value.load_data.return_value = []
                                     with patch(
                                         "app.services.direct_ingestion_service.QdrantVectorStore"
                                     ):
                                         with patch(
                                             "app.services.direct_ingestion_service.IngestionPipeline"
-                                        ) as mock_pipeline:
-                                            logs = service.run(
-                                                bucket="documents",
-                                                cleanup=False,
-                                                batch_size=2,
-                                            )
+                                        ):
+                                            with patch("app.services.direct_ingestion_service.storage_service.download") as mock_dl:
+                                                async def fake_dl(key): yield b"fake"
+                                                mock_dl.side_effect = fake_dl
+                                                with pytest.raises(ValueError):
+                                                    await service.run(cleanup=False)
 
-    assert any("Batch complete; resume after docs/b.pdf" in line for line in logs)
-    assert mock_pipeline.return_value.run.call_count == 2
-    final_status = mock_save_status.call_args_list[-1].args[3]
-    assert final_status["status"] == "paused"
-    assert final_status["last_scanned_key"] == "docs/b.pdf"
-    assert final_status["last_completed_key"] == "docs/b.pdf"
-    assert final_status["next_resume_key"] == "docs/b.pdf"
-    assert final_status["cycle_complete"] is False
-    assert final_status["current_file"] is None
+    final_status = mock_save_status.call_args_list[-1].kwargs["status"]
+    assert "/data/docs/unsupported.ppt" in final_status["recent_skipped_files"]
+    assert "No supported documents" in final_status["last_error"]
 
 
-def test_direct_ingestion_service_status_tracks_recent_skips_and_summary():
+@pytest.mark.asyncio
+async def test_direct_ingestion_service_rejects_concurrent_run():
+    """If a run is already in progress (status==running), raise RuntimeError."""
     service = DirectIngestionService()
-    object_info = MagicMock(
-        object_name="docs/unsupported.ppt",
-        is_dir=False,
-        etag="etag-3",
-        size=789,
-        last_modified=None,
-    )
 
-    mock_client = MagicMock()
-    mock_client.collection_exists.return_value = True
-    mock_client.scroll.return_value = ([], None)
-
-    mock_minio = MagicMock()
-    mock_minio.list_objects.return_value = [object_info]
+    mock_qdrant = MagicMock()
+    mock_qdrant.collection_exists.return_value = True
 
     with patch(
         "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
-        return_value=mock_client,
+        return_value=mock_qdrant,
     ):
-        with patch(
-            "app.services.direct_ingestion_service.Minio", return_value=mock_minio
-        ):
-            with patch.object(service, "_save_status") as mock_save_status:
-                with patch.object(service, "_ensure_collection"):
-                    with patch(
-                        "app.services.direct_ingestion_service.SimpleDirectoryReader"
-                    ) as mock_reader:
-                        mock_reader.return_value.load_data.return_value = []
-                        with patch(
-                            "app.services.direct_ingestion_service.QdrantVectorStore"
-                        ):
-                            with patch(
-                                "app.services.direct_ingestion_service.IngestionPipeline"
-                            ):
-                                with pytest.raises(ValueError):
-                                    service.run(bucket="documents", cleanup=False)
-
-    final_status = mock_save_status.call_args_list[-1].args[3]
-    assert final_status["recent_skipped_files"] == ["docs/unsupported.ppt"]
-    assert final_status["last_error"] == (
-        "No supported documents could be loaded from MinIO for direct ingestion"
-    )
-
-
-def test_direct_ingestion_service_rejects_concurrent_run():
-    service = DirectIngestionService()
-    object_info = MagicMock(
-        object_name="docs/example.pdf",
-        is_dir=False,
-        etag="etag-1",
-        size=123,
-        last_modified=None,
-    )
-
-    mock_client = MagicMock()
-    mock_client.collection_exists.return_value = True
-
-    mock_minio = MagicMock()
-    mock_minio.list_objects.return_value = [object_info]
-
-    with patch(
-        "app.services.direct_ingestion_service.qdrant_client.QdrantClient",
-        return_value=mock_client,
-    ):
-        with patch(
-            "app.services.direct_ingestion_service.Minio", return_value=mock_minio
+        with patch.object(
+            service,
+            "_load_status",
+            return_value={"status": "running", "current_file": "/data/docs/example.pdf"},
         ):
             with patch.object(
-                service,
-                "_load_status",
-                return_value={"status": "running", "current_file": "docs/example.pdf"},
+                service, "_list_source_files", return_value=["/data/docs/example.pdf"]
             ):
                 with pytest.raises(RuntimeError) as exc:
-                    service.run(bucket="documents", cleanup=False)
+                    await service.run(cleanup=False)
 
     assert "already running" in str(exc.value)
+

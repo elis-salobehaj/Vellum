@@ -6,11 +6,11 @@ KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-vellum}"
 KIND_CONTEXT_NAME="${KIND_CONTEXT_NAME:-vellum}"
 KIND_BOOTSTRAP_CONTEXT="kind-${KIND_CLUSTER_NAME}"
 KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a}"
-MAIN_KUBECONFIG_PATH="${MAIN_KUBECONFIG_PATH:-$HOME/.kube/config}"
+MAIN_KUBECONFIG_PATH="${MAIN_KUBECONFIG_PATH:-${KUBECONFIG:-$HOME/.kube/config}}"
 KIND_DEFAULT_API_SERVER_PORT="${KIND_DEFAULT_API_SERVER_PORT:-6551}"
 KIND_IMAGE_BACKEND="${KIND_IMAGE_BACKEND:-vellum-backend:latest}"
 KIND_IMAGE_FRONTEND="${KIND_IMAGE_FRONTEND:-vellum-frontend:latest}"
-KIND_IMAGE_INGESTION="${KIND_IMAGE_INGESTION:-vellum-ingest:local}"
+KIND_IMAGE_DAGSTER="${KIND_IMAGE_DAGSTER:-dagster-vellum:local}"
 
 ensure_project_root() {
     cd "$PROJECT_ROOT"
@@ -528,8 +528,8 @@ publish_image() {
         frontend)
             target_image="$KIND_IMAGE_FRONTEND"
             ;;
-        ingestion)
-            target_image="$KIND_IMAGE_INGESTION"
+        dagster-vellum)
+            target_image="$KIND_IMAGE_DAGSTER"
             ;;
         *)
             echo "Unsupported component: ${component}" >&2

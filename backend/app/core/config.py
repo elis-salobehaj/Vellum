@@ -25,14 +25,16 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_API_BASE: str = "https://api.openai.com/v1"
 
-    # Ray Serve
+    # Ray Serve (local LLM)
     LLM_SERVICE_URL: str = (
         "http://llm-service-head-svc.vellum-ray.svc.cluster.local:8000/v1"
     )
-    KFP_HOST: str = "http://ml-pipeline.kubeflow.svc.cluster.local:8888"
-    KFP_NAMESPACE: str = "kubeflow-vellum"
-    KFP_USER_ID: str = "vellum@example.com"
-    INGESTION_MODE: str = "kfp"
+
+    # Dagster (replaces KFP)
+    DAGSTER_GRAPHQL_URL: str = (
+        "http://dagster-dagster-webserver.dagster.svc.cluster.local:3000/graphql"
+    )
+    INGESTION_MODE: str = "direct"  # "direct" | "dagster"
 
     # AWS Bedrock
     AWS_BEDROCK_API_KEY: str = ""
@@ -43,14 +45,16 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "vellum"
 
-    # MinIO
-    MINIO_ENDPOINT: str = "minio-service.kubeflow.svc:9000"
-    MINIO_ACCESS_KEY: str = "minio"
-    MINIO_SECRET_KEY: str = "minio123"
-    MINIO_BUCKET: str = "documents"
+    # Document Storage (replaces MinIO)
+    USE_S3_STORAGE: bool = False
+    DOCUMENT_STORAGE_PATH: str = "/data/documents"  # PVC mount path (local default)
+    S3_BUCKET: str = "vellum-documents"
+    S3_ENDPOINT: str = ""   # e.g. https://s3.us-east-1.amazonaws.com
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
 
     # Embeddings
-    EMBEDDING_MODEL_NAME: str = "text-embedding-3-small"
+    EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
     EMBEDDINGS_SERVICE_URL: str = (
         "http://embeddings-service.kubeflow-vellum.svc.cluster.local/v1"
     )
@@ -83,7 +87,7 @@ class Settings(BaseSettings):
         if self.use_google:
             return "google"
         if self.use_local_model:
-            return "kubeflow"  # or local
+            return "ray"
         return "openai"  # Default fallback
 
 

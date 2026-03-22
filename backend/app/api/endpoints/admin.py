@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
 from typing import List, AsyncGenerator
 from app.models.schemas import ModelConfig
@@ -6,7 +6,7 @@ from app.core.auth import get_current_user
 from app.core.config import settings
 from app.core.logging import logger
 import os
-from minio import Minio
+import tempfile
 
 router = APIRouter()
 
@@ -136,105 +136,31 @@ async def upload_and_ingest(
         logger.info("admin_ingest_process_start", user=user_id)
         yield "🚀 Starting Upload & Ingest Process...\n"
 
-        # Configuration
-        base_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../../../")
-        )
-        source_dir_candidates = [
-            os.path.join(base_dir, "data", "source_documents"),
-            "/data/source_documents",
-        ]
-        source_dir = next(
-            (path for path in source_dir_candidates if os.path.exists(path)),
-            source_dir_candidates[0],
-        )
+        storage_path = settings.DOCUMENT_STORAGE_PATH
+        yield f"ℹ️  Document storage backend: {'S3' if settings.USE_S3_STORAGE else 'local'} ({storage_path})\n"
 
         if cleanup:
             logger.info("admin_ingest_clean_slate_requested", user=user_id)
             yield "🧹 Clean-slate ingestion requested; existing collection contents will be replaced.\n"
 
-        yield f"ℹ️  Using source directory: {source_dir}\n"
-
-        # 1. Initialize Minio Client
-        try:
-            endpoint = settings.MINIO_ENDPOINT.replace("http://", "").replace(
-                "https://", ""
-            )
-            client = Minio(
-                endpoint,
-                access_key=settings.MINIO_ACCESS_KEY,
-                secret_key=settings.MINIO_SECRET_KEY,
-                secure=False,
-            )
-            logger.debug("admin_minio_connected")
-            yield "✅ Connected to Minio.\n"
-        except Exception as e:
-            logger.error("admin_minio_connect_failed", error=str(e))
-            yield f"❌ Failed to connect to Minio: {e}\n"
-            return
-
-        # 2. Create Bucket if not exists
-        try:
-            if not client.bucket_exists(settings.MINIO_BUCKET):
-                client.make_bucket(settings.MINIO_BUCKET)
-                logger.info("admin_bucket_created", bucket=settings.MINIO_BUCKET)
-                yield f"✅ Created bucket '{settings.MINIO_BUCKET}'.\n"
-            else:
-                yield f"ℹ️  Bucket '{settings.MINIO_BUCKET}' already exists.\n"
-        except Exception as e:
-            logger.error(
-                "admin_bucket_check_failed", bucket=settings.MINIO_BUCKET, error=str(e)
-            )
-            yield f"❌ Failed to ensure bucket exists: {e}\n"
-            return
-
-        # 3. Upload Files
-        if not os.path.exists(source_dir):
-            logger.warning("admin_source_dir_missing", path=source_dir)
-            yield f"⚠️ Source directory not found: {source_dir}\n"
-        else:
-            files = [
-                f
-                for f in os.listdir(source_dir)
-                if os.path.isfile(os.path.join(source_dir, f))
-            ]
-            if not files:
-                logger.warning("admin_no_files_found", path=source_dir)
-                yield "⚠️  No files found in source directory.\n"
-
-            for filename in files:
-                file_path = os.path.join(source_dir, filename)
-                try:
-                    client.fput_object(settings.MINIO_BUCKET, filename, file_path)
-                    logger.debug("admin_file_uploaded", filename=filename)
-                    yield f"   ⬆️  Uploaded: {filename}\n"
-                except Exception as e:
-                    logger.error(
-                        "admin_file_upload_failed", filename=filename, error=str(e)
-                    )
-                    yield f"   ❌ Failed to upload {filename}: {e}\n"
-
-        # 4. Trigger Ingestion
+        # Trigger Ingestion
         if settings.INGESTION_MODE == "direct":
             yield "🔄 Running Direct Ingestion...\n"
             from app.services.direct_ingestion_service import direct_ingestion_service
 
             try:
-                direct_logs = direct_ingestion_service.run(
-                    bucket=settings.MINIO_BUCKET,
+                direct_logs = await direct_ingestion_service.run(
                     cleanup=cleanup,
                     batch_size=batch_size,
                     reset_progress=reset_progress,
                 )
                 for line in direct_logs:
                     yield f"{line}\n"
-                status = direct_ingestion_service.get_status(
-                    bucket=settings.MINIO_BUCKET
-                )
+                status = await direct_ingestion_service.get_status()
                 yield (
                     "📈 Status: "
-                    f"{status['indexed_source_doc_count']}/{status['bucket_object_count']} indexed, "
-                    f"pending {status['pending_source_object_count']}, status={status['status']}\n"
+                    f"{status['indexed_source_doc_count']}/{status['total_doc_count']} indexed, "
+                    f"status={status['status']}\n"
                 )
                 if status.get("recent_skipped_files"):
                     yield (
@@ -246,42 +172,58 @@ async def upload_and_ingest(
                 logger.error("admin_direct_ingest_exception", error=str(e))
                 yield f"❌ Direct ingestion failed: {e}\n"
         else:
-            yield "🔄 Triggering Ingestion Pipeline...\n"
-            from app.services.kfp_service import kfp_service
+            yield "🔄 Triggering Dagster Ingestion Job...\n"
+            from app.services.dagster_service import dagster_service
 
             try:
-                logger.info("admin_triggering_kfp")
-                kfp_user_id = None if settings.BYPASS_AUTH else current_user.get("user")
-                result = await kfp_service.trigger_ingestion(
-                    bucket=settings.MINIO_BUCKET,
-                    cleanup=cleanup,
-                    user_id=kfp_user_id,
-                )
-
+                result = await dagster_service.trigger_ingestion()
                 if result.get("status") == "success":
-                    logger.info(
-                        "admin_kfp_trigger_success", run_id=result.get("run_id")
-                    )
-                    yield f"✅ Ingestion Triggered Successfully: {result['message']}\n"
+                    logger.info("admin_dagster_trigger_success", run_id=result.get("run_id"))
+                    yield f"✅ Ingestion Triggered: {result['message']}\n"
                     yield f"Run ID: {result.get('run_id')}\n"
-                elif result.get("status") == "redirect":
-                    logger.warning(
-                        "admin_kfp_trigger_redirect", message=result["message"]
-                    )
-                    yield f"⚠️  {result['message']}\n"
-                    yield f"Details: {result.get('details')}\n"
                 else:
-                    logger.error("admin_kfp_trigger_failed", result=result)
-                    yield f"❌ Ingestion Failed: {result}\n"
-
+                    logger.error("admin_dagster_trigger_failed", result=result)
+                    yield f"❌ Ingestion Failed: {result.get('message')}\n"
             except Exception as e:
-                logger.error("admin_kfp_trigger_exception", error=str(e))
-                yield f"❌ Failed to trigger ingestion: {e}\n"
+                logger.error("admin_dagster_trigger_exception", error=str(e))
+                yield f"❌ Failed to trigger Dagster ingestion: {e}\n"
 
         logger.info("admin_ingest_process_complete")
         yield "🏁 Process Complete.\n"
 
     return StreamingResponse(log_generator(), media_type="text/plain")
+
+
+@router.post("/upload-file")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Upload a document to the configured storage backend (local PVC or S3).
+    """
+    from app.services.storage_service import storage_service
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+
+    user_id = current_user.get("user", "unknown")
+    logger.info("admin_file_upload_start", filename=file.filename, user=user_id)
+
+    try:
+        # Write upload to a temp file then hand off to storage service
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        await storage_service.upload(file.filename, tmp_path)
+        os.unlink(tmp_path)
+        logger.info("admin_file_upload_success", filename=file.filename)
+        return {"status": "ok", "filename": file.filename}
+    except Exception as e:
+        logger.error("admin_file_upload_failed", filename=file.filename, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/ingestion-status")
@@ -291,7 +233,7 @@ async def ingestion_status(current_user: dict = Depends(get_current_user)):
     from app.services.direct_ingestion_service import direct_ingestion_service
 
     try:
-        return direct_ingestion_service.get_status(bucket=settings.MINIO_BUCKET)
+        return await direct_ingestion_service.get_status()
     except Exception as exc:
         logger.error("admin_ingestion_status_failed", error=str(exc))
         raise HTTPException(status_code=500, detail=str(exc)) from exc

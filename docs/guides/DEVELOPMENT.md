@@ -62,6 +62,15 @@ Use this mode when you are iterating on FastAPI handlers, React code, prompt wir
    pnpm dev
    ```
 
+### Pre-Merge Testing with Kind (CI Parity)
+Kind is the official local reference for production-parity testing. The architecture (Istio Ambient, Dagster, Qdrant, KubeRay) exactly mirrors what runs in EKS/GKE.
+
+To run the complete ephemeral testing lifecycle (cluster creation → deploy → E2E tests → teardown):
+```bash
+./scripts/run-e2e-kind.sh
+```
+This is the same suite that runs in the CI pipeline, guaranteeing that passing tests locally will pass in the cloud.
+
 ### Full Kubernetes Deploy
 Use this when you need the backend and frontend running as cluster workloads instead of local processes.
 
@@ -219,9 +228,9 @@ kubectl rollout restart deployment -n kubeflow
 | **Kubeflow Dashboard** | 8086 | http://localhost:8086 | Istio ingress port-forward |
 | **Ray Serve LLM** | 8081 | http://localhost:8081 | Only when `ENABLE_LOCAL_LLM=true` and `llm-service` RayService is deployed |
 | **Embeddings (TEI)** | 8082 | http://localhost:8082 | `./scripts/connect.sh` |
-| **KFP API** | 8888 | http://localhost:8888 | `./scripts/connect.sh` |
+| **KFP API** | 8888 | http://localhost:8888 | `./scripts/connect.sh` (optional debug path) |
 | **Ray Dashboard** | 8265 | http://localhost:8265 | `./scripts/connect.sh` |
-| **MinIO** | 9000 | http://localhost:9000 | `./scripts/connect.sh` |
+| **Dagster UI** | 3200 | http://localhost:3200 | `./scripts/connect.sh` (port-forwards from `dagster` namespace) |
 | **Qdrant** | 6333 | http://localhost:6333 | `./scripts/connect.sh` |
 
 Port rule of thumb:

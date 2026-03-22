@@ -21,18 +21,20 @@
 
 | # | Plan | Status | Summary |
 |---|------|--------|---------|
-| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phases 1–3 complete: Kind bootstrap, direct ingestion, KubeRay operator, Ray cluster, and KServe → Ray Serve migration. Active work is Phase 4 (Dagster + MinIO removal). |
+| 7 | **Infrastructure Migration to Kind + Ray-Native Architecture** | 🚧 Active | Phases 1–5 complete: Kind bootstrap, direct ingestion, KubeRay operator, Ray Serve, Dagster ingestion, Istio Ambient, MinIO/KFP/Dex removal, and Kind CI Gatekeeper. Active work is **Phase 6** (Quality of Life & Finalization). |
 | 8 | **Multimodal RAG — Text + Image Search** | ⏳ Backlog | TEI → Infinity + SigLIP 2, dual-engine (vLLM + SGLang VLM), cross-modal Qdrant search. 6 phases. Depends on #7. |
 | 9 | **Enterprise Security Hardening** | ⏳ Backlog | RBAC (Role Based Access Control), Service Account tokens, OIDC groups integration |
 
-**Last Status Update**: 2026-03-20
+**Last Status Update**: 2026-03-21
 
 **Recently Completed**:
+- ✅ **Infrastructure Migration Phase 5** — Kind CI Gatekeeper complete. E2E tests fully integrated. Cluster creation, backend unit testing, Playwright headless hybrid tests, Dagster execution, and deterministic cluster teardown automated natively on Kind (`run-e2e-kind.sh`). PVC `ReadWriteOnce` contention fixed for local Dagster sharing.
+- ✅ **Infrastructure Migration Phase 4** — Kubeflow stack (KFP, Dex, MinIO, Cert-Manager, oauth2-proxy) fully removed. Dagster deployed via Helm for async ingestion. Istio Ambient mesh replaces sidecar mode. `StorageService` abstraction (PVC/S3). `kubeflow-userid` auth bypass removed. `deployment/manifests` submodule deleted. 28/28 tests passing.
+- ✅ **Infrastructure Migration Phase 3** — KServe + Knative removed. Ray Serve + vLLM deployed via KubeRay. GPU passthrough validated on Kind.
 - ✅ **Infrastructure Migration Phase 1 Closeout** — Kind is now the accepted local baseline: slim Kubeflow overlay, direct-ingestion default, clean-slate and resumable ingestion controls, concurrent-run rejection, auth enforcement, GPU-backed local LLM validation, and end-to-end tests are all documented and verified.
 - ✅ **Frontend UI Enhancements** — Premium design language (Claude-inspired), relative push sidebar, OKLCH colors, directory restructuring, and context menus.
-- ✅ **Frontend UI Overhaul** — shadcn/ui + OKLCH theming, dark mode, React Query, chat UX redesign, premium animations, and performance optimizations.
-- ✅ **Phase 5: Production Ingestion & Serving** — Decoupled microservices, TEI embeddings, lightweight backend, KFP ingestion
 - ✅ **Dependency Standardization & Upgrades** — pnpm, uv, pyproject.toml, React 19, Vite 7, Playwright 1.58, httpx migration
+
 - ✅ **Dev Tooling & Hybrid Mode** — nvm + pnpm + uv standardization, hybrid dev mode, deploy optimization, unified logging, backend test suite. **Update: Fixed Entra ID loops and KFP local execution issues.**
 - ✅ **Phase 4: Experimentation & Tuning** — Katib hyperparameter optimization, Qdrant migration
 - ✅ **Phase 3: Platform Engineering** — Kubeflow v1.11.0, Istio, Dex OIDC, Central Dashboard

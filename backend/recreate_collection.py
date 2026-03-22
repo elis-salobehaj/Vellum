@@ -1,4 +1,5 @@
 import qdrant_client
+from qdrant_client.http import models
 from app.core.config import settings
 
 client = qdrant_client.QdrantClient(
@@ -18,7 +19,6 @@ except Exception as e:
     print(f"Error or collection not found: {e}")
 
 print(f"Creating collection {collection_name} with dim 1536...")
-from qdrant_client.http import models
 
 client.create_collection(
     collection_name=collection_name,

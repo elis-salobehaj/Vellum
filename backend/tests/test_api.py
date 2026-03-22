@@ -190,28 +190,22 @@ def test_admin_upload_and_ingest_passes_cleanup_and_reports_status(
     mock_run.return_value = ["✅ Direct ingestion complete"]
     mock_get_status.return_value = {
         "status": "completed",
-        "bucket_object_count": 10,
+        "total_doc_count": 10,
         "indexed_source_doc_count": 9,
-        "pending_source_object_count": 1,
         "recent_skipped_files": ["docs/unsupported.ppt"],
     }
 
     with patch("app.api.endpoints.admin.settings.INGESTION_MODE", "direct"):
-        with patch("app.api.endpoints.admin.os.path.exists", return_value=True):
-            with patch("app.api.endpoints.admin.os.listdir", return_value=[]):
-                with patch("app.api.endpoints.admin.Minio") as mock_minio:
-                    mock_minio.return_value.bucket_exists.return_value = True
-                    response = client.post(
-                        "/api/v1/admin/upload-and-ingest?batch_size=20&reset_progress=true&cleanup=true"
-                    )
+        response = client.post(
+            "/api/v1/admin/upload-and-ingest?batch_size=20&reset_progress=true&cleanup=true"
+        )
 
     assert response.status_code == 200
     mock_run.assert_called_once_with(
-        bucket="documents",
         cleanup=True,
         batch_size=20,
         reset_progress=True,
     )
     assert "Clean-slate ingestion requested" in response.text
-    assert "Status: 9/10 indexed" in response.text
     assert "docs/unsupported.ppt" in response.text
+

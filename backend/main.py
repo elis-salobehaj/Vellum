@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from app.api.api import api_router
 from app.core.config import settings
 from app.core.logging import setup_logging
 
@@ -23,8 +24,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from app.api.api import api_router
 
 # Core API routes from api_router
 # We include them twice: once at root for legacy/direct access (e.g., /health, /files)

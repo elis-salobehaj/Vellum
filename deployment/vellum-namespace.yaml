@@ -3,11 +3,17 @@ kind: Namespace
 metadata:
   name: kubeflow-vellum
   labels:
-    app.kubernetes.io/part-of: kubeflow-profile
-    istio-injection: enabled
-    katib.kubeflow.org/metrics-collector-injection: enabled
-    pipelines.kubeflow.org/enabled: "true"
-    serving.kubeflow.org/inferenceservice: enabled
+    # Istio Ambient mesh — no sidecars; ztunnel handles L4, waypoint handles L7
+    istio.io/dataplane-mode: ambient
     pod-security.kubernetes.io/enforce: baseline
   annotations:
     owner: vellum@example.com
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vellum-ray
+  labels:
+    # Protect with Istio ambient
+    istio.io/dataplane-mode: ambient

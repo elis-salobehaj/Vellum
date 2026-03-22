@@ -1,20 +1,69 @@
-# This file defines internal routing and namespace access for Vellum.
-# It is intentionally DECOUPLED from the main Kubeflow Gateway on port 8080
-# to avoid conflicts between Dex auth and Vellum's Entra ID auth.
+# Istio Ambient mesh configuration for the kubeflow-vellum namespace.
+#
+# Ambient mode replaces Envoy sidecar injection (istio-injection: enabled) with:
+#   - ztunnel: per-node L4 mTLS and L4 authorization
+#   - waypoint proxy: per-namespace L7 JWT verification, AuthorizationPolicy
+#
+# To install Istio Ambient on a Kind cluster:
+#   istioctl install --set profile=ambient -y
+#   istioctl x waypoint apply --namespace kubeflow-vellum --enroll-namespace
+#
 ---
+# Waypoint proxy for the kubeflow-vellum namespace.
+# Handles L7 AuthorizationPolicy, JWT RequestAuthentication, and header inspection.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: vellum-waypoint
+  namespace: kubeflow-vellum
+  labels:
+    istio.io/waypoint-for: namespace
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+---
+# Request authentication — verify Entra ID JWTs on all API traffic.
+# The waypoint proxy enforces this at L7 before traffic reaches the backend pod.
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: vellum-jwt
+  namespace: kubeflow-vellum
+spec:
+  jwtRules:
+  - issuer: "https://login.microsoftonline.com/common/v2.0"
+    jwksUri: "https://login.microsoftonline.com/common/discovery/v2.0/keys"
+    audiences:
+    - "api://$(AZURE_CLIENT_ID)"
+    forwardOriginalToken: true
+---
+# Authorization policy: allow authenticated JWT principals + internal mesh traffic.
+# Post-Dex: the kubeflow-userid header fallback is gone — only JWT claims are trusted.
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: vellum-ns-auth
   namespace: kubeflow-vellum
 spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: vellum-waypoint
   action: ALLOW
   rules:
-  # Allow any valid authenticated user carrying an Azure JWT
+  # Authenticated users with a valid Entra ID JWT
   - from:
     - source:
         requestPrincipals: ["*"]
-  # Allow internal service-to-service traffic
+  # Internal service-to-service traffic (ztunnel mTLS)
   - from:
     - source:
-        namespaces: ["kubeflow-vellum", "kubeflow", "istio-system"]
+        namespaces:
+        - kubeflow-vellum
+        - istio-system
+        - dagster
+        - qdrant
+        - vellum-ray

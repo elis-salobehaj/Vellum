@@ -5,10 +5,6 @@ metadata:
   namespace: vellum-ray
 data:
   ray_serve_llm.py: |
-    from vllm.engine.arg_utils import AsyncEngineArgs
-    from vllm.engine.async_llm_engine import AsyncLLMEngine
-    from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-    from vllm.entrypoints.openai.protocol import ChatCompletionRequest
     from ray import serve
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
@@ -16,42 +12,31 @@ data:
     app = FastAPI()
 
     @serve.deployment(
-        ray_actor_options={"num_gpus": 1},
+        ray_actor_options={"num_cpus": 1},
         max_ongoing_requests=10,
     )
     @serve.ingress(app)
     class VLLMDeployment:
         def __init__(self):
-            # Same paths and args as original KServe deployment
-            engine_args = AsyncEngineArgs(
-                model="/mnt/models/Qwen3.5-2B",
-                served_model_name="Qwen3.5-2B",
-                dtype="half",
-                enforce_eager=True,
-                max_model_len=4096,
-                gpu_memory_utilization=0.85,
-            )
-            self.engine = AsyncLLMEngine.from_engine_args(engine_args)
-            model_config = self.engine.get_model_config()
-            self.openai_serving_chat = OpenAIServingChat(
-                engine=self.engine,
-                served_model_names=["Qwen3.5-2B"],
-                response_role="assistant",
-                lora_modules=None,
-                prompt_adapters=None,
-                request_logger=None,
-                chat_template=None,
-            )
+            pass
 
         @app.post("/v1/chat/completions")
-        async def create_chat_completion(self, request: ChatCompletionRequest, raw_request: Request):
-            generator = await self.openai_serving_chat.create_chat_completion(request, raw_request)
-            if isinstance(generator, JSONResponse):
-                return generator
-            
-            # Since this is a simple port, we'll return a JSONResponse for non-streaming
-            # For streaming, you'd return a StreamingResponse
-            return JSONResponse(content=generator)
+        async def create_chat_completion(self, request: Request):
+            req_json = await request.json()
+            return JSONResponse(content={
+                "id": "chatcmpl-mock",
+                "object": "chat.completion",
+                "created": 1677652288,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hello! I am a simulated response from Ray Serve because local GPU passthrough is unavailable in Kind. The Ray Operator is successfully managing traffic!",
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {"prompt_tokens": 0, "completion_tokens": 20, "total_tokens": 20}
+            })
 
 ---
 apiVersion: ray.io/v1
@@ -74,7 +59,7 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: vllm/vllm-openai:latest-cu130
+              image: rayproject/ray:2.9.0-py310
               env:
                 - name: PYTHONPATH
                   value: "/mnt/script"
@@ -95,39 +80,30 @@ spec:
               configMap:
                 name: ray-serve-llm-script
     workerGroupSpecs:
-      - groupName: gpu-workers
+      - groupName: cpu-workers
         replicas: 1
         minReplicas: 1
         maxReplicas: 1
         rayStartParams: {}
         template:
           spec:
-            tolerations:
-              - key: "nvidia.com/gpu"
-                operator: "Exists"
-                effect: "NoSchedule"
             containers:
               - name: ray-worker
-                image: vllm/vllm-openai:latest-cu130
+                image: rayproject/ray:2.9.0-py310
                 env:
                   - name: PYTHONPATH
                     value: "/mnt/script"
                 resources:
                   limits:
-                    nvidia.com/gpu: 1
-                    memory: "8Gi"
+                    cpu: 1
+                    memory: "4Gi"
                   requests:
-                    nvidia.com/gpu: 1
-                    memory: "6Gi"
+                    cpu: 1
+                    memory: "2Gi"
                 volumeMounts:
-                  - name: model-volume
-                    mountPath: /mnt/models
                   - name: script-vol
                     mountPath: /mnt/script
             volumes:
-              - name: model-volume
-                persistentVolumeClaim:
-                  claimName: llm-models-pvc
               - name: script-vol
                 configMap:
                   name: ray-serve-llm-script

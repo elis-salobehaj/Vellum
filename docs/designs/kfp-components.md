@@ -1,6 +1,15 @@
 # Kubeflow Pipelines (KFP) Components Architecture
 
-Historical/optional reference in completed Phase 1. The local operational ingestion path is now direct ingestion on Kind; use this document when you need to debug or reason about the retained KFP control plane itself.
+> ⛔ **RETIRED — Phase 4 (2026-03-21)**
+> KFP, MinIO, and the Kubeflow Central Dashboard were removed in Phase 4.
+> Ingestion is now handled by **Dagster** (`dagster/dagster_vellum/`).
+> This document is preserved for historical reference only.
+> See [`docs/designs/adr-002-ray-dagster-ambient.md`](adr-002-ray-dagster-ambient.md) for the migration rationale.
+
+---
+
+Historical/optional reference from the Kubeflow-era (Phase 1) stack.
+
 
 This document details the components of the Kubeflow Pipelines (KFP) system deployed in the Vellum platform, their roles, and how they interact.
 
